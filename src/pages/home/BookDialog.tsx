@@ -102,7 +102,7 @@ export default function BookDialog({ book, onClose }: Props) {
 
         <div className="book-body">
           {/* 左栏顶部：说明 */}
-          <div className="book-list-head">本轮 {round.length} 词</div>
+          <div className="book-list-head">本轮</div>
 
           {/* 左栏：本轮词表 */}
           <div className="book-list">

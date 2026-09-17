@@ -681,6 +681,7 @@ kbd {
   padding: 7px 10px;
   border-radius: 8px;
   font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text);
 }
 
