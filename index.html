@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vocab Cards (TS)</title>
+    <script>
+      // 首屏前先定主题，避免闪烁（key 与 src/theme.ts 保持一致）
+      ;(function () {
+        try {
+          var m = localStorage.getItem('vocab-theme')
+          var t =
+            m === 'light' || m === 'dark'
+              ? m
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          document.documentElement.dataset.theme = t
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

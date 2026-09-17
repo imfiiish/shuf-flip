@@ -274,7 +274,7 @@ export default function Study() {
     <div className="app">
       <button
         type="button"
-        className="back-btn"
+        className="icon-btn back-btn"
         onClick={() => navigate('/')}
         aria-label="返回主页"
         title="返回主页"
