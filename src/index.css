@@ -458,6 +458,15 @@ kbd {
   z-index: 5;
   /* 只负责滚动；居中交给内层 */
   overflow: auto;
+  /* 隐藏滚动条但保留滚动能力 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 旧 Edge */
+}
+
+.bookshelf::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .bookshelf-inner {
@@ -618,6 +627,12 @@ kbd {
 
 .select-hint .exc {
   color: var(--danger);
+}
+
+.select-warn {
+  margin: -8px 0 0;
+  color: var(--danger);
+  font-size: 0.88rem;
 }
 
 .tag-picker {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TagFilter, TagMode } from '../filter'
-import { loadFilter, matchesFilter } from '../filter'
+import { loadFilter, matchesFilter, sameFilter } from '../filter'
 import { allTags } from '../tags'
 import { words } from '../words'
 
@@ -16,10 +16,12 @@ function nextMode(m: TagMode | undefined): TagMode | undefined {
 type Props = {
   onClose: () => void
   onConfirm: (filter: TagFilter, count: number) => void
+  /** 已有的词书筛选条件，用于查重 */
+  existing: TagFilter[]
 }
 
 /** `/` 页弹出的 tag 选择窗口 */
-export default function TagPicker({ onClose, onConfirm }: Props) {
+export default function TagPicker({ onClose, onConfirm, existing }: Props) {
   // 初始状态从上次保存的选择恢复
   const [modes, setModes] = useState<Record<string, TagMode>>(() => {
     const f = loadFilter()
@@ -51,6 +53,12 @@ export default function TagPicker({ onClose, onConfirm }: Props) {
   const count = useMemo(
     () => words.filter((w) => matchesFilter(w, filter)).length,
     [filter],
+  )
+
+  // 和已有词书 tag 组合重复时不允许创建
+  const duplicate = useMemo(
+    () => existing.some((f) => sameFilter(f, filter)),
+    [existing, filter],
   )
 
   const toggle = (tag: string) =>
@@ -121,6 +129,12 @@ export default function TagPicker({ onClose, onConfirm }: Props) {
           })}
         </div>
 
+        {duplicate && (
+          <p className="select-warn" role="alert">
+            已存在相同 tag 的词书
+          </p>
+        )}
+
         <div className="select-actions">
           <span className="select-count">将学习 {count} 张</span>
           <button
@@ -134,7 +148,7 @@ export default function TagPicker({ onClose, onConfirm }: Props) {
             type="button"
             className="btn btn-primary"
             onClick={start}
-            disabled={count === 0}
+            disabled={count === 0 || duplicate}
           >
             创建词书
           </button>

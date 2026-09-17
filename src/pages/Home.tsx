@@ -4,7 +4,7 @@ import { logout } from '../auth'
 import TagPicker from '../components/TagPicker'
 import ThemeToggle from '../components/ThemeToggle'
 import type { TagFilter } from '../filter'
-import { saveFilter } from '../filter'
+import { sameFilter, saveFilter } from '../filter'
 
 /** 一本词书（这轮只做 UI，暂不持久化） */
 type Book = {
@@ -97,12 +97,16 @@ export default function Home() {
 
       {pickerOpen && (
         <TagPicker
+          existing={books.map((b) => b.filter)}
           onClose={() => setPickerOpen(false)}
           onConfirm={(filter, count) => {
-            setBooks((b) => [
-              ...b,
-              { id: Date.now(), name: `词书${b.length + 1}`, filter, count },
-            ])
+            setBooks((b) => {
+              if (b.some((x) => sameFilter(x.filter, filter))) return b
+              return [
+                ...b,
+                { id: Date.now(), name: `词书${b.length + 1}`, filter, count },
+              ]
+            })
             setPickerOpen(false)
           }}
         />

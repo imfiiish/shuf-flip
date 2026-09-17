@@ -38,3 +38,10 @@ export function matchesFilter(word: Word, f: TagFilter): boolean {
   if (f.include.length === 0) return true
   return word.tags.some((t) => f.include.includes(t))
 }
+
+/** 两个筛选条件是否等价（include / exclude 都按集合比较，与顺序无关） */
+export function sameFilter(a: TagFilter, b: TagFilter): boolean {
+  const key = (f: TagFilter) =>
+    `i:${[...f.include].sort().join(',')}|e:${[...f.exclude].sort().join(',')}`
+  return key(a) === key(b)
+}
