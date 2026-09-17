@@ -450,6 +450,97 @@ kbd {
   box-shadow: 0 0 0 3px var(--danger-ring);
 }
 
+/* ---------- 词书区（/ 页中间的大区域）---------- */
+.bookshelf {
+  position: fixed;
+  /* 四周留白，避开四角按钮（按钮 24 + 44 = 到 68，留 88 即空出 20） */
+  inset: 88px;
+  z-index: 5;
+  /* 只负责滚动；居中交给内层 */
+  overflow: auto;
+}
+
+.bookshelf-inner {
+  /* 关键：min-height 100% + 自己长高，内容超高时不再向上溢出，顶部不会被裁 */
+  min-height: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  /* 给 hover 上移和光晕留空间，避免被 overflow 裁掉 */
+  padding: 12px;
+}
+
+.book {
+  position: relative;
+  width: 188px;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 14px 14px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px 14px 14px 10px;
+  background: var(--card);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease,
+    border-color 180ms ease, color 180ms ease;
+}
+
+/* 书脊 */
+.book::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--accent);
+}
+
+.book:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 14px 36px -12px var(--accent-ring);
+}
+
+.book:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.book-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.book-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* 空词书：虚线框 + 居中「+」 */
+.book-add {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+}
+
+.book-add::before {
+  display: none;
+}
+
+.book-add:hover {
+  color: var(--accent);
+}
+
 /* ---------- 选择 tag 弹窗（/ 页）---------- */
 .modal-backdrop {
   position: fixed;

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { TagFilter, TagMode } from '../filter'
-import { loadFilter, matchesFilter, saveFilter } from '../filter'
+import { loadFilter, matchesFilter } from '../filter'
 import { allTags } from '../tags'
 import { words } from '../words'
 
@@ -16,12 +15,11 @@ function nextMode(m: TagMode | undefined): TagMode | undefined {
 
 type Props = {
   onClose: () => void
+  onConfirm: (filter: TagFilter, count: number) => void
 }
 
 /** `/` 页弹出的 tag 选择窗口 */
-export default function TagPicker({ onClose }: Props) {
-  const navigate = useNavigate()
-
+export default function TagPicker({ onClose, onConfirm }: Props) {
   // 初始状态从上次保存的选择恢复
   const [modes, setModes] = useState<Record<string, TagMode>>(() => {
     const f = loadFilter()
@@ -65,8 +63,7 @@ export default function TagPicker({ onClose }: Props) {
     })
 
   const start = () => {
-    saveFilter(filter)
-    navigate('/study')
+    onConfirm(filter, count)
   }
 
   return (
@@ -139,7 +136,7 @@ export default function TagPicker({ onClose }: Props) {
             onClick={start}
             disabled={count === 0}
           >
-            开始学习
+            创建词书
           </button>
         </div>
       </div>
