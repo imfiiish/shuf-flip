@@ -546,16 +546,20 @@ kbd {
   aspect-ratio: 2 / 3;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 14px 14px 20px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
   border: 1px solid var(--border);
-  border-radius: 10px 14px 14px 10px;
+  border-radius: 8px 14px 14px 8px;
   background: var(--card);
   color: var(--text);
-  text-align: left;
+  text-align: center;
   font: inherit;
   cursor: pointer;
   overflow: hidden;
+  /* 默认淡投影，让书浮起来 */
+  box-shadow: 0 10px 24px -14px rgba(15, 40, 35, 0.4);
   transition: transform 180ms ease, box-shadow 180ms ease,
     border-color 180ms ease, color 180ms ease;
 }
@@ -565,15 +569,26 @@ kbd {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: 6px;
+  width: 9px;
   background: var(--accent);
+}
+
+/* 书脊内侧的渐隐，做出装订厚度 */
+.book::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 9px;
+  width: 7px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.14), transparent);
+  pointer-events: none;
 }
 
 .book:hover,
 .book-item:hover .book {
   transform: translateY(-3px);
   border-color: var(--accent);
-  box-shadow: 0 14px 36px -12px var(--accent-ring);
+  box-shadow: 0 18px 38px -14px var(--accent-ring),
+    0 8px 18px -10px rgba(15, 40, 35, 0.3);
 }
 
 .book:focus-visible {
@@ -582,7 +597,7 @@ kbd {
 }
 
 .book-title {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 
@@ -599,9 +614,11 @@ kbd {
   border-style: dashed;
   background: transparent;
   color: var(--muted);
+  box-shadow: none;
 }
 
-.book-add::before {
+.book-add::before,
+.book-add::after {
   display: none;
 }
 
