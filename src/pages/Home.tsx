@@ -1,13 +1,19 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout } from '../auth'
+import TagPicker from '../components/TagPicker'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Home() {
   const navigate = useNavigate()
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   return (
     <div className="page home-page">
-      <button className="btn btn-primary" onClick={() => navigate('/study')}>
+      <button
+        className="btn btn-primary"
+        onClick={() => setPickerOpen(true)}
+      >
         学习
       </button>
 
@@ -39,6 +45,8 @@ export default function Home() {
           <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
       </button>
+
+      {pickerOpen && <TagPicker onClose={() => setPickerOpen(false)} />}
     </div>
   )
 }

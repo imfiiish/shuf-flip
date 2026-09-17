@@ -450,6 +450,177 @@ kbd {
   box-shadow: 0 0 0 3px var(--danger-ring);
 }
 
+/* ---------- 选择 tag 弹窗（/ 页）---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 20, 18, 0.45);
+  animation: fade-in 180ms ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  max-height: 85vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 28px 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card-active);
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.45);
+  animation: modal-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.select-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.select-hint .inc {
+  color: var(--accent);
+}
+
+.select-hint .exc {
+  color: var(--danger);
+}
+
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.tag-chip {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease,
+    border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.tag-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px -10px var(--accent-ring);
+}
+
+.tag-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.tag-chip.include {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 8px 24px -8px var(--accent-ring);
+}
+
+.tag-chip.exclude {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+  text-decoration: line-through;
+  box-shadow: 0 8px 24px -8px var(--danger-ring);
+}
+
+.select-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.select-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1rem;
+  padding: 12px 24px;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 过滤后没有词 */
+.empty-study {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  color: var(--muted);
+}
+
+.empty-study p {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
 /* ---------- 动画 ---------- */
 
 /* 入场：整体浮现 */

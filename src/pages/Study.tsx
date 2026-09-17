@@ -1,33 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
+import { loadFilter, matchesFilter } from '../filter'
+import { tagRank } from '../tags'
 import type { Word } from '../words'
 import { words } from '../words'
-
-const TOTAL = words.length
-
-// tags 展示顺序（CEFR.A1/A2/B1/B2/C1/C2 都归到 CEFR；未列出的排最后）
-const TAG_ORDER = [
-  '初中',
-  '高中',
-  'CET4',
-  'CET6',
-  '考研',
-  'IELTS',
-  'TOEFL',
-  'TEM4',
-  'TEM8',
-  'CEFR',
-  'SAT',
-  'GRE',
-  'GMAT',
-  'BEC',
-] as const
-
-function tagRank(tag: string): number {
-  const i = TAG_ORDER.findIndex((t) => tag === t || tag.startsWith(`${t}.`))
-  return i === -1 ? TAG_ORDER.length : i
-}
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
@@ -94,13 +72,19 @@ type DeckState = {
 /** 「完成」飞出动画的临时副本 */
 type Ghost = { id: number; word: Word }
 
-function startState(): DeckState {
-  return { deck: words.map((_, i) => i), center: 0, completed: [] }
+function startState(indices: number[]): DeckState {
+  return { deck: indices, center: 0, completed: [] }
 }
 
 export default function Study() {
   const navigate = useNavigate()
-  const [state, setState] = useState<DeckState>(startState)
+  // 按「选择 tag」弹窗保存的过滤条件，筛出要学的词（保留在 words 里的原始索引）
+  const deckIndices = useMemo(() => {
+    const f = loadFilter()
+    return words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
+  }, [])
+  const TOTAL = deckIndices.length
+  const [state, setState] = useState<DeckState>(() => startState(deckIndices))
   const { deck, center, completed } = state
   const centerIdx: number | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
@@ -227,13 +211,15 @@ export default function Study() {
   // 避免 currentTime=0 + play() 在快速连按时抢跑/叠加
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // 预加载 5 个音频，首次播放不延迟
+  // 预加载本次要学的音频，首次播放不延迟
   useEffect(() => {
-    words.forEach((w) => {
-      const a = new Audio(`${import.meta.env.BASE_URL}audio/${w.audio_file}`)
+    deckIndices.forEach((i) => {
+      const a = new Audio(
+        `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
+      )
       a.preload = 'auto'
     })
-  }, [])
+  }, [deckIndices])
 
   // 卸载时停掉正在播的
   useEffect(
@@ -313,30 +299,27 @@ export default function Study() {
     return () => window.removeEventListener('keydown', onKey)
   }, [go, complete, undo, redo, toggleReveal])
 
+  if (TOTAL === 0) {
+    return (
+      <div className="app">
+        <BackButton to="/" label="返回主页" />
+        <div className="empty-study">
+          <p>没有符合条件的词</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => navigate('/')}
+          >
+            重新选择 tag
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
-      <button
-        type="button"
-        className="icon-btn back-btn"
-        onClick={() => navigate('/')}
-        aria-label="返回主页"
-        title="返回主页"
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <line x1="19" y1="12" x2="5" y2="12" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-      </button>
+      <BackButton to="/" label="返回主页" />
       <div
         className="cards"
         onMouseMove={onCardsMouseMove}
