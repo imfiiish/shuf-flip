@@ -664,31 +664,27 @@ kbd {
   text-align: center;
 }
 
-/* 左右两栏 */
+/* 左右两栏：右栏和词表同一行，顶底分别对齐 */
 .book-body {
-  display: flex;
-  gap: 20px;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 176px;
+  grid-template-rows: auto auto;
+  gap: 8px 20px;
   width: 100%;
 }
 
-/* 左栏：可滚动词表 */
-.book-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .book-list-head {
+  grid-column: 1;
+  grid-row: 1;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
 .book-list {
-  min-height: 0;
-  max-height: min(46vh, 420px);
+  grid-column: 1;
+  grid-row: 2;
+  /* 固定高度（取原来的最大值），不随词数变 */
+  height: min(46vh, 420px);
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -737,12 +733,21 @@ kbd {
   text-decoration: line-through;
 }
 
-/* 右栏：切换 + 控件 */
+/* 右栏：和词表同一行（列表顶部到底部） */
 .book-side {
-  flex: 0 0 176px;
+  grid-column: 2;
+  grid-row: 2;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* 顶组向下收、底组向上收，不要贴死列表边 */
+  padding: 14px 0;
+}
+
+.side-group {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
