@@ -2,8 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
-import { loadFilter, matchesFilter } from '../filter'
-import { loadRevealCounts, saveRevealCounts } from '../progress'
+import { filterKey, loadFilter, matchesFilter } from '../filter'
+import {
+  loadCenter,
+  loadCompleted,
+  loadRevealCounts,
+  saveCenter,
+  saveCompleted,
+  saveRevealCounts,
+} from '../progress'
 import { tagRank } from '../tags'
 import type { Word } from '../words'
 import { words } from '../words'
@@ -73,20 +80,39 @@ type DeckState = {
 /** 「完成」飞出动画的临时副本 */
 type Ghost = { id: number; word: Word }
 
-function startState(indices: number[]): DeckState {
-  return { deck: indices, center: 0, completed: [] }
-}
-
 export default function Study() {
   const navigate = useNavigate()
-  // 按「选择 tag」弹窗保存的过滤条件，筛出要学的词（保留在 words 里的原始索引）
-  const deckIndices = useMemo(() => {
+  // 按「选择 tag」弹窗保存的过滤条件，筛出这本书要学的词（words 里的原始索引）
+  const { key, allIndices } = useMemo(() => {
     const f = loadFilter()
-    return words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
+    return {
+      key: filterKey(f),
+      allIndices: words.map((_, i) => i).filter((i) => matchesFilter(words[i], f)),
+    }
   }, [])
-  const TOTAL = deckIndices.length
-  const [state, setState] = useState<DeckState>(() => startState(deckIndices))
+  const TOTAL = allIndices.length
+  // 词汇状态全局互通（已完成的词不再出现）；位置 center 按词书恢复
+  const [state, setState] = useState<DeckState>(() => {
+    const done = loadCompleted()
+    const deck = allIndices.filter((i) => !done.includes(i))
+    const center = deck.length
+      ? Math.min(loadCenter(key), deck.length - 1)
+      : 0
+    return { deck, center, completed: done }
+  })
   const { deck, center, completed } = state
+
+  // 这本书里已完成的词数（分母用这本书的总词数）
+  const completedCount = allIndices.filter((i) => completed.includes(i)).length
+
+  // 已完成（全局词状态）与位置（本书）分别写回
+  useEffect(() => {
+    saveCompleted(completed)
+  }, [completed])
+
+  useEffect(() => {
+    saveCenter(key, center)
+  }, [key, center])
   const centerIdx: number | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
   // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
@@ -220,13 +246,13 @@ export default function Study() {
 
   // 预加载本次要学的音频，首次播放不延迟
   useEffect(() => {
-    deckIndices.forEach((i) => {
+    allIndices.forEach((i) => {
       const a = new Audio(
         `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
       )
       a.preload = 'auto'
     })
-  }, [deckIndices])
+  }, [allIndices])
 
   // 卸载时停掉正在播的
   useEffect(
@@ -387,7 +413,7 @@ export default function Study() {
           <kbd>Enter</kbd> 完成
         </span>
         <span className="progress">
-          ✓ {completed.length} / {TOTAL}
+          ✓ {completedCount} / {TOTAL}
         </span>
       </div>
     </div>

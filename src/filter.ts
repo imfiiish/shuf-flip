@@ -39,9 +39,12 @@ export function matchesFilter(word: Word, f: TagFilter): boolean {
   return word.tags.some((t) => f.include.includes(t))
 }
 
+/** 筛选条件的稳定 key，用于区分不同词书 / 定位存储 */
+export function filterKey(f: TagFilter): string {
+  return `i:${[...f.include].sort().join(',')}|e:${[...f.exclude].sort().join(',')}`
+}
+
 /** 两个筛选条件是否等价（include / exclude 都按集合比较，与顺序无关） */
 export function sameFilter(a: TagFilter, b: TagFilter): boolean {
-  const key = (f: TagFilter) =>
-    `i:${[...f.include].sort().join(',')}|e:${[...f.exclude].sort().join(',')}`
-  return key(a) === key(b)
+  return filterKey(a) === filterKey(b)
 }

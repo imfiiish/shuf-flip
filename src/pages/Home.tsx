@@ -1,23 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout } from '../auth'
+import type { Book } from '../books'
+import { loadBooks, saveBooks } from '../books'
 import TagPicker from '../components/TagPicker'
 import ThemeToggle from '../components/ThemeToggle'
-import type { TagFilter } from '../filter'
 import { sameFilter, saveFilter } from '../filter'
-
-/** 一本词书（这轮只做 UI，暂不持久化） */
-type Book = {
-  id: number
-  name: string
-  filter: TagFilter
-  count: number
-}
 
 export default function Home() {
   const navigate = useNavigate()
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [books, setBooks] = useState<Book[]>([])
+  const [books, setBooks] = useState<Book[]>(loadBooks)
+
+  useEffect(() => {
+    saveBooks(books)
+  }, [books])
 
   const openBook = (book: Book) => {
     saveFilter(book.filter)
