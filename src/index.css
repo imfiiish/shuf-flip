@@ -282,48 +282,6 @@ kbd {
   color: var(--text);
 }
 
-.counter {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 完成进度 ✓ n / 5 */
-.progress {
-  margin-left: auto;
-  color: var(--accent);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 完成时飞出的副本 */
-.ghost {
-  transform: translate(-50%, -50%);
-  z-index: 4;
-  pointer-events: none;
-  animation: ghost-out 340ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.ghost .word {
-  color: var(--accent);
-  text-decoration: line-through;
-}
-
-.ghost .check {
-  font-size: 1.5rem;
-  color: var(--accent);
-}
-
-.all-done {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  color: var(--accent);
-  animation: fade-up 300ms ease-out;
-}
-
 /* ---------- 页面 / 按钮（login、home）---------- */
 .page {
   min-height: 100vh;
@@ -726,39 +684,14 @@ kbd {
   color: var(--text);
 }
 
-/* 本轮抽中的词（靠前 size 个）：左侧竖条 + accent 文字，不用整条底色 */
-.word-row.round {
-  position: relative;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.word-row.round::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 15px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.word-row.done {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-
-/* 右栏：和词表同一行（列表顶部到底部） */
+/* 右栏：和词表同一行 */
 .book-side {
   grid-column: 2;
   grid-row: 2;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
-  /* 顶组向下收、底组向上收，不要贴死列表边 */
   padding: 14px 0;
 }
 
@@ -766,33 +699,6 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.seg {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.seg-btn {
-  flex: 1;
-  font: inherit;
-  padding: 8px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
-}
-
-.seg-btn + .seg-btn {
-  border-left: 1px solid var(--border);
-}
-
-.seg-btn.on {
-  background: var(--accent);
-  color: var(--on-accent);
 }
 
 .side-btn {
@@ -966,18 +872,6 @@ kbd {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* 完成：卡片上浮淡出 */
-@keyframes ghost-out {
-  from {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
   }
 }
 

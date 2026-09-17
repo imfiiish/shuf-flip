@@ -1,9 +1,8 @@
 // 学习相关的持久化
-// - 词汇状态（全局，所有词书互通）：展开次数、已完成
-// - 每本词书的位置：center（按 filterKey 分开）
+// - 展开次数（全局，所有词书互通）
+// - 每本词书/每一轮的位置：center（按 key 分开）
 
 const REVEAL_KEY = 'vocab-reveal-counts'
-const COMPLETED_KEY = 'vocab-completed'
 const CENTERS_KEY = 'vocab-centers'
 
 function isIndex(n: unknown): n is number {
@@ -33,23 +32,7 @@ export function saveRevealCounts(counts: Record<number, number>): void {
   localStorage.setItem(REVEAL_KEY, JSON.stringify(counts))
 }
 
-// ---- 已完成（全局，词索引；任意词书完成即全局完成）----
-export function loadCompleted(): number[] {
-  try {
-    const raw = localStorage.getItem(COMPLETED_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter(isIndex) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveCompleted(indices: number[]): void {
-  localStorage.setItem(COMPLETED_KEY, JSON.stringify(indices))
-}
-
-// ---- 每本词书的位置（按 filterKey 分开）----
+// ---- 位置（按 key 分开）----
 function loadCenterMap(): Record<string, number> {
   try {
     const raw = localStorage.getItem(CENTERS_KEY)

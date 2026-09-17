@@ -5,10 +5,8 @@ import BackButton from '../components/BackButton'
 import { filterKey, loadFilter, matchesFilter } from '../filter'
 import {
   loadCenter,
-  loadCompleted,
   loadRevealCounts,
   saveCenter,
-  saveCompleted,
   saveRevealCounts,
 } from '../progress'
 import { loadSession } from '../session'
@@ -71,20 +69,15 @@ function slotOf(p: number, center: number, n: number): Slot {
   return d
 }
 
-/** 牌组状态 */
-type DeckState = {
-  deck: number[]
-  center: number
-  completed: number[]
-}
-
-/** 「完成」飞出动画的临时副本 */
-type Ghost = { id: number; word: Word }
-
+/**
+ * 学习页：只负责「翻」。
+ * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开。
+ */
 export default function Study() {
   const navigate = useNavigate()
-  // 词书筛选 + 可选的一组（session）；位置 center 按这一组单独记
-  const { centerKey, allIndices } = useMemo(() => {
+
+  // 词书筛选 + 那一轮（session）；位置 center 按这一轮单独记
+  const { centerKey, deck } = useMemo(() => {
     const f = loadFilter()
     const fk = filterKey(f)
     const book = words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
@@ -92,36 +85,24 @@ export default function Study() {
     if (s && s.key === fk) {
       const idx = s.indices.filter((i) => book.includes(i))
       if (idx.length > 0) {
-        return { centerKey: `${fk}|${idx.join('.')}`, allIndices: idx }
+        return { centerKey: `${fk}|${idx.join('.')}`, deck: idx }
       }
     }
-    return { centerKey: fk, allIndices: book }
+    return { centerKey: fk, deck: book }
   }, [])
-  const TOTAL = allIndices.length
-  // 词汇状态全局互通（已完成的词不再出现）；位置按本次会话恢复
-  const [state, setState] = useState<DeckState>(() => {
-    const done = loadCompleted()
-    const deck = allIndices.filter((i) => !done.includes(i))
-    const center = deck.length
-      ? Math.min(loadCenter(centerKey), deck.length - 1)
-      : 0
-    return { deck, center, completed: done }
-  })
-  const { deck, center, completed } = state
+  const TOTAL = deck.length
 
-  // 这本书/这一组里已完成的词数
-  const completedCount = allIndices.filter((i) => completed.includes(i)).length
-
-  // 已完成（全局词状态）与位置（本次会话）分别写回
-  useEffect(() => {
-    saveCompleted(completed)
-  }, [completed])
+  const [center, setCenter] = useState(() =>
+    TOTAL ? Math.min(loadCenter(centerKey), TOTAL - 1) : 0,
+  )
 
   useEffect(() => {
     saveCenter(centerKey, center)
   }, [centerKey, center])
+
   const centerIdx: number | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
+
   // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
   const [revealCounts, setRevealCounts] = useState<Record<number, number>>(
     loadRevealCounts,
@@ -131,13 +112,8 @@ export default function Study() {
     saveRevealCounts(revealCounts)
   }, [revealCounts])
 
-  // 重做栈：被撤销（还原）的词，等待重新完成
-  const [redoStack, setRedoStack] = useState<number[]>([])
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
-  // 被「完成」的卡片：飞出动画的临时副本
-  const [ghosts, setGhosts] = useState<Ghost[]>([])
-  const ghostId = useRef(0)
 
   // 悬浮光晕：按「指针位置」命中，而不是 CSS :hover。
   // 否则卡片位移后，:hover 会粘在移动的那个元素上（光晕跟着卡片而不是鼠标）。
@@ -181,85 +157,31 @@ export default function Study() {
     return () => cancelAnimationFrame(raf)
   }, [center, deck, updateHover])
 
-  const addGhost = useCallback((word: Word) => {
-    const id = ++ghostId.current
-    setGhosts((g) => [...g, { id, word }])
-  }, [])
-
-  // 翻页（不进撤销历史）
-  const go = useCallback((delta: number) => {
-    setRevealed(false)
-    setState((s) => {
-      if (s.deck.length === 0) return s
-      const nc = (s.center + delta + s.deck.length) % s.deck.length
-      return { ...s, center: nc }
-    })
-  }, [])
-
-  // Enter：完成当前词 → 从牌组移除，自动前进到下一张
-  const complete = useCallback(() => {
-    if (deck.length === 0) return
-    const done = deck[center]
-    addGhost(words[done])
-    const nextDeck = deck.filter((_, p) => p !== center)
-    const nextCenter = nextDeck.length ? center % nextDeck.length : 0
-    setState({
-      deck: nextDeck,
-      center: nextCenter,
-      completed: [...completed, done],
-    })
-    setRedoStack([]) // 新的操作清空重做栈
-    setRevealed(false)
-  }, [deck, center, completed, addGhost])
-
-  // 撤销：把最近完成的词还原回牌组，并把中心移回那张卡
-  const undo = useCallback(() => {
-    if (completed.length === 0) return
-    const word = completed[completed.length - 1]
-    const nextDeck = [...deck, word].sort((a, b) => a - b)
-    setState({
-      deck: nextDeck,
-      center: nextDeck.indexOf(word),
-      completed: completed.slice(0, -1),
-    })
-    setRedoStack((s) => [...s, word])
-    setRevealed(false)
-  }, [deck, completed])
-
-  // 重做：把那次的词重新完成（移出牌组）
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return
-    const word = redoStack[redoStack.length - 1]
-    const p = deck.indexOf(word)
-    if (p === -1) {
-      setRedoStack((s) => s.slice(0, -1))
-      return
-    }
-    addGhost(words[word])
-    const nextDeck = deck.filter((_, i) => i !== p)
-    const nextCenter = nextDeck.length ? p % nextDeck.length : 0
-    setState({
-      deck: nextDeck,
-      center: nextCenter,
-      completed: [...completed, word],
-    })
-    setRedoStack((s) => s.slice(0, -1))
-    setRevealed(false)
-  }, [redoStack, deck, completed, addGhost])
+  // 翻页
+  const go = useCallback(
+    (delta: number) => {
+      setRevealed(false)
+      setCenter((c) => {
+        if (TOTAL === 0) return 0
+        return (c + delta + TOTAL) % TOTAL
+      })
+    },
+    [TOTAL],
+  )
 
   // 音频：按需播放。重播时先停掉上一次再新建实例，
   // 避免 currentTime=0 + play() 在快速连按时抢跑/叠加
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // 预加载本次要学的音频，首次播放不延迟
+  // 预加载这一轮的音频，首次播放不延迟
   useEffect(() => {
-    allIndices.forEach((i) => {
+    deck.forEach((i) => {
       const a = new Audio(
         `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
       )
       a.preload = 'auto'
     })
-  }, [allIndices])
+  }, [deck])
 
   // 卸载时停掉正在播的
   useEffect(
@@ -296,34 +218,15 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
-  // 键盘：Space 释义 / H L 翻页 / Enter 完成 / Ctrl+C 撤销 / Ctrl+Shift+C 重做
+  // 键盘：Space 释义 / H L 翻页
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const k = e.key
-
-      // 撤销 / 重做（Ctrl 或 Cmd）
-      if (e.ctrlKey || e.metaKey) {
-        const key = k.toLowerCase()
-        if ((key === 'c' || key === 'z') && !e.shiftKey) {
-          e.preventDefault()
-          undo()
-        } else if ((key === 'c' || key === 'z') && e.shiftKey) {
-          e.preventDefault()
-          redo()
-        }
-        return
-      }
 
       if (k === ' ') {
         e.preventDefault() // 防止页面滚动
         if (e.repeat) return // 按住时忽略自动重复，避免疯狂重播
         toggleReveal()
-        return
-      }
-      if (k === 'Enter') {
-        e.preventDefault()
-        if (e.repeat) return
-        complete()
         return
       }
       const low = k.toLowerCase()
@@ -337,20 +240,20 @@ export default function Study() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, complete, undo, redo, toggleReveal])
+  }, [go, toggleReveal])
 
   if (TOTAL === 0) {
     return (
       <div className="app">
         <BackButton to="/" label="返回主页" />
         <div className="empty-study">
-          <p>没有符合条件的词</p>
+          <p>还没有可学的词</p>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => navigate('/')}
           >
-            重新选择 tag
+            去选词书
           </button>
         </div>
       </div>
@@ -387,24 +290,6 @@ export default function Study() {
             />
           )
         })}
-
-        {/* 完成时的飞出副本 */}
-        {ghosts.map((g) => (
-          <div
-            key={g.id}
-            className="card ghost"
-            onAnimationEnd={() =>
-              setGhosts((list) => list.filter((x) => x.id !== g.id))
-            }
-          >
-            <div className="inner">
-              <div className="word">{g.word.word}</div>
-              <div className="check">✓</div>
-            </div>
-          </div>
-        ))}
-
-        {deck.length === 0 && <div className="all-done">✓ 全部完成</div>}
       </div>
 
       <div className="hints">
@@ -415,12 +300,6 @@ export default function Study() {
         </span>
         <span>
           <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
-        </span>
-        <span>
-          <kbd>Enter</kbd> 完成
-        </span>
-        <span className="progress">
-          ✓ {completedCount} / {TOTAL}
         </span>
       </div>
     </div>

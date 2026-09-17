@@ -1,17 +1,5 @@
-// 词书弹窗偏好：每轮的随机顺序（按词书）+ 每轮词数
-const SIZE_KEY = 'vocab-round-size'
+// 词书弹窗偏好：每轮的随机顺序（按词书）
 const ORDERS_KEY = 'vocab-round-orders'
-
-export const ROUND_SIZES = [5, 10, 20]
-
-export function loadRoundSize(): number {
-  const n = Number(localStorage.getItem(SIZE_KEY))
-  return ROUND_SIZES.includes(n) ? n : 10
-}
-
-export function saveRoundSize(n: number): void {
-  localStorage.setItem(SIZE_KEY, String(n))
-}
 
 function isIndexArray(v: unknown): v is number[] {
   return (

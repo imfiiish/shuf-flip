@@ -2,16 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Book } from '../books'
 import { filterKey, matchesFilter, saveFilter } from '../filter'
-import { loadCompleted } from '../progress'
-import {
-  ROUND_SIZES,
-  loadOrder,
-  loadRoundSize,
-  saveOrder,
-  saveRoundSize,
-} from '../rounds'
+import { loadOrder, saveOrder } from '../rounds'
 import { saveSession } from '../session'
 import { words } from '../words'
+
+/** 每轮推送的词数 */
+const ROUND_SIZE = 20
 
 /** 洗牌：返回打乱顺序的新数组 */
 function shuffle(pool: number[]): number[] {
@@ -31,10 +27,8 @@ type Props = {
 }
 
 /**
- * 点词书弹出的窗口。
- * 左栏：可滚动词表（未完成 / 已完成 切换），高度固定
- * 右栏：顶部 切换 + 5/10/20，底部 刷新 + 开始
- * 「本轮顺序」按词书持久化，重开不重排；5/10/20 也记住。
+ * 点词书弹出的窗口：左栏是「本轮」的词表，右栏是操作。
+ * 每轮从词书里随机推 20 个词；换一轮重掷；顺序按词书持久化，重开不重排。
  */
 export default function BookDialog({ book, onClose }: Props) {
   const navigate = useNavigate()
@@ -44,10 +38,7 @@ export default function BookDialog({ book, onClose }: Props) {
     () => words.map((_, i) => i).filter((i) => matchesFilter(words[i], book.filter)),
     [book],
   )
-  const completedSet = useMemo(() => new Set(loadCompleted()), [])
 
-  const [size, setSize] = useState(loadRoundSize)
-  const [view, setView] = useState<'todo' | 'done'>('todo')
   // 上一轮顺序；没有或对不上就重新洗牌
   const [order, setOrder] = useState<number[]>(() => {
     const stored = loadOrder(key)
@@ -66,21 +57,7 @@ export default function BookDialog({ book, onClose }: Props) {
     saveOrder(key, order)
   }, [key, order])
 
-  const todo = useMemo(
-    () => order.filter((i) => !completedSet.has(i)),
-    [order, completedSet],
-  )
-  const done = useMemo(
-    () => order.filter((i) => completedSet.has(i)),
-    [order, completedSet],
-  )
-  const round = todo.slice(0, size)
-  const list = view === 'todo' ? todo : done
-
-  const pickSize = (n: number) => {
-    setSize(n)
-    saveRoundSize(n)
-  }
+  const round = order.slice(0, ROUND_SIZE)
 
   const start = () => {
     if (round.length === 0) return
@@ -125,72 +102,23 @@ export default function BookDialog({ book, onClose }: Props) {
 
         <div className="book-body">
           {/* 左栏顶部：说明 */}
-          <div className="book-list-head">
-            {view === 'todo'
-              ? `未完成 ${todo.length} 词 · 前 ${round.length} 个为「本轮」`
-              : `已完成 ${done.length} 词`}
-          </div>
+          <div className="book-list-head">本轮 {round.length} 词</div>
 
-          {/* 左栏：固定高度的可滚动词表 */}
+          {/* 左栏：本轮词表 */}
           <div className="book-list">
-            {list.length === 0 ? (
-              <p className="book-empty">
-                {view === 'todo' ? '✓ 全部完成' : '还没有已完成的词'}
-              </p>
+            {round.length === 0 ? (
+              <p className="book-empty">这本词书还没有词</p>
             ) : (
-              list.map((i, idx) => {
-                const isRound = view === 'todo' && idx < size
-                return (
-                  <span
-                    key={i}
-                    className={`word-row${isRound ? ' round' : ''}${
-                      view === 'done' ? ' done' : ''
-                    }`}
-                  >
-                    {words[i].word}
-                  </span>
-                )
-              })
+              round.map((i) => (
+                <span className="word-row" key={i}>
+                  {words[i].word}
+                </span>
+              ))
             )}
           </div>
 
-          {/* 右栏：顶组贴列表顶，底组贴列表底 */}
+          {/* 右栏：操作 */}
           <aside className="book-side">
-            <div className="side-group">
-              <div className="seg" role="group" aria-label="查看">
-                <button
-                  type="button"
-                  className={`seg-btn${view === 'todo' ? ' on' : ''}`}
-                  onClick={() => setView('todo')}
-                  aria-pressed={view === 'todo'}
-                >
-                  未完成
-                </button>
-                <button
-                  type="button"
-                  className={`seg-btn${view === 'done' ? ' on' : ''}`}
-                  onClick={() => setView('done')}
-                  aria-pressed={view === 'done'}
-                >
-                  已完成
-                </button>
-              </div>
-
-              <div className="seg" role="group" aria-label="每轮词数">
-                {ROUND_SIZES.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`seg-btn${size === n ? ' on' : ''}`}
-                    onClick={() => pickSize(n)}
-                    aria-pressed={size === n}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="side-group">
               <button
                 type="button"
@@ -212,7 +140,7 @@ export default function BookDialog({ book, onClose }: Props) {
                   <polyline points="23 4 23 10 17 10" />
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                 </svg>
-                刷新
+                换一轮
               </button>
 
               <button
