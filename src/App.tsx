@@ -318,7 +318,7 @@ export default function App() {
           <kbd>→</kbd> 翻页
         </span>
         <span>
-          <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义 + 朗读'}
+          <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
         </span>
         <span>
           <kbd>Enter</kbd> 完成
