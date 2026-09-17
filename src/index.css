@@ -350,6 +350,48 @@ kbd {
   transform: translateY(0);
 }
 
+/* 学习页左上角返回按钮（固定视口） */
+.back-btn {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 160ms ease, background 160ms ease,
+    border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.back-btn:hover,
+.back-btn:active {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 8px 28px -6px var(--accent-ring);
+}
+
+.back-btn:hover {
+  transform: translateY(-1px);
+}
+
+.back-btn:active {
+  transform: translateY(0);
+}
+
+.back-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
 /* ---------- 动画 ---------- */
 
 /* 入场：整体浮现 */

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Word } from '../words'
 import { words } from '../words'
 
@@ -97,6 +98,7 @@ function startState(): DeckState {
 }
 
 export default function Study() {
+  const navigate = useNavigate()
   const [state, setState] = useState<DeckState>(startState)
   const { deck, center, completed } = state
   const centerIdx: number | null = deck.length ? deck[center] : null
@@ -270,6 +272,28 @@ export default function Study() {
 
   return (
     <div className="app">
+      <button
+        type="button"
+        className="back-btn"
+        onClick={() => navigate('/')}
+        aria-label="返回主页"
+        title="返回主页"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+      </button>
       <div className="cards">
         {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
         {deck.map((wordIndex, p) => {
