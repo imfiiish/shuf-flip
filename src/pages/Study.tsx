@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Word } from '../words'
 import { words } from '../words'
@@ -113,6 +114,48 @@ export default function Study() {
   // 被「完成」的卡片：飞出动画的临时副本
   const [ghosts, setGhosts] = useState<Ghost[]>([])
   const ghostId = useRef(0)
+
+  // 悬浮光晕：按「指针位置」命中，而不是 CSS :hover。
+  // 否则卡片位移后，:hover 会粘在移动的那个元素上（光晕跟着卡片而不是鼠标）。
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const pointer = useRef<{ x: number; y: number } | null>(null)
+
+  const updateHover = useCallback(() => {
+    const pt = pointer.current
+    if (!pt) return
+    const el = document.elementFromPoint(pt.x, pt.y)
+    const cardEl = el?.closest<HTMLElement>('.card[data-idx]')
+    const idx = cardEl ? Number(cardEl.dataset.idx) : NaN
+    setHoveredId(Number.isNaN(idx) ? null : idx)
+  }, [])
+
+  const onCardsMouseMove = useCallback(
+    (e: ReactMouseEvent) => {
+      pointer.current = { x: e.clientX, y: e.clientY }
+      updateHover()
+    },
+    [updateHover],
+  )
+
+  const onCardsMouseLeave = useCallback(() => {
+    pointer.current = null
+    setHoveredId(null)
+  }, [])
+
+  // 翻页动画期间持续按指针位置重新命中，让光晕跟着「位置」走
+  useEffect(() => {
+    if (!pointer.current) return
+    let raf = 0
+    const start = performance.now()
+    const tick = () => {
+      updateHover()
+      if (performance.now() - start < 520) {
+        raf = requestAnimationFrame(tick)
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [center, deck, updateHover])
 
   const addGhost = useCallback((word: Word) => {
     const id = ++ghostId.current
@@ -294,7 +337,11 @@ export default function Study() {
           <polyline points="12 19 5 12 12 5" />
         </svg>
       </button>
-      <div className="cards">
+      <div
+        className="cards"
+        onMouseMove={onCardsMouseMove}
+        onMouseLeave={onCardsMouseLeave}
+      >
         {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
         {deck.map((wordIndex, p) => {
           const slot = slotOf(p, center, deck.length)
@@ -303,9 +350,11 @@ export default function Study() {
           return (
             <Card
               key={wordIndex}
+              idx={wordIndex}
               word={words[wordIndex]}
               slot={slot}
               revealed={slot === 0 && revealed}
+              hovered={hoveredId === wordIndex}
               dots={revealCounts[wordIndex] || 0}
               onClick={() => {
                 if (slot === 0) toggleReveal()
@@ -357,18 +406,31 @@ export default function Study() {
 
 type CardProps = {
   word: Word
+  idx: number
   slot: Slot
   revealed?: boolean
+  hovered?: boolean
   dots?: number
   onClick?: () => void
 }
 
-function Card({ word, slot, revealed = false, dots = 0, onClick }: CardProps) {
+function Card({
+  word,
+  idx,
+  slot,
+  revealed = false,
+  hovered = false,
+  dots = 0,
+  onClick,
+}: CardProps) {
   const isCenter = slot === 0
 
   return (
     <div
-      className={`card pos-${slot}${isCenter ? ' active' : ''}`}
+      className={`card pos-${slot}${isCenter ? ' active' : ''}${
+        hovered ? ' hovered' : ''
+      }`}
+      data-idx={idx}
       onClick={onClick}
     >
       {/* 展开过几次：顶部居中的实心圆 */}
