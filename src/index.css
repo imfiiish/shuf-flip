@@ -95,7 +95,8 @@ body {
   z-index: 3;
   border-color: var(--accent);
   background: var(--card-active);
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  /* 描边 + 柔和外光晕 */
+  box-shadow: 0 0 0 3px var(--accent-ring), 0 10px 42px -4px var(--accent-ring);
 }
 
 /* 右侧相邻：缩小 75%（540→405），露出 4/5（被中间遮 1/5） */
@@ -145,6 +146,13 @@ body {
   transform: translate(-50%, -50%) translateX(310px) scale(0.75);
   opacity: 0.5;
   z-index: 2;
+}
+
+/* 两侧卡：淡一点的柔和光晕 */
+.pos-1,
+.pos--1,
+.pos-S {
+  box-shadow: 0 8px 28px -6px var(--accent-ring);
 }
 
 .inner {
