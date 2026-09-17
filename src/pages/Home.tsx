@@ -3,23 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { logout } from '../auth'
 import type { Book } from '../books'
 import { loadBooks, saveBooks } from '../books'
+import BookDialog from '../components/BookDialog'
 import TagPicker from '../components/TagPicker'
 import ThemeToggle from '../components/ThemeToggle'
-import { sameFilter, saveFilter } from '../filter'
+import { sameFilter } from '../filter'
 
 export default function Home() {
   const navigate = useNavigate()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [activeBook, setActiveBook] = useState<Book | null>(null)
   const [books, setBooks] = useState<Book[]>(loadBooks)
+  const [confirmId, setConfirmId] = useState<number | null>(null)
 
   useEffect(() => {
     saveBooks(books)
   }, [books])
-
-  const openBook = (book: Book) => {
-    saveFilter(book.filter)
-    navigate('/study')
-  }
 
   return (
     <div className="page home-page">
@@ -27,16 +25,77 @@ export default function Home() {
       <div className="bookshelf">
         <div className="bookshelf-inner">
           {books.map((book) => (
-            <button
+            <div
+              className="book-item"
               key={book.id}
-              type="button"
-              className="book"
-              onClick={() => openBook(book)}
-              title={`打开 ${book.name}`}
+              onMouseLeave={() =>
+                setConfirmId((c) => (c === book.id ? null : c))
+              }
             >
-              <span className="book-title">{book.name}</span>
-              <span className="book-meta">{book.count} 词</span>
-            </button>
+              <button
+                type="button"
+                className="book"
+                onClick={() => {
+                  setConfirmId(null)
+                  setActiveBook(book)
+                }}
+                title={`打开 ${book.name}`}
+              >
+                <span className="book-title">{book.name}</span>
+                <span className="book-meta">{book.count} 词</span>
+              </button>
+              <button
+                type="button"
+                className={`book-del${confirmId === book.id ? ' confirm' : ''}`}
+                onClick={() => {
+                  if (confirmId === book.id) {
+                    setBooks((b) => b.filter((x) => x.id !== book.id))
+                    setActiveBook((a) => (a?.id === book.id ? null : a))
+                    setConfirmId(null)
+                  } else {
+                    setConfirmId(book.id)
+                  }
+                }}
+                aria-label={
+                  confirmId === book.id
+                    ? `再点一次删除 ${book.name}`
+                    : `删除 ${book.name}`
+                }
+                title={
+                  confirmId === book.id ? '再点一次确认删除' : `删除 ${book.name}`
+                }
+              >
+                {confirmId === book.id ? (
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                )}
+              </button>
+            </div>
           ))}
 
           <button
@@ -91,6 +150,10 @@ export default function Home() {
           <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
       </button>
+
+      {activeBook && (
+        <BookDialog book={activeBook} onClose={() => setActiveBook(null)} />
+      )}
 
       {pickerOpen && (
         <TagPicker

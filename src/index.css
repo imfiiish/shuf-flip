@@ -482,6 +482,64 @@ kbd {
   padding: 12px;
 }
 
+.book-item {
+  position: relative;
+  width: 188px;
+}
+
+.book-item .book {
+  width: 100%;
+}
+
+/* 右上角删除按钮：hover / 键盘聚焦时出现 */
+.book-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: var(--card-active);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease, transform 180ms ease, color 140ms ease,
+    background 140ms ease, border-color 140ms ease;
+}
+
+.book-item:hover .book-del,
+.book-del:focus-visible {
+  opacity: 1;
+}
+
+.book-item:hover .book-del {
+  transform: translateY(-3px);
+}
+
+.book-del:hover {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* 二次确认态：红底 + 打勾 */
+.book-del.confirm {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-ring);
+}
+
+.book-del:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--danger-ring);
+}
+
 .book {
   position: relative;
   width: 188px;
@@ -511,7 +569,8 @@ kbd {
   background: var(--accent);
 }
 
-.book:hover {
+.book:hover,
+.book-item:hover .book {
   transform: translateY(-3px);
   border-color: var(--accent);
   box-shadow: 0 14px 36px -12px var(--accent-ring);
@@ -593,6 +652,141 @@ kbd {
   right: 14px;
   width: 36px;
   height: 36px;
+}
+
+/* ---------- 词书弹窗（点词书后）---------- */
+.book-modal {
+  max-width: 900px;
+  align-items: stretch;
+}
+
+.book-modal .modal-title {
+  text-align: center;
+}
+
+/* 左右两栏 */
+.book-body {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  width: 100%;
+}
+
+/* 左栏：可滚动词表 */
+.book-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.book-list-head {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.book-list {
+  min-height: 0;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  scrollbar-width: none;
+}
+
+.book-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.word-row {
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* 本轮抽中的词（靠前 size 个）：左侧竖条 + accent 文字，不用整条底色 */
+.word-row.round {
+  position: relative;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.word-row.round::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.word-row.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* 右栏：切换 + 控件 */
+.book-side {
+  flex: 0 0 176px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg-btn {
+  flex: 1;
+  font: inherit;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--border);
+}
+
+.seg-btn.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.side-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding-left: 14px;
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+.book-empty {
+  margin: 8px;
+  color: var(--muted);
 }
 
 @keyframes fade-in {

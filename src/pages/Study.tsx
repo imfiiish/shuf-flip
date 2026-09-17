@@ -11,6 +11,7 @@ import {
   saveCompleted,
   saveRevealCounts,
 } from '../progress'
+import { loadSession } from '../session'
 import { tagRank } from '../tags'
 import type { Word } from '../words'
 import { words } from '../words'
@@ -82,37 +83,43 @@ type Ghost = { id: number; word: Word }
 
 export default function Study() {
   const navigate = useNavigate()
-  // 按「选择 tag」弹窗保存的过滤条件，筛出这本书要学的词（words 里的原始索引）
-  const { key, allIndices } = useMemo(() => {
+  // 词书筛选 + 可选的一组（session）；位置 center 按这一组单独记
+  const { centerKey, allIndices } = useMemo(() => {
     const f = loadFilter()
-    return {
-      key: filterKey(f),
-      allIndices: words.map((_, i) => i).filter((i) => matchesFilter(words[i], f)),
+    const fk = filterKey(f)
+    const book = words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
+    const s = loadSession()
+    if (s && s.key === fk) {
+      const idx = s.indices.filter((i) => book.includes(i))
+      if (idx.length > 0) {
+        return { centerKey: `${fk}|${idx.join('.')}`, allIndices: idx }
+      }
     }
+    return { centerKey: fk, allIndices: book }
   }, [])
   const TOTAL = allIndices.length
-  // 词汇状态全局互通（已完成的词不再出现）；位置 center 按词书恢复
+  // 词汇状态全局互通（已完成的词不再出现）；位置按本次会话恢复
   const [state, setState] = useState<DeckState>(() => {
     const done = loadCompleted()
     const deck = allIndices.filter((i) => !done.includes(i))
     const center = deck.length
-      ? Math.min(loadCenter(key), deck.length - 1)
+      ? Math.min(loadCenter(centerKey), deck.length - 1)
       : 0
     return { deck, center, completed: done }
   })
   const { deck, center, completed } = state
 
-  // 这本书里已完成的词数（分母用这本书的总词数）
+  // 这本书/这一组里已完成的词数
   const completedCount = allIndices.filter((i) => completed.includes(i)).length
 
-  // 已完成（全局词状态）与位置（本书）分别写回
+  // 已完成（全局词状态）与位置（本次会话）分别写回
   useEffect(() => {
     saveCompleted(completed)
   }, [completed])
 
   useEffect(() => {
-    saveCenter(key, center)
-  }, [key, center])
+    saveCenter(centerKey, center)
+  }, [centerKey, center])
   const centerIdx: number | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
   // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
