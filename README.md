@@ -2,6 +2,8 @@
 
 一个用 **React + Vite + TypeScript** 写的三卡片环形滑动背单词页。
 
+![截图](docs/screenshot.png)
+
 ## 功能
 
 - 左 / 中 / 右三张卡，中间大、两边小，环形无缝滑动（首尾相接）
