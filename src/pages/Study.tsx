@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import { loadFilter, matchesFilter } from '../filter'
+import { loadRevealCounts, saveRevealCounts } from '../progress'
 import { tagRank } from '../tags'
 import type { Word } from '../words'
 import { words } from '../words'
@@ -88,8 +89,14 @@ export default function Study() {
   const { deck, center, completed } = state
   const centerIdx: number | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
-  // 每个词「展开释义」的次数（只记 隐藏→显示 那次）
-  const [revealCounts, setRevealCounts] = useState<Record<number, number>>({})
+  // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
+  const [revealCounts, setRevealCounts] = useState<Record<number, number>>(
+    loadRevealCounts,
+  )
+
+  useEffect(() => {
+    saveRevealCounts(revealCounts)
+  }, [revealCounts])
 
   // 重做栈：被撤销（还原）的词，等待重新完成
   const [redoStack, setRedoStack] = useState<number[]>([])
