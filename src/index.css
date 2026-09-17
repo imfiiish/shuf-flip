@@ -66,6 +66,9 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+  /* 整个页面不可选中（点词即复制） */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .app {
@@ -635,6 +638,12 @@ kbd {
   align-items: stretch;
 }
 
+/* 词书弹窗的定位锚：弹窗多大它就多大，便于把提示贴在弹窗上方 */
+.modal-anchor {
+  position: relative;
+  width: min(900px, 100%);
+}
+
 .book-modal .modal-title {
   text-align: center;
 }
@@ -678,11 +687,44 @@ kbd {
 }
 
 .word-row {
-  padding: 7px 10px;
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 7px 10px 7px 20px;
+  border: 0;
   border-radius: 8px;
+  background: transparent;
+  font: inherit;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: padding-left 140ms ease;
+}
+
+/* 左侧绿色小竖条：hover 时出现在「其他词首字母」的位置 */
+.word-row::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+/* hover：绿条顶在原来首字母的位置，当前词被推出去 */
+.word-row:hover {
+  padding-left: 32px;
+}
+
+.word-row:hover::before {
+  opacity: 1;
 }
 
 /* 右栏：和词表同一行 */
@@ -716,6 +758,20 @@ kbd {
 .book-empty {
   margin: 8px;
   color: var(--muted);
+}
+
+/* 点击词复制的提示：以弹窗为参照，贴在弹窗上方 */
+.copy-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 28px);
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 9px 33px;
+  font-size: 0.79rem;
+  cursor: default;
+  pointer-events: none;
+  animation: fade-in 160ms ease-out;
 }
 
 @keyframes fade-in {

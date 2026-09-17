@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Book } from '../../lib/books'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
@@ -19,6 +19,23 @@ function shuffle(pool: number[]): number[] {
     arr[j] = t
   }
   return arr
+}
+
+/** clipboard API 不可用时的兜底复制 */
+function fallbackCopy(text: string): boolean {
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch {
+    return false
+  }
 }
 
 type Props = {
@@ -59,6 +76,29 @@ export default function BookDialog({ book, onClose }: Props) {
 
   const round = order.slice(0, ROUND_SIZE)
 
+  // 点词 → 复制到剪贴板，并弹一下提示
+  const [copied, setCopied] = useState<string | null>(null)
+  const copyTimer = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => window.clearTimeout(copyTimer.current), [])
+
+  const showCopied = (word: string) => {
+    setCopied(word)
+    window.clearTimeout(copyTimer.current)
+    copyTimer.current = window.setTimeout(() => setCopied(null), 1100)
+  }
+
+  const copy = (word: string) => {
+    const p = navigator.clipboard?.writeText(word)
+    if (p) {
+      p.then(() => showCopied(word)).catch(() => {
+        if (fallbackCopy(word)) showCopied(word)
+      })
+    } else if (fallbackCopy(word)) {
+      showCopied(word)
+    }
+  }
+
   const start = () => {
     if (round.length === 0) return
     saveFilter(book.filter)
@@ -68,13 +108,17 @@ export default function BookDialog({ book, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal book-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={book.name}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal-anchor">
+        {copied && (
+          <div className="btn btn-primary copy-toast">已复制 {copied}</div>
+        )}
+        <div
+          className="modal book-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={book.name}
+          onClick={(e) => e.stopPropagation()}
+        >
         <button
           type="button"
           className="icon-btn modal-close"
@@ -110,9 +154,15 @@ export default function BookDialog({ book, onClose }: Props) {
               <p className="book-empty">这本词书还没有词</p>
             ) : (
               round.map((i) => (
-                <span className="word-row" key={i}>
+                <button
+                  type="button"
+                  className="word-row"
+                  key={i}
+                  onClick={() => copy(words[i].word)}
+                  title="点击复制"
+                >
                   {words[i].word}
-                </span>
+                </button>
               ))
             )}
           </div>
@@ -154,6 +204,7 @@ export default function BookDialog({ book, onClose }: Props) {
             </div>
           </aside>
         </div>
+      </div>
       </div>
     </div>
   )
