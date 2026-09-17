@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { ThemeMode } from '../theme'
-import { applyTheme, getThemeMode, saveThemeMode } from '../theme'
+import type { ThemeMode } from '../lib/theme'
+import { applyTheme, getThemeMode, saveThemeMode } from '../lib/theme'
 
 // 循环顺序：自动 → 亮 → 暗 → 自动
 const ORDER: ThemeMode[] = ['auto', 'light', 'dark']

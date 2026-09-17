@@ -1,4 +1,6 @@
 // 当前学习会话：从词书弹窗里选中的那一组词
+import { readJSON, writeJSON } from './storage'
+
 export type Session = {
   /** 所属词书的 filterKey */
   key: string
@@ -9,21 +11,18 @@ export type Session = {
 const KEY = 'vocab-session'
 
 export function loadSession(): Session | null {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return null
-    const s = JSON.parse(raw) as { key?: unknown; indices?: unknown }
-    if (typeof s?.key !== 'string' || !Array.isArray(s.indices)) return null
+  return readJSON<Session>(KEY, (v) => {
+    if (typeof v !== 'object' || v === null) return null
+    const s = v as { key?: unknown; indices?: unknown }
+    if (typeof s.key !== 'string' || !Array.isArray(s.indices)) return null
     const indices = s.indices.filter(
       (x): x is number => Number.isInteger(x) && x >= 0,
     )
     if (indices.length === 0) return null
     return { key: s.key, indices }
-  } catch {
-    return null
-  }
+  })
 }
 
 export function saveSession(s: Session): void {
-  localStorage.setItem(KEY, JSON.stringify(s))
+  writeJSON(KEY, s)
 }

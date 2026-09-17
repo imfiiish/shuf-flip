@@ -2,17 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
-import { filterKey, loadFilter, matchesFilter } from '../filter'
+import type { Word } from '../data/words'
+import { words } from '../data/words'
+import { filterKey, loadFilter, matchesFilter } from '../lib/filter'
 import {
   loadCenter,
   loadRevealCounts,
   saveCenter,
   saveRevealCounts,
-} from '../progress'
-import { loadSession } from '../session'
-import { tagRank } from '../tags'
-import type { Word } from '../words'
-import { words } from '../words'
+} from '../lib/progress'
+import { loadSession } from '../lib/session'
+import { tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'

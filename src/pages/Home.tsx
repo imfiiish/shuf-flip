@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout } from '../auth'
-import type { Book } from '../books'
-import { loadBooks, saveBooks } from '../books'
-import BookDialog from '../components/BookDialog'
-import TagPicker from '../components/TagPicker'
 import ThemeToggle from '../components/ThemeToggle'
-import { sameFilter } from '../filter'
+import { logout } from '../lib/auth'
+import type { Book } from '../lib/books'
+import { loadBooks, saveBooks } from '../lib/books'
+import { sameFilter } from '../lib/filter'
+import BookDialog from './home/BookDialog'
+import TagPicker from './home/TagPicker'
 
 export default function Home() {
   const navigate = useNavigate()

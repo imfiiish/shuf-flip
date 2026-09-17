@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { TagFilter, TagMode } from '../filter'
-import { loadFilter, matchesFilter, sameFilter } from '../filter'
-import { allTags } from '../tags'
-import { words } from '../words'
+import type { TagFilter, TagMode } from '../../lib/filter'
+import { loadFilter, matchesFilter, sameFilter } from '../../lib/filter'
+import { allTags } from '../../lib/tags'
+import { words } from '../../data/words'
 
 const TAGS = allTags()
 

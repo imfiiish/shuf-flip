@@ -1,16 +1,18 @@
 // 主题模式：自动（跟随系统）/ 亮 / 暗，持久化到 localStorage
+import { readString, writeString } from './storage'
+
 export type ThemeMode = 'auto' | 'light' | 'dark'
 
 // 需与 index.html 里首屏内联脚本的 key 保持一致
 const KEY = 'vocab-theme'
 
 export function getThemeMode(): ThemeMode {
-  const v = localStorage.getItem(KEY)
+  const v = readString(KEY)
   return v === 'light' || v === 'dark' ? v : 'auto'
 }
 
 export function saveThemeMode(mode: ThemeMode): void {
-  localStorage.setItem(KEY, mode)
+  writeString(KEY, mode)
 }
 
 /** 把模式解析成实际生效的 light / dark */

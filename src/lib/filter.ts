@@ -1,4 +1,5 @@
-import type { Word } from './words'
+import type { Word } from '../data/words'
+import { readJSON, writeJSON } from './storage'
 
 /** 选中 tag 的两态：包含 / 排除（不选 = 不在 map 里） */
 export type TagMode = 'include' | 'exclude'
@@ -8,7 +9,6 @@ export type TagFilter = {
   exclude: string[]
 }
 
-// 与 index.html / theme.ts 一样，用 localStorage 暂存
 const KEY = 'vocab-filter'
 
 function asStringArray(v: unknown): string[] {
@@ -16,18 +16,19 @@ function asStringArray(v: unknown): string[] {
 }
 
 export function loadFilter(): TagFilter {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return { include: [], exclude: [] }
-    const p = JSON.parse(raw) as { include?: unknown; exclude?: unknown }
-    return { include: asStringArray(p?.include), exclude: asStringArray(p?.exclude) }
-  } catch {
-    return { include: [], exclude: [] }
-  }
+  return (
+    readJSON<TagFilter>(KEY, (v) => {
+      const p = v as { include?: unknown; exclude?: unknown } | null
+      return {
+        include: asStringArray(p?.include),
+        exclude: asStringArray(p?.exclude),
+      }
+    }) ?? { include: [], exclude: [] }
+  )
 }
 
 export function saveFilter(f: TagFilter): void {
-  localStorage.setItem(KEY, JSON.stringify(f))
+  writeJSON(KEY, f)
 }
 
 /** 过滤规则：排除优先；没选包含 tag 时从全部开始；包含之间是 OR */

@@ -1,4 +1,4 @@
-import { words } from './words'
+import { words } from '../data/words'
 
 // tags 展示顺序（CEFR.A1/A2/B1/B2/C1/C2 都归到 CEFR；未列出的排最后）
 export const TAG_ORDER = [

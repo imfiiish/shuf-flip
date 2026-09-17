@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { login } from '../auth'
+import { login } from '../lib/auth'
 
 export default function Login() {
   const navigate = useNavigate()

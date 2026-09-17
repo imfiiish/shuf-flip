@@ -1,4 +1,5 @@
 import type { TagFilter } from './filter'
+import { readJSON, writeJSON } from './storage'
 
 /** 一本词书 */
 export type Book = {
@@ -24,16 +25,13 @@ function isBook(v: unknown): v is Book {
 }
 
 export function loadBooks(): Book[] {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter(isBook) : []
-  } catch {
-    return []
-  }
+  return (
+    readJSON<Book[]>(KEY, (v) =>
+      Array.isArray(v) ? v.filter(isBook) : [],
+    ) ?? []
+  )
 }
 
 export function saveBooks(books: Book[]): void {
-  localStorage.setItem(KEY, JSON.stringify(books))
+  writeJSON(KEY, books)
 }

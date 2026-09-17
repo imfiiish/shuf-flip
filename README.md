@@ -98,7 +98,7 @@
 
 ## 数据
 
-- 词条在 [`src/words.ts`](src/words.ts)：**60 个词**，覆盖 19 个 tag（每个 tag 至少 5 张）、纯 `a-z` 单词、无短语
+- 词条在 [`src/data/words.ts`](src/data/words.ts)：**60 个词**，覆盖 19 个 tag（每个 tag 至少 5 张）、纯 `a-z` 单词、无短语
 - 词条由上层 `words.json`（ECDICT 风格：`phonetic / definition / tags / audio_file`）筛选生成
 - 音频在 `public/audio/`（60 个 mp3，约 720 KB），通过 `/audio/<audio_file>` 引用
 
@@ -120,23 +120,27 @@ npm run preview    # 预览打包结果
 src/
 ├── main.tsx                入口
 ├── App.tsx                 路由 + 登录守卫
-├── pages/
-│   ├── Login.tsx           /login 登录
-│   ├── Home.tsx            /  词书架
-│   └── Study.tsx           /study 三卡学习（只管翻）
-├── components/
-│   ├── BookDialog.tsx      词书弹窗（本轮 20 词 / 换一轮 / 开始）
-│   ├── TagPicker.tsx       新建词书的 tag 选择弹窗
+├── index.css               全部样式
+├── data/
+│   └── words.ts            词条数据
+├── lib/                    领域逻辑 + 持久化
+│   ├── storage.ts          localStorage 统一封装（读写 + 校验）
+│   ├── tags.ts             tag 排序 / 收集
+│   ├── filter.ts           tag 筛选规则
+│   ├── books.ts            词书存取
+│   ├── session.ts          当前轮次存取
+│   ├── progress.ts         展开次数 + 位置
+│   ├── rounds.ts           每轮的随机顺序
+│   ├── theme.ts            主题模式
+│   └── auth.ts             登录态
+├── components/             跨页面共享组件
 │   ├── ThemeToggle.tsx     主题切换按钮
 │   └── BackButton.tsx      左上角返回按钮
-├── words.ts                词条数据
-├── tags.ts                 tag 排序 / 收集
-├── filter.ts               tag 筛选规则
-├── books.ts                词书存取
-├── session.ts              当前轮次存取
-├── progress.ts             展开次数 + 位置
-├── rounds.ts               每轮的随机顺序
-├── theme.ts                主题模式
-├── auth.ts                 登录态
-└── index.css               全部样式
+└── pages/
+    ├── Login.tsx           /login 登录
+    ├── Home.tsx            /  词书架
+    ├── Study.tsx           /study 三卡学习（只管翻）
+    └── home/
+        ├── BookDialog.tsx  词书弹窗（本轮 20 词 / 换一轮 / 开始）
+        └── TagPicker.tsx   新建词书的 tag 选择弹窗
 ```

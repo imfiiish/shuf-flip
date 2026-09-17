@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isLoggedIn } from './auth'
+import { isLoggedIn } from './lib/auth'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Study from './pages/Study'

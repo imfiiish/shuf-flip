@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Book } from '../books'
-import { filterKey, matchesFilter, saveFilter } from '../filter'
-import { loadOrder, saveOrder } from '../rounds'
-import { saveSession } from '../session'
-import { words } from '../words'
+import type { Book } from '../../lib/books'
+import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
+import { loadOrder, saveOrder } from '../../lib/rounds'
+import { saveSession } from '../../lib/session'
+import { words } from '../../data/words'
 
 /** 每轮推送的词数 */
 const ROUND_SIZE = 20
@@ -149,7 +149,7 @@ export default function BookDialog({ book, onClose }: Props) {
                 onClick={start}
                 disabled={round.length === 0}
               >
-                开始学习 {round.length}
+                开始学习
               </button>
             </div>
           </aside>
