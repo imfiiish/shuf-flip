@@ -37,6 +37,9 @@ const SIDE = 2
 const STAGE_W = 1200
 const STAGE_H = 360
 
+// 切窗口/失焦：短于此时长（ms）的忽略，避免点地址栏/通知误判为离开
+const AWAY_MIN_MS = 1000
+
 /** 卡片槽位：数字为环形位置，'B' 偶数张的正背面，'S' 只剩两张时的右侧位 */
 type Slot = number | 'B' | 'S'
 
@@ -161,6 +164,10 @@ export default function Study() {
   const roundIndexRef = useRef(1)
   const leaveFnRef = useRef<() => void>(() => {})
   const exitSentRef = useRef(false)
+  // 切窗口计时：awayAtRef = 本次离开开始时刻；before/after 分别累计两个阶段的离开时长
+  const awayAtRef = useRef<number | null>(null)
+  const awayBeforeRef = useRef(0)
+  const awayAfterRef = useRef(0)
 
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
@@ -206,26 +213,53 @@ export default function Study() {
     return () => cancelAnimationFrame(raf)
   }, [center, deck, updateHover])
 
-  // 离开当前中心卡：补一条 card_leave（前/后停留）
+  // 结算一段「离开」：按是否已展开，累加到对应阶段（忽略 <1s 的短暂失焦）
+  const closeAway = useCallback((now: number) => {
+    const start = awayAtRef.current
+    if (start === null) return
+    awayAtRef.current = null
+    const gap = now - start
+    if (gap < AWAY_MIN_MS) return
+    if (firstRevealRef.current === null) awayBeforeRef.current += gap
+    else awayAfterRef.current += gap
+  }, [])
+
+  // 进入一张卡：重置计时与离开累计
+  const beginCard = useCallback(
+    (name: string, dir: 'init' | 'left' | 'right') => {
+      viewStartRef.current = performance.now()
+      firstRevealRef.current = null
+      awayBeforeRef.current = 0
+      awayAfterRef.current = 0
+      awayAtRef.current =
+        !document.hasFocus() || document.hidden ? performance.now() : null
+      logEvent('card_view', { word: name, dir, n: revealCounts[name] || 0 })
+    },
+    [revealCounts],
+  )
+
+  // 离开当前中心卡：补一条 card_leave（前/后停留，已扣除切窗口时间）
   const emitCardLeave = useCallback(() => {
     if (!centerName || viewStartRef.current === 0) return
     const now = performance.now()
-    const before =
+    closeAway(now)
+    const rawBefore =
       firstRevealRef.current !== null
-        ? Math.round(firstRevealRef.current - viewStartRef.current)
-        : Math.round(now - viewStartRef.current)
-    const after =
-      firstRevealRef.current !== null
-        ? Math.round(now - firstRevealRef.current)
-        : 0
+        ? firstRevealRef.current - viewStartRef.current
+        : now - viewStartRef.current
+    const rawAfter =
+      firstRevealRef.current !== null ? now - firstRevealRef.current : 0
     logEvent('card_leave', {
       word: centerName,
-      dwellBeforeMs: before,
-      dwellAfterMs: after,
+      dwellBeforeMs: Math.max(0, Math.round(rawBefore - awayBeforeRef.current)),
+      dwellAfterMs: Math.max(0, Math.round(rawAfter - awayAfterRef.current)),
     })
     viewStartRef.current = 0
     firstRevealRef.current = null
-  }, [centerName])
+    awayBeforeRef.current = 0
+    awayAfterRef.current = 0
+    awayAtRef.current = null
+  }, [centerName, closeAway])
   leaveFnRef.current = emitCardLeave
 
   // 会话结束：一次只发一条
@@ -248,24 +282,33 @@ export default function Study() {
     beginSession()
     logEvent('study_enter', { filterKey: fk, deckSize: TOTAL })
     logEvent('round_new', { index: roundIndexRef.current, words: deck })
-    viewStartRef.current = performance.now()
-    firstRevealRef.current = null
-    if (centerName) {
-      logEvent('card_view', {
-        word: centerName,
-        dir: 'init',
-        n: revealCounts[centerName] || 0,
-      })
-    }
+    if (centerName) beginCard(centerName, 'init')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 切窗口/切标签：记录可见性与焦点，供分析剔除空闲时间
+  // 切窗口/切标签：记录可见性与焦点，并结算「离开」时长（hidden 或 blur）
   useEffect(() => {
-    const onVis = () =>
+    const syncAway = () => {
+      const awayNow = !document.hasFocus() || document.hidden
+      const now = performance.now()
+      if (awayNow) {
+        if (awayAtRef.current === null) awayAtRef.current = now
+      } else {
+        closeAway(now)
+      }
+    }
+    const onVis = () => {
       logEvent('visibility', { state: document.visibilityState })
-    const onFocus = () => logEvent('focus', { state: 'focus' })
-    const onBlur = () => logEvent('focus', { state: 'blur' })
+      syncAway()
+    }
+    const onFocus = () => {
+      logEvent('focus', { state: 'focus' })
+      syncAway()
+    }
+    const onBlur = () => {
+      logEvent('focus', { state: 'blur' })
+      syncAway()
+    }
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('focus', onFocus)
     window.addEventListener('blur', onBlur)
@@ -274,7 +317,7 @@ export default function Study() {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('blur', onBlur)
     }
-  }, [])
+  }, [closeAway])
 
   // 页面卸载（关标签/刷新/外跳）：尽力补一条 study_exit 并立即发出
   useEffect(() => {
@@ -307,19 +350,11 @@ export default function Study() {
       emitCardLeave()
       const next = (center + delta + TOTAL) % TOTAL
       const name = deck[next]
-      viewStartRef.current = performance.now()
-      firstRevealRef.current = null
-      if (name) {
-        logEvent('card_view', {
-          word: name,
-          dir: delta > 0 ? 'right' : 'left',
-          n: revealCounts[name] || 0,
-        })
-      }
+      if (name) beginCard(name, delta > 0 ? 'right' : 'left')
       setRevealed(false)
       setCenter(next)
     },
-    [TOTAL, center, deck, emitCardLeave, revealCounts],
+    [TOTAL, center, deck, emitCardLeave, beginCard],
   )
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
@@ -363,21 +398,13 @@ export default function Study() {
     emitCardLeave()
     roundIndexRef.current += 1
     logEvent('round_new', { index: roundIndexRef.current, words: round })
-    viewStartRef.current = performance.now()
-    firstRevealRef.current = null
-    if (round[0]) {
-      logEvent('card_view', {
-        word: round[0],
-        dir: 'init',
-        n: revealCounts[round[0]] || 0,
-      })
-    }
+    if (round[0]) beginCard(round[0], 'init')
     setRevealed(false)
     setHoveredName(null)
     setDeck(round)
     setCenter(0)
     setRoundTick((t) => t + 1)
-  }, [book, fk, emitCardLeave, revealCounts])
+  }, [book, fk, emitCardLeave, beginCard])
 
   // 键盘：Space 释义 / Enter 换一轮 / H L 翻页
   useEffect(() => {
