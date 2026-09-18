@@ -84,20 +84,38 @@ body {
 
 .app {
   min-height: 100vh;
+  min-height: 100dvh; /* 移动端地址栏收起/展开时高度更准 */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 32px;
   padding: 24px;
+  /* 屏外过渡卡（.pos-±2）每侧比舞台多出 ~149px，在窄屏上会把文档撑出横向滚动条。
+     按视口裁掉多出的部分；用 clip 而非 hidden，避免纵向也被变成滚动容器 */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
-/* 舞台：所有卡片绝对定位在中心，靠 transform 环形滑动 */
-.cards {
+/* 入场动画放在这层：内层 .cards 的 transform 被缩放占用，不能再被动画覆盖。
+   本身作为 flex 子项，尺寸即缩放后的舞台，和提示行一起居中（与原来一致） */
+.stage {
   position: relative;
+  width: calc(1200px * var(--stage-scale, 1));
+  height: calc(360px * var(--stage-scale, 1));
+  animation: app-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 舞台：所有卡片绝对定位在中心，靠 transform 环形滑动。
+   内部始终按 1200×360 设计尺寸渲染，再整体等比缩放到 --stage-scale */
+.cards {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 1200px;
   height: 360px;
-  animation: app-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: scale(var(--stage-scale, 1));
+  transform-origin: top left;
 }
 
 .card {
@@ -281,6 +299,8 @@ body {
 
 .hints {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 24px;
   align-items: center;
   color: var(--muted);
@@ -386,25 +406,25 @@ kbd {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
-/* 学习页返回按钮：固定视口左上角 */
+/* 学习页返回按钮：固定视口左上角（避开刘海/圆角） */
 .back-btn {
   position: fixed;
-  top: 24px;
-  left: 24px;
+  top: max(24px, env(safe-area-inset-top));
+  left: max(24px, env(safe-area-inset-left));
 }
 
 /* 主题切换按钮：固定视口左下角 */
 .theme-toggle {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(24px, env(safe-area-inset-left));
 }
 
 /* 退出登录按钮：固定视口右下角，主题红 */
 .logout-btn {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
   color: var(--danger);
   border-color: var(--danger-ring);
 }
@@ -1055,6 +1075,22 @@ kbd {
 
 .detail .definition {
   animation: fade-up 240ms ease-out 70ms both;
+}
+
+/* 横屏手机等矮视口：收紧留白与提示行，尽量把空间让给舞台 */
+@media (max-height: 520px) {
+  .app {
+    gap: 16px;
+    padding: 12px;
+  }
+  .hints {
+    gap: 16px;
+    font-size: 0.82rem;
+  }
+  .back-btn {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+  }
 }
 
 /* 无障碍：尊重系统「减少动态效果」*/

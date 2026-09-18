@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import type { Word } from '../data/words'
@@ -34,6 +34,10 @@ function dotColors(n: number): DotColor[] {
 
 // 每侧渲染 2 张：±1 可见，±2 是屏外过渡位（保证环形无缝）
 const SIDE = 2
+
+// 舞台的设计尺寸（A1 等比缩放的基准，与 index.css 的 .cards 保持一致）
+const STAGE_W = 1200
+const STAGE_H = 360
 
 /** 卡片槽位：数字为环形位置，'B' 偶数张的正背面，'S' 只剩两张时的右侧位 */
 type Slot = number | 'B' | 'S'
@@ -73,6 +77,43 @@ export default function Study() {
   const [deck, setDeck] = useState(initialDeck)
   // 换一轮时递增，给舞台换 key → 重放进入 Study 页的入场动画（.cards 的 app-in）
   const [roundTick, setRoundTick] = useState(0)
+
+  // A1 等比缩放：舞台内部保持 1200×360 设计尺寸，按「视口 - 留白 - 提示行」算缩放比（≤1）
+  const appRef = useRef<HTMLDivElement>(null)
+  const hintsRef = useRef<HTMLDivElement>(null)
+  const [stageScale, setStageScale] = useState(() => {
+    const availW = document.documentElement.clientWidth - 48
+    const availH = document.documentElement.clientHeight - 48 - 32 - 30
+    return Math.max(0.2, Math.min(1, availW / STAGE_W, availH / STAGE_H))
+  })
+
+  useEffect(() => {
+    const app = appRef.current
+    if (!app) return
+    const update = () => {
+      // 留白/间距从计算样式读，随矮视口媒体查询自动变
+      const cs = getComputedStyle(app)
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+      const gap = parseFloat(cs.rowGap) || 0
+      const hintsH = hintsRef.current?.getBoundingClientRect().height ?? 0
+      // 用 documentElement（不含滚动条）而不是 window.innerWidth，避免高估可用宽
+      const availW = document.documentElement.clientWidth - padX
+      const availH =
+        document.documentElement.clientHeight - padY - gap - hintsH
+      setStageScale(
+        Math.max(0.2, Math.min(1, availW / STAGE_W, availH / STAGE_H)),
+      )
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    if (hintsRef.current) ro.observe(hintsRef.current)
+    window.addEventListener('resize', update)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [])
   const centerKey = useMemo(() => `${fk}|${deck.join('.')}`, [fk, deck])
   const TOTAL = deck.length
 
@@ -236,39 +277,44 @@ export default function Study() {
   }
 
   return (
-    <div className="app">
+    <div className="app" ref={appRef}>
       <BackButton to="/" label="返回主页" />
       <div
-        className="cards"
+        className="stage"
         key={roundTick}
-        onMouseMove={onCardsMouseMove}
-        onMouseLeave={onCardsMouseLeave}
+        style={{ '--stage-scale': stageScale } as CSSProperties}
       >
-        {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
-        {deck.map((wordIndex, p) => {
-          const slot = slotOf(p, center, deck.length)
-          // 数字槽位超出窗口就不渲染；'B' / 'S' 始终渲染
-          if (typeof slot === 'number' && Math.abs(slot) > SIDE) return null
-          return (
-            <Card
-              key={wordIndex}
-              idx={wordIndex}
-              word={words[wordIndex]}
-              slot={slot}
-              revealed={slot === 0 && revealed}
-              hovered={hoveredId === wordIndex}
-              dots={revealCounts[wordIndex] || 0}
-              onClick={() => {
-                if (slot === 0) toggleReveal()
-                else if (slot === 1 || slot === 'S') go(1)
-                else if (slot === -1) go(-1)
-              }}
-            />
-          )
-        })}
+        <div
+          className="cards"
+          onMouseMove={onCardsMouseMove}
+          onMouseLeave={onCardsMouseLeave}
+        >
+          {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
+          {deck.map((wordIndex, p) => {
+            const slot = slotOf(p, center, deck.length)
+            // 数字槽位超出窗口就不渲染；'B' / 'S' 始终渲染
+            if (typeof slot === 'number' && Math.abs(slot) > SIDE) return null
+            return (
+              <Card
+                key={wordIndex}
+                idx={wordIndex}
+                word={words[wordIndex]}
+                slot={slot}
+                revealed={slot === 0 && revealed}
+                hovered={hoveredId === wordIndex}
+                dots={revealCounts[wordIndex] || 0}
+                onClick={() => {
+                  if (slot === 0) toggleReveal()
+                  else if (slot === 1 || slot === 'S') go(1)
+                  else if (slot === -1) go(-1)
+                }}
+              />
+            )
+          })}
+        </div>
       </div>
 
-      <div className="hints">
+      <div className="hints" ref={hintsRef}>
         <span>
           <kbd>H</kbd>
           <kbd>L</kbd>/<kbd>←</kbd>
