@@ -18,21 +18,17 @@ import { tagRank } from '../lib/tags'
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
 
-// 「展开释义」次数 → 3 个实心圆（左到右：红、黄、绿，其余灰）
-// 三进制折叠：3 绿 = 1 黄，3 黄 = 1 红；最多显示 3 颗（超出时先舍绿）
+// 「展开释义」次数 → 3 个实心圆：
+//   1~3 次：1/2/3 绿；4~6 次：1/2/3 黄；7~9 次：1/2/3 红
+//   9 次以后照常计数，但显示停在 3 个红
+const DOT_TIERS: DotColor[] = ['g', 'y', 'r']
 function dotColors(n: number): DotColor[] {
-  const g = n % 3
-  const y = Math.floor(n / 3) % 3
-  const r = Math.floor(n / 9)
-  const out: DotColor[] = []
-  const add = (color: DotColor, count: number) => {
-    for (let i = 0; i < count && out.length < 3; i++) out.push(color)
-  }
-  add('r', r)
-  add('y', y)
-  add('g', g)
-  while (out.length < 3) out.push('empty')
-  return out
+  if (n <= 0) return ['empty', 'empty', 'empty']
+  const tier = Math.min(Math.floor((n - 1) / 3), DOT_TIERS.length - 1)
+  const filled = n >= 9 ? 3 : ((n - 1) % 3) + 1
+  return Array.from({ length: 3 }, (_, i) =>
+    i < filled ? DOT_TIERS[tier] : 'empty',
+  )
 }
 
 // 每侧渲染 2 张：±1 可见，±2 是屏外过渡位（保证环形无缝）
