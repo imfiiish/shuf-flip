@@ -1,5 +1,5 @@
 // 词书弹窗偏好：每轮的随机顺序（按词书）
-import { readJSON, writeJSON } from './storage'
+import { readMap, writeJSON } from './storage'
 
 const ORDERS_KEY = 'vocab-round-orders'
 
@@ -10,16 +10,7 @@ function isIndexArray(v: unknown): v is number[] {
 }
 
 function loadOrders(): Record<string, number[]> {
-  return (
-    readJSON<Record<string, number[]>>(ORDERS_KEY, (v) => {
-      if (typeof v !== 'object' || v === null) return {}
-      const out: Record<string, number[]> = {}
-      for (const [k, val] of Object.entries(v)) {
-        if (isIndexArray(val)) out[k] = val
-      }
-      return out
-    }) ?? {}
-  )
+  return readMap<number[]>(ORDERS_KEY, isIndexArray)
 }
 
 /** 某本词书上一轮的随机顺序（没有则 null） */

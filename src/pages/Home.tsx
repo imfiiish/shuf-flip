@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
+import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
-import { sameFilter } from '../lib/filter'
 import BookDialog from './home/BookDialog'
 import TagPicker from './home/TagPicker'
 
@@ -73,33 +73,9 @@ export default function Home() {
                 }
               >
                 {confirmId === book.id ? (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <CheckIcon />
                 ) : (
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    aria-hidden="true"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                  <CloseIcon size={14} strokeWidth={2.5} />
                 )}
               </button>
             </div>
@@ -180,7 +156,6 @@ export default function Home() {
           onConfirm={(filter, count) => {
             setBooks((b) => {
               if (b.length >= MAX_BOOKS) return b
-              if (b.some((x) => sameFilter(x.filter, filter))) return b
               return [
                 ...b,
                 { id: Date.now(), name: '词书', filter, count },

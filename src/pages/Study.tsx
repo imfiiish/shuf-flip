@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import type { Word } from '../data/words'
 import { words } from '../data/words'
+import { preloadAudio, useAudioPlayer } from '../lib/audio'
 import { filterKey, loadFilter, matchesFilter } from '../lib/filter'
 import {
   loadCenter,
@@ -18,35 +19,18 @@ import { tagRank } from '../lib/tags'
 type DotColor = 'r' | 'y' | 'g' | 'empty'
 
 // 「展开释义」次数 → 3 个实心圆（左到右：红、黄、绿，其余灰）
-// 规则：先加绿；满 3 个再 +1 时把绿合成 1 个黄；无绿且 3 黄时合成 1 个红
+// 三进制折叠：3 绿 = 1 黄，3 黄 = 1 红；最多显示 3 颗（超出时先舍绿）
 function dotColors(n: number): DotColor[] {
-  let g = 0
-  let y = 0
-  let r = 0
-  for (let i = 0; i < n; i++) {
-    if (g + y + r < 3) g += 1
-    else if (g > 0) {
-      g = 0
-      y += 1
-    } else if (y === 3) {
-      y = 0
-      r += 1
-    } else if (y > 0) {
-      y -= 1
-      r += 1
-    } else {
-      r += 1
-    }
-    while (g + y + r > 3) {
-      if (g > 0) g -= 1
-      else if (y > 0) y -= 1
-      else r -= 1
-    }
-  }
+  const g = n % 3
+  const y = Math.floor(n / 3) % 3
+  const r = Math.floor(n / 9)
   const out: DotColor[] = []
-  for (let i = 0; i < r; i++) out.push('r')
-  for (let i = 0; i < y; i++) out.push('y')
-  for (let i = 0; i < g; i++) out.push('g')
+  const add = (color: DotColor, count: number) => {
+    for (let i = 0; i < count && out.length < 3; i++) out.push(color)
+  }
+  add('r', r)
+  add('y', y)
+  add('g', g)
   while (out.length < 3) out.push('empty')
   return out
 }
@@ -169,40 +153,12 @@ export default function Study() {
     [TOTAL],
   )
 
-  // 音频：按需播放。重播时先停掉上一次再新建实例，
-  // 避免 currentTime=0 + play() 在快速连按时抢跑/叠加
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
+  const play = useAudioPlayer()
 
-  // 预加载这一轮的音频，首次播放不延迟
   useEffect(() => {
-    deck.forEach((i) => {
-      const a = new Audio(
-        `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
-      )
-      a.preload = 'auto'
-    })
+    preloadAudio(deck.map((i) => words[i].audio_file))
   }, [deck])
-
-  // 卸载时停掉正在播的
-  useEffect(
-    () => () => {
-      audioRef.current?.pause()
-      audioRef.current = null
-    },
-    [],
-  )
-
-  const play = useCallback((file?: string) => {
-    if (!file) return
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
-    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}`)
-    audio.preload = 'auto'
-    audioRef.current = audio
-    audio.play().catch(() => {})
-  }, [])
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {

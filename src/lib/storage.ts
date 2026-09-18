@@ -29,6 +29,26 @@ export function writeJSON(key: string, value: unknown): void {
   }
 }
 
+/**
+ * 读一个「字符串 key → 校验过的值」的 map。
+ * 统一处理 progress / rounds 这类以 id 为 key 的存储。
+ */
+export function readMap<T>(
+  key: string,
+  isValid: (value: unknown) => value is T,
+): Record<string, T> {
+  return (
+    readJSON<Record<string, T>>(key, (v) => {
+      if (typeof v !== 'object' || v === null) return {}
+      const out: Record<string, T> = {}
+      for (const [k, val] of Object.entries(v)) {
+        if (isValid(val)) out[k] = val
+      }
+      return out
+    }) ?? {}
+  )
+}
+
 /** 读原始字符串（auth / theme 这类非 JSON 值） */
 export function readString(key: string): string | null {
   try {

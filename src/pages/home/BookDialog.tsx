@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Modal from '../../components/Modal'
 import type { Book } from '../../lib/books'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
 import { loadOrder, saveOrder } from '../../lib/rounds'
 import { saveSession } from '../../lib/session'
+import { preloadAudio, useAudioPlayer } from '../../lib/audio'
 import { words } from '../../data/words'
 
 /** 每轮推送的词数 */
@@ -68,16 +70,6 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     setEditing(false)
   }
 
-  // Esc 关闭弹窗；改名编辑中时 Esc 只取消改名，不关窗
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || editing) return
-      onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [editing, onClose])
-
   const key = useMemo(() => filterKey(book.filter), [book])
   const all = useMemo(
     () => words.map((_, i) => i).filter((i) => matchesFilter(words[i], book.filter)),
@@ -125,44 +117,15 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     }
   }
 
-  // 音频：同一时刻只播一个
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
+  const play = useAudioPlayer()
+  const playWord = (i: number) => play(words[i].audio_file)
 
-  const playWord = (i: number) => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
-    const audio = new Audio(
-      `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
-    )
-    audio.preload = 'auto'
-    audioRef.current = audio
-    audio.addEventListener('ended', () => {
-      if (audioRef.current === audio) audioRef.current = null
-    })
-    audio.play().catch(() => {})
-  }
-
-  // 预加载本轮音频，首次点击不延迟
   useEffect(() => {
-    order.slice(0, ROUND_SIZE).forEach((i) => {
-      const a = new Audio(
-        `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
-      )
-      a.preload = 'auto'
-    })
+    preloadAudio(order.slice(0, ROUND_SIZE).map((i) => words[i].audio_file))
   }, [order])
 
-  // 卸载（含关闭弹窗）时清掉复制提示与正在播的音频
-  useEffect(
-    () => () => {
-      window.clearTimeout(copyTimer.current)
-      audioRef.current?.pause()
-      audioRef.current = null
-    },
-    [],
-  )
+  useEffect(() => () => window.clearTimeout(copyTimer.current), [])
 
   const start = () => {
     if (round.length === 0) return
@@ -172,75 +135,105 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal book-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={book.name}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="icon-btn modal-close"
-          onClick={onClose}
-          aria-label="关闭"
-          title="关闭"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+    <Modal
+      onClose={onClose}
+      ariaLabel={book.name}
+      className="book-modal"
+      closeOnEscape={!editing}
+    >
+      <div className="modal-title-bar">
+        {editing ? (
+          <input
+            className="modal-title-input"
+            value={draft}
+            autoFocus
+            maxLength={24}
+            aria-label="词书名称"
+            placeholder="词书"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commitRename()
+              } else if (e.key === 'Escape') {
+                e.preventDefault()
+                cancelRename()
+              }
+            }}
+            onBlur={commitRename}
+          />
+        ) : (
+          <button
+            type="button"
+            className="modal-title modal-title-edit"
+            onClick={() => {
+              setDraft(book.name)
+              setEditing(true)
+            }}
+            aria-label={`词书名称：${book.name}，点击修改`}
+            title="点击修改名称"
           >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+            <span className="title-text">{book.name}</span>
+            <svg
+              className="edit-icon"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+            </svg>
+          </button>
+        )}
+      </div>
 
-        <div className="modal-title-bar">
-          {editing ? (
-            <input
-              className="modal-title-input"
-              value={draft}
-              autoFocus
-              maxLength={24}
-              aria-label="词书名称"
-              placeholder="词书"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  commitRename()
-                } else if (e.key === 'Escape') {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  cancelRename()
-                }
-              }}
-              onBlur={commitRename}
-            />
+      <div className="book-body">
+        {/* 左栏顶部：说明 */}
+        <div className="book-list-head">本轮</div>
+
+        {/* 左栏：本轮词表 */}
+        <div className="book-list">
+          {round.length === 0 ? (
+            <p className="book-empty">这本词书还没有词</p>
           ) : (
+            round.map((i) => (
+              <button
+                type="button"
+                className="word-row"
+                key={i}
+                onClick={() => {
+                  copy(words[i].word)
+                  playWord(i)
+                }}
+                title="点击复制并发音"
+              >
+                <span className="word-text">{words[i].word}</span>
+                {copied === words[i].word && (
+                  <span className="copied-tag">已复制</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* 右栏：操作 */}
+        <aside className="book-side">
+          <div className="side-group">
             <button
               type="button"
-              className="modal-title modal-title-edit"
-              onClick={() => {
-                setDraft(book.name)
-                setEditing(true)
-              }}
-              aria-label={`词书名称：${book.name}，点击修改`}
-              title="点击修改名称"
+              className="btn btn-ghost side-btn"
+              onClick={() => setOrder(shuffle(all))}
+              disabled={all.length === 0}
             >
-              <span className="title-text">{book.name}</span>
               <svg
-                className="edit-icon"
-                width="15"
-                height="15"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -249,80 +242,23 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
+              换一轮
             </button>
-          )}
-        </div>
 
-        <div className="book-body">
-          {/* 左栏顶部：说明 */}
-          <div className="book-list-head">本轮</div>
-
-          {/* 左栏：本轮词表 */}
-          <div className="book-list">
-            {round.length === 0 ? (
-              <p className="book-empty">这本词书还没有词</p>
-            ) : (
-              round.map((i) => (
-                <button
-                  type="button"
-                  className="word-row"
-                  key={i}
-                  onClick={() => {
-                    copy(words[i].word)
-                    playWord(i)
-                  }}
-                  title="点击复制并发音"
-                >
-                  <span className="word-text">{words[i].word}</span>
-                  {copied === words[i].word && (
-                    <span className="copied-tag">已复制</span>
-                  )}
-                </button>
-              ))
-            )}
+            <button
+              type="button"
+              className="btn btn-primary side-btn"
+              onClick={start}
+              disabled={round.length === 0}
+            >
+              开始学习
+            </button>
           </div>
-
-          {/* 右栏：操作 */}
-          <aside className="book-side">
-            <div className="side-group">
-              <button
-                type="button"
-                className="btn btn-ghost side-btn"
-                onClick={() => setOrder(shuffle(all))}
-                disabled={all.length === 0}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                换一轮
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-primary side-btn"
-                onClick={start}
-                disabled={round.length === 0}
-              >
-                开始学习
-              </button>
-            </div>
-          </aside>
-        </div>
+        </aside>
       </div>
-    </div>
+    </Modal>
   )
 }

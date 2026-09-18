@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
 import { loadFilter, matchesFilter, sameFilter } from '../../lib/filter'
 import { allTags } from '../../lib/tags'
@@ -30,15 +31,6 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
     f.exclude.forEach((t) => (m[t] = 'exclude'))
     return m
   })
-
-  // Esc 关闭
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   const filter = useMemo<TagFilter>(() => {
     const include: string[] = []
@@ -75,85 +67,54 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="选择要学的 tag"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal onClose={onClose} ariaLabel="选择要学的 tag">
+      <h2 className="modal-title">选择要学的 tag</h2>
+      <p className="select-hint">
+        点一下 <b className="inc">包含</b>，再点一下 <b className="exc">排除</b>
+        ，再点取消
+      </p>
+
+      <div className="tag-picker">
+        {TAGS.map((t) => {
+          const m = modes[t]
+          return (
+            <button
+              key={t}
+              type="button"
+              className={`tag-chip${m ? ` ${m}` : ''}`}
+              onClick={() => toggle(t)}
+              aria-pressed={!!m}
+            >
+              {t}
+            </button>
+          )
+        })}
+      </div>
+
+      {duplicate && (
+        <p className="select-warn" role="alert">
+          已存在相同 tag 的词书
+        </p>
+      )}
+
+      <div className="select-actions">
+        <span className="select-count">将学习 {count} 张</span>
         <button
           type="button"
-          className="icon-btn modal-close"
-          onClick={onClose}
-          aria-label="关闭"
-          title="关闭"
+          className="btn btn-ghost"
+          onClick={() => setModes({})}
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          清空
         </button>
-
-        <h2 className="modal-title">选择要学的 tag</h2>
-        <p className="select-hint">
-          点一下 <b className="inc">包含</b>，再点一下 <b className="exc">排除</b>
-          ，再点取消
-        </p>
-
-        <div className="tag-picker">
-          {TAGS.map((t) => {
-            const m = modes[t]
-            return (
-              <button
-                key={t}
-                type="button"
-                className={`tag-chip${m ? ` ${m}` : ''}`}
-                onClick={() => toggle(t)}
-                aria-pressed={!!m}
-              >
-                {t}
-              </button>
-            )
-          })}
-        </div>
-
-        {duplicate && (
-          <p className="select-warn" role="alert">
-            已存在相同 tag 的词书
-          </p>
-        )}
-
-        <div className="select-actions">
-          <span className="select-count">将学习 {count} 张</span>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => setModes({})}
-          >
-            清空
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={start}
-            disabled={count === 0 || duplicate}
-          >
-            创建词书
-          </button>
-        </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={start}
+          disabled={count === 0 || duplicate}
+        >
+          创建词书
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }

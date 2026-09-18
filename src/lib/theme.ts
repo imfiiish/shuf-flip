@@ -16,7 +16,7 @@ export function saveThemeMode(mode: ThemeMode): void {
 }
 
 /** 把模式解析成实际生效的 light / dark */
-export function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
+function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
   if (mode !== 'auto') return mode
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
