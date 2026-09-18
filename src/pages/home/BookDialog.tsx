@@ -5,6 +5,7 @@ import type { Book } from '../../lib/books'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
 import { loadOrder, saveOrder, ROUND_SIZE, drawRound } from '../../lib/rounds'
 import { saveSession } from '../../lib/session'
+import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
 import { words } from '../../data/words'
 
@@ -57,17 +58,17 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
   const key = useMemo(() => filterKey(book.filter), [book])
   const all = useMemo(
-    () => words.map((_, i) => i).filter((i) => matchesFilter(words[i], book.filter)),
+    () => words.filter((w) => matchesFilter(w, book.filter)).map((w) => w.word),
     [book],
   )
 
   // 上一轮顺序；没有或对不上就重新洗牌
-  const [order] = useState<number[]>(() => {
+  const [order] = useState<string[]>(() => {
     const stored = loadOrder(key)
     if (
       stored &&
       stored.length === all.length &&
-      all.every((i) => stored.includes(i))
+      all.every((w) => stored.includes(w))
     ) {
       return stored
     }
@@ -104,10 +105,18 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
   // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
   const play = useAudioPlayer()
-  const playWord = (i: number) => play(words[i].audio_file)
+  const playWord = (name: string) => {
+    const w = getWord(name)
+    if (w) play(w.audio_file)
+  }
 
   useEffect(() => {
-    preloadAudio(order.slice(0, ROUND_SIZE).map((i) => words[i].audio_file))
+    preloadAudio(
+      order.slice(0, ROUND_SIZE).flatMap((name) => {
+        const w = getWord(name)
+        return w ? [w.audio_file] : []
+      }),
+    )
   }, [order])
 
   useEffect(() => () => window.clearTimeout(copyTimer.current), [])
@@ -115,7 +124,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const start = () => {
     if (round.length === 0) return
     saveFilter(book.filter)
-    saveSession({ key, indices: round })
+    saveSession({ key, words: round })
     navigate('/study')
   }
 
@@ -187,23 +196,27 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
           {round.length === 0 ? (
             <p className="book-empty">这本词书还没有词</p>
           ) : (
-            round.map((i) => (
-              <button
-                type="button"
-                className="word-row"
-                key={i}
-                onClick={() => {
-                  copy(words[i].word)
-                  playWord(i)
-                }}
-                title="点击复制并发音"
-              >
-                <span className="word-text">{words[i].word}</span>
-                {copied === words[i].word && (
-                  <span className="copied-tag">已复制</span>
-                )}
-              </button>
-            ))
+            round.map((name) => {
+              const w = getWord(name)
+              if (!w) return null
+              return (
+                <button
+                  type="button"
+                  className="word-row"
+                  key={name}
+                  onClick={() => {
+                    copy(w.word)
+                    playWord(name)
+                  }}
+                  title="点击复制并发音"
+                >
+                  <span className="word-text">{w.word}</span>
+                  {copied === w.word && (
+                    <span className="copied-tag">已复制</span>
+                  )}
+                </button>
+              )
+            })
           )}
         </div>
 

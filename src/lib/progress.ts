@@ -1,5 +1,5 @@
 // 学习相关的持久化
-// - 展开次数（全局，所有词书互通）
+// - 展开次数（全局，所有词书互通）：key = word 字符串
 // - 每本词书/每一轮的位置：center（按 key 分开）
 import { readMap, writeJSON } from './storage'
 
@@ -14,15 +14,12 @@ function isCount(n: unknown): n is number {
   return Number.isInteger(n) && (n as number) > 0
 }
 
-// ---- 展开次数（全局，key = words 原始索引）----
-export function loadRevealCounts(): Record<number, number> {
-  const map = readMap<number>(REVEAL_KEY, isCount)
-  const out: Record<number, number> = {}
-  for (const [k, v] of Object.entries(map)) out[Number(k)] = v
-  return out
+// ---- 展开次数（全局）----
+export function loadRevealCounts(): Record<string, number> {
+  return readMap<number>(REVEAL_KEY, isCount)
 }
 
-export function saveRevealCounts(counts: Record<number, number>): void {
+export function saveRevealCounts(counts: Record<string, number>): void {
   writeJSON(REVEAL_KEY, counts)
 }
 

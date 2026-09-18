@@ -14,6 +14,7 @@ import {
 } from '../lib/progress'
 import { loadSession, saveSession } from '../lib/session'
 import { drawRound, saveOrder } from '../lib/rounds'
+import { getWord } from '../lib/dict'
 import { tagLabel, tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
@@ -61,15 +62,16 @@ function slotOf(p: number, center: number, n: number): Slot {
 export default function Study() {
   const navigate = useNavigate()
 
-  // 词书筛选 + 这一轮的词（session）；换一轮会替换 deck
+  // 词书筛选 + 这一轮的词（session，word 字符串）；换一轮会替换 deck
   const { fk, book, initialDeck } = useMemo(() => {
     const f = loadFilter()
     const fk = filterKey(f)
-    const book = words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
+    const book = words.filter((w) => matchesFilter(w, f)).map((w) => w.word)
     const s = loadSession()
     if (s && s.key === fk) {
-      const idx = s.indices.filter((i) => book.includes(i))
-      if (idx.length > 0) return { fk, book, initialDeck: idx }
+      const has = new Set(book)
+      const list = s.words.filter((w) => has.has(w))
+      if (list.length > 0) return { fk, book, initialDeck: list }
     }
     return { fk, book, initialDeck: book }
   }, [])
@@ -125,11 +127,13 @@ export default function Study() {
     saveCenter(centerKey, center)
   }, [centerKey, center])
 
-  const centerIdx: number | null = deck.length ? deck[center] : null
-  const centerWord: Word | null = centerIdx != null ? words[centerIdx] : null
+  const centerName: string | null = deck.length ? deck[center] : null
+  const centerWord: Word | null = centerName
+    ? (getWord(centerName) ?? null)
+    : null
 
   // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
-  const [revealCounts, setRevealCounts] = useState<Record<number, number>>(
+  const [revealCounts, setRevealCounts] = useState<Record<string, number>>(
     loadRevealCounts,
   )
 
@@ -142,16 +146,15 @@ export default function Study() {
 
   // 悬浮光晕：按「指针位置」命中，而不是 CSS :hover。
   // 否则卡片位移后，:hover 会粘在移动的那个元素上（光晕跟着卡片而不是鼠标）。
-  const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const [hoveredName, setHoveredName] = useState<string | null>(null)
   const pointer = useRef<{ x: number; y: number } | null>(null)
 
   const updateHover = useCallback(() => {
     const pt = pointer.current
     if (!pt) return
     const el = document.elementFromPoint(pt.x, pt.y)
-    const cardEl = el?.closest<HTMLElement>('.card[data-idx]')
-    const idx = cardEl ? Number(cardEl.dataset.idx) : NaN
-    setHoveredId(Number.isNaN(idx) ? null : idx)
+    const cardEl = el?.closest<HTMLElement>('.card[data-word]')
+    setHoveredName(cardEl?.dataset.word ?? null)
   }, [])
 
   const onCardsMouseMove = useCallback(
@@ -164,7 +167,7 @@ export default function Study() {
 
   const onCardsMouseLeave = useCallback(() => {
     pointer.current = null
-    setHoveredId(null)
+    setHoveredName(null)
   }, [])
 
   // 翻页动画期间持续按指针位置重新命中，让光晕跟着「位置」走
@@ -198,17 +201,22 @@ export default function Study() {
   const play = useAudioPlayer()
 
   useEffect(() => {
-    preloadAudio(deck.map((i) => words[i].audio_file))
+    preloadAudio(
+      deck.flatMap((name) => {
+        const w = getWord(name)
+        return w ? [w.audio_file] : []
+      }),
+    )
   }, [deck])
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {
     setRevealed(true)
-    if (centerIdx != null) {
-      setRevealCounts((c) => ({ ...c, [centerIdx]: (c[centerIdx] || 0) + 1 }))
+    if (centerName) {
+      setRevealCounts((c) => ({ ...c, [centerName]: (c[centerName] || 0) + 1 }))
     }
     play(centerWord?.audio_file)
-  }, [play, centerWord, centerIdx])
+  }, [play, centerWord, centerName])
 
   const toggleReveal = useCallback(() => {
     if (revealed) play(centerWord?.audio_file)
@@ -220,9 +228,9 @@ export default function Study() {
     if (book.length === 0) return
     const { order, round } = drawRound(book)
     saveOrder(fk, order)
-    saveSession({ key: fk, indices: round })
+    saveSession({ key: fk, words: round })
     setRevealed(false)
-    setHoveredId(null)
+    setHoveredName(null)
     setDeck(round)
     setCenter(0)
     setRoundTick((t) => t + 1)
@@ -290,19 +298,20 @@ export default function Study() {
           onMouseLeave={onCardsMouseLeave}
         >
           {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
-          {deck.map((wordIndex, p) => {
+          {deck.map((name, p) => {
             const slot = slotOf(p, center, deck.length)
             // 数字槽位超出窗口就不渲染；'B' / 'S' 始终渲染
             if (typeof slot === 'number' && Math.abs(slot) > SIDE) return null
+            const word = getWord(name)
+            if (!word) return null
             return (
               <Card
-                key={wordIndex}
-                idx={wordIndex}
-                word={words[wordIndex]}
+                key={name}
+                word={word}
                 slot={slot}
                 revealed={slot === 0 && revealed}
-                hovered={hoveredId === wordIndex}
-                dots={revealCounts[wordIndex] || 0}
+                hovered={hoveredName === name}
+                dots={revealCounts[name] || 0}
                 onClick={() => {
                   if (slot === 0) toggleReveal()
                   else if (slot === 1 || slot === 'S') go(1)
@@ -333,7 +342,6 @@ export default function Study() {
 
 type CardProps = {
   word: Word
-  idx: number
   slot: Slot
   revealed?: boolean
   hovered?: boolean
@@ -343,7 +351,6 @@ type CardProps = {
 
 function Card({
   word,
-  idx,
   slot,
   revealed = false,
   hovered = false,
@@ -357,7 +364,7 @@ function Card({
       className={`card pos-${slot}${isCenter ? ' active' : ''}${
         hovered ? ' hovered' : ''
       }`}
-      data-idx={idx}
+      data-word={word.word}
       onClick={onClick}
     >
       {/* 展开过几次：顶部居中的实心圆 */}
