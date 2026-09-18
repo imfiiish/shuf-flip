@@ -1,5 +1,7 @@
 import { words } from '../data/words'
 
+export const CEFR_PREFIX = 'CEFR.'
+
 // tags 展示顺序（CEFR.A1/A2/B1/B2/C1/C2 都归到 CEFR；未列出的排最后）
 const TAG_ORDER = [
   '初中',
@@ -21,6 +23,11 @@ const TAG_ORDER = [
 export function tagRank(tag: string): number {
   const i = TAG_ORDER.findIndex((t) => tag === t || tag.startsWith(`${t}.`))
   return i === -1 ? TAG_ORDER.length : i
+}
+
+/** tag 的展示名：CEFR.A1 → A1（同一排已有「CEFR」标签），其余原样 */
+export function tagLabel(tag: string): string {
+  return tag.startsWith(CEFR_PREFIX) ? tag.slice(CEFR_PREFIX.length) : tag
 }
 
 /** 词库里出现过的所有 tag（去重），按展示顺序排列 */

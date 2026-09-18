@@ -13,7 +13,7 @@ import {
   saveRevealCounts,
 } from '../lib/progress'
 import { loadSession } from '../lib/session'
-import { tagRank } from '../lib/tags'
+import { tagLabel, tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
@@ -314,7 +314,7 @@ function Card({
             .sort((a, b) => tagRank(a) - tagRank(b))
             .map((tag) => (
               <span className="tag" key={tag}>
-                {tag}
+                {tagLabel(tag)}
               </span>
             ))}
         </div>

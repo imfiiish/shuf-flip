@@ -907,11 +907,29 @@ kbd {
   font-size: 0.88rem;
 }
 
-.tag-picker {
+.tag-groups {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tag-group {
+  display: grid;
+  grid-template-columns: 4.5em 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.tag-group-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+  letter-spacing: 0.06em;
+}
+.tag-group-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: center;
 }
 
 .tag-chip {
@@ -955,9 +973,15 @@ kbd {
 
 .select-actions {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+.select-buttons {
+  display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 4px;
 }
 
 .select-count {
