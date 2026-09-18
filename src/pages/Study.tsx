@@ -12,7 +12,8 @@ import {
   saveCenter,
   saveRevealCounts,
 } from '../lib/progress'
-import { loadSession } from '../lib/session'
+import { loadSession, saveSession } from '../lib/session'
+import { drawRound, saveOrder } from '../lib/rounds'
 import { tagLabel, tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
@@ -51,25 +52,28 @@ function slotOf(p: number, center: number, n: number): Slot {
 
 /**
  * 学习页：只负责「翻」。
- * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开。
+ * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 换一轮。
  */
 export default function Study() {
   const navigate = useNavigate()
 
-  // 词书筛选 + 那一轮（session）；位置 center 按这一轮单独记
-  const { centerKey, deck } = useMemo(() => {
+  // 词书筛选 + 这一轮的词（session）；换一轮会替换 deck
+  const { fk, book, initialDeck } = useMemo(() => {
     const f = loadFilter()
     const fk = filterKey(f)
     const book = words.map((_, i) => i).filter((i) => matchesFilter(words[i], f))
     const s = loadSession()
     if (s && s.key === fk) {
       const idx = s.indices.filter((i) => book.includes(i))
-      if (idx.length > 0) {
-        return { centerKey: `${fk}|${idx.join('.')}`, deck: idx }
-      }
+      if (idx.length > 0) return { fk, book, initialDeck: idx }
     }
-    return { centerKey: fk, deck: book }
+    return { fk, book, initialDeck: book }
   }, [])
+
+  const [deck, setDeck] = useState(initialDeck)
+  // 换一轮时递增，给舞台换 key → 重放进入 Study 页的入场动画（.cards 的 app-in）
+  const [roundTick, setRoundTick] = useState(0)
+  const centerKey = useMemo(() => `${fk}|${deck.join('.')}`, [fk, deck])
   const TOTAL = deck.length
 
   const [center, setCenter] = useState(() =>
@@ -170,7 +174,20 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
-  // 键盘：Space 释义 / H L 翻页
+  // 换一轮：洗整本词书，取前 ROUND_SIZE 个作为新的一轮，并持久化
+  const nextRound = useCallback(() => {
+    if (book.length === 0) return
+    const { order, round } = drawRound(book)
+    saveOrder(fk, order)
+    saveSession({ key: fk, indices: round })
+    setRevealed(false)
+    setHoveredId(null)
+    setDeck(round)
+    setCenter(0)
+    setRoundTick((t) => t + 1)
+  }, [book, fk])
+
+  // 键盘：Space 释义 / Enter 换一轮 / H L 翻页
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const k = e.key
@@ -179,6 +196,12 @@ export default function Study() {
         e.preventDefault() // 防止页面滚动
         if (e.repeat) return // 按住时忽略自动重复，避免疯狂重播
         toggleReveal()
+        return
+      }
+      if (k === 'Enter') {
+        e.preventDefault() // 防止顺手触发聚焦的按钮
+        if (e.repeat) return // 按住时只换一次
+        nextRound()
         return
       }
       const low = k.toLowerCase()
@@ -192,7 +215,7 @@ export default function Study() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, toggleReveal])
+  }, [go, toggleReveal, nextRound])
 
   if (TOTAL === 0) {
     return (
@@ -217,6 +240,7 @@ export default function Study() {
       <BackButton to="/" label="返回主页" />
       <div
         className="cards"
+        key={roundTick}
         onMouseMove={onCardsMouseMove}
         onMouseLeave={onCardsMouseLeave}
       >
@@ -252,6 +276,9 @@ export default function Study() {
         </span>
         <span>
           <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
+        </span>
+        <span>
+          <kbd>Enter</kbd> 换一轮
         </span>
       </div>
     </div>

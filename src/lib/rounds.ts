@@ -1,6 +1,30 @@
 // 词书弹窗偏好：每轮的随机顺序（按词书）
 import { readMap, writeJSON } from './storage'
 
+/** 每轮推送的词数 */
+export const ROUND_SIZE = 20
+
+/** 洗牌：返回打乱顺序的新数组 */
+export function shuffle(pool: number[]): number[] {
+  const arr = [...pool]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const t = arr[i]
+    arr[i] = arr[j]
+    arr[j] = t
+  }
+  return arr
+}
+
+/** 换一轮：洗整本词书，返回完整顺序和本轮（前 ROUND_SIZE 个） */
+export function drawRound(pool: number[]): {
+  order: number[]
+  round: number[]
+} {
+  const order = shuffle(pool)
+  return { order, round: order.slice(0, ROUND_SIZE) }
+}
+
 const ORDERS_KEY = 'vocab-round-orders'
 
 function isIndexArray(v: unknown): v is number[] {
