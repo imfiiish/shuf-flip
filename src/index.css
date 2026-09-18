@@ -26,6 +26,12 @@
   --kbd-border: #cbded9;
   --dot-empty: #cbd5d2;
   --on-accent: #ffffff;
+
+  /* hover 词行的浮起效果 */
+  --row-hover-bg: var(--card-active);
+  --row-hover-shadow: 0 8px 18px -14px rgba(15, 40, 35, 0.18);
+  /* 词表底色：亮色用极浅青灰，白行 hover 时才浮得起来 */
+  --list-bg: var(--bg);
 }
 
 /* 手动暗色：强制 */
@@ -50,6 +56,11 @@
   --kbd-border: #334641;
   --dot-empty: #46524f;
   --on-accent: #06221e;
+
+  --row-hover-bg: var(--card-active);
+  --row-hover-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+  /* 暗色词表保持原样 */
+  --list-bg: var(--card);
 }
 
 /* 手动亮色：强制（变量沿用 :root 默认，只锁 color-scheme） */
@@ -638,12 +649,6 @@ kbd {
   align-items: stretch;
 }
 
-/* 词书弹窗的定位锚：弹窗多大它就多大，便于把提示贴在弹窗上方 */
-.modal-anchor {
-  position: relative;
-  width: min(900px, 100%);
-}
-
 .book-modal .modal-title {
   text-align: center;
 }
@@ -676,7 +681,7 @@ kbd {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--card);
+  background: var(--list-bg);
   scrollbar-width: none;
 }
 
@@ -688,7 +693,10 @@ kbd {
 
 .word-row {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   padding: 7px 10px 7px 20px;
   border: 0;
@@ -701,6 +709,16 @@ kbd {
   text-align: left;
   cursor: pointer;
   transition: padding-left 140ms ease;
+}
+
+/* 复制成功：在该行最右边闪一下 */
+.copied-tag {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  animation: fade-in 160ms ease-out;
 }
 
 /* 左侧绿色小竖条：hover 时出现在「其他词首字母」的位置 */
@@ -718,9 +736,12 @@ kbd {
   transition: opacity 140ms ease;
 }
 
-/* hover：绿条顶在原来首字母的位置，当前词被推出去 */
+/* hover：绿条顶在原来首字母的位置，当前词被推出去，并浮起一点 */
 .word-row:hover {
   padding-left: 32px;
+  background: var(--row-hover-bg);
+  box-shadow: var(--row-hover-shadow);
+  z-index: 1;
 }
 
 .word-row:hover::before {
@@ -758,20 +779,6 @@ kbd {
 .book-empty {
   margin: 8px;
   color: var(--muted);
-}
-
-/* 点击词复制的提示：以弹窗为参照，贴在弹窗上方 */
-.copy-toast {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 28px);
-  transform: translateX(-50%);
-  z-index: 100;
-  padding: 9px 33px;
-  font-size: 0.79rem;
-  cursor: default;
-  pointer-events: none;
-  animation: fade-in 160ms ease-out;
 }
 
 @keyframes fade-in {

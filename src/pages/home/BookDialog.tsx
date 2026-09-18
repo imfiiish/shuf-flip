@@ -108,17 +108,13 @@ export default function BookDialog({ book, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-anchor">
-        {copied && (
-          <div className="btn btn-primary copy-toast">已复制 {copied}</div>
-        )}
-        <div
-          className="modal book-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label={book.name}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div
+        className="modal book-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={book.name}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           type="button"
           className="icon-btn modal-close"
@@ -162,6 +158,9 @@ export default function BookDialog({ book, onClose }: Props) {
                   title="点击复制"
                 >
                   {words[i].word}
+                  {copied === words[i].word && (
+                    <span className="copied-tag">已复制</span>
+                  )}
                 </button>
               ))
             )}
@@ -204,7 +203,6 @@ export default function BookDialog({ book, onClose }: Props) {
             </div>
           </aside>
         </div>
-      </div>
       </div>
     </div>
   )
