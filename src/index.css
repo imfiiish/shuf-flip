@@ -649,8 +649,85 @@ kbd {
   align-items: stretch;
 }
 
-.book-modal .modal-title {
+/* 标题栏：展示态（按钮）与编辑态（输入框）共用同一固定尺寸，
+   切换时不改变弹窗大小（否则标题宽度/行高变化会让整个窗口跳动） */
+.modal-title-bar {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+}
+
+.modal-title-bar .modal-title,
+.modal-title-bar .modal-title-input {
+  width: min(320px, 100%);
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
   text-align: center;
+}
+
+.modal-title-bar .modal-title-edit {
+  position: relative;
+  cursor: text;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+/* 名称过长时省略，不撑破固定宽度 */
+.modal-title-bar .title-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-title-bar .modal-title-edit:hover {
+  border-color: var(--border);
+  background: var(--list-bg);
+}
+
+.modal-title-bar .modal-title-edit:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.modal-title-bar .edit-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.modal-title-bar .modal-title-edit:hover .edit-icon,
+.modal-title-bar .modal-title-edit:focus-visible .edit-icon {
+  opacity: 1;
+}
+
+.modal-title-bar .modal-title-input {
+  border-color: var(--accent);
+  background: var(--card);
+}
+
+.modal-title-bar .modal-title-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 /* 左右两栏：右栏和词表同一行，顶底分别对齐 */
@@ -719,6 +796,15 @@ kbd {
   color: var(--accent);
   white-space: nowrap;
   animation: fade-in 160ms ease-out;
+}
+
+/* 词名：过长时省略，不与右侧复制提示重叠 */
+.word-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 左侧绿色小竖条：hover 时出现在「其他词首字母」的位置 */

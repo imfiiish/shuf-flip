@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { logout } from '../lib/auth'
 import type { Book } from '../lib/books'
-import { loadBooks, saveBooks } from '../lib/books'
+import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
 import { sameFilter } from '../lib/filter'
 import BookDialog from './home/BookDialog'
 import TagPicker from './home/TagPicker'
@@ -12,8 +12,15 @@ export default function Home() {
   const navigate = useNavigate()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [activeBook, setActiveBook] = useState<Book | null>(null)
-  const [books, setBooks] = useState<Book[]>(loadBooks)
+  // 旧数据里的自动名「词书1/2…」规整为「词书」；自定义名保留
+  const [books, setBooks] = useState<Book[]>(() =>
+    loadBooks().map((b) =>
+      /^词书\d+$/.test(b.name) ? { ...b, name: '词书' } : b,
+    ),
+  )
   const [confirmId, setConfirmId] = useState<number | null>(null)
+
+  const atLimit = books.length >= MAX_BOOKS
 
   useEffect(() => {
     saveBooks(books)
@@ -98,27 +105,29 @@ export default function Home() {
             </div>
           ))}
 
-          <button
-            type="button"
-            className="book book-add"
-            onClick={() => setPickerOpen(true)}
-            aria-label="新建词书"
-            title="新建词书"
-          >
-            <svg
-              width="30"
-              height="30"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
+          {!atLimit && (
+            <button
+              type="button"
+              className="book book-add"
+              onClick={() => setPickerOpen(true)}
+              aria-label="新建词书"
+              title="新建词书"
             >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+              <svg
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -152,7 +161,16 @@ export default function Home() {
       </button>
 
       {activeBook && (
-        <BookDialog book={activeBook} onClose={() => setActiveBook(null)} />
+        <BookDialog
+          book={activeBook}
+          onClose={() => setActiveBook(null)}
+          onRename={(name) => {
+            setBooks((bs) =>
+              bs.map((x) => (x.id === activeBook.id ? { ...x, name } : x)),
+            )
+            setActiveBook((a) => (a ? { ...a, name } : a))
+          }}
+        />
       )}
 
       {pickerOpen && (
@@ -161,10 +179,11 @@ export default function Home() {
           onClose={() => setPickerOpen(false)}
           onConfirm={(filter, count) => {
             setBooks((b) => {
+              if (b.length >= MAX_BOOKS) return b
               if (b.some((x) => sameFilter(x.filter, filter))) return b
               return [
                 ...b,
-                { id: Date.now(), name: `词书${b.length + 1}`, filter, count },
+                { id: Date.now(), name: '词书', filter, count },
               ]
             })
             setPickerOpen(false)

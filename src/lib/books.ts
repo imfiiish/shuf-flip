@@ -11,6 +11,9 @@ export type Book = {
 
 const KEY = 'vocab-books'
 
+/** 词书数量上限 */
+export const MAX_BOOKS = 3
+
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === 'string')
 }

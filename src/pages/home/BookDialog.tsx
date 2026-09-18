@@ -41,14 +41,42 @@ function fallbackCopy(text: string): boolean {
 type Props = {
   book: Book
   onClose: () => void
+  /** 重命名词书（提交时调用，name 已 trim 且非空） */
+  onRename: (name: string) => void
 }
 
 /**
  * 点词书弹出的窗口：左栏是「本轮」的词表，右栏是操作。
  * 每轮从词书里随机推 20 个词；换一轮重掷；顺序按词书持久化，重开不重排。
  */
-export default function BookDialog({ book, onClose }: Props) {
+export default function BookDialog({ book, onClose, onRename }: Props) {
   const navigate = useNavigate()
+
+  // 顶部标题改名：点击进入编辑，Enter / 失焦提交，Esc 取消
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(book.name)
+
+  const commitRename = () => {
+    const name = draft.trim()
+    if (name && name !== book.name) onRename(name)
+    else setDraft(book.name)
+    setEditing(false)
+  }
+
+  const cancelRename = () => {
+    setDraft(book.name)
+    setEditing(false)
+  }
+
+  // Esc 关闭弹窗；改名编辑中时 Esc 只取消改名，不关窗
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || editing) return
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editing, onClose])
 
   const key = useMemo(() => filterKey(book.filter), [book])
   const all = useMemo(
@@ -76,11 +104,9 @@ export default function BookDialog({ book, onClose }: Props) {
 
   const round = order.slice(0, ROUND_SIZE)
 
-  // 点词 → 复制到剪贴板，并弹一下提示
+  // 点词 → 复制到剪贴板 + 播放发音
   const [copied, setCopied] = useState<string | null>(null)
   const copyTimer = useRef<number | undefined>(undefined)
-
-  useEffect(() => () => window.clearTimeout(copyTimer.current), [])
 
   const showCopied = (word: string) => {
     setCopied(word)
@@ -98,6 +124,45 @@ export default function BookDialog({ book, onClose }: Props) {
       showCopied(word)
     }
   }
+
+  // 音频：同一时刻只播一个
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const playWord = (i: number) => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    const audio = new Audio(
+      `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
+    )
+    audio.preload = 'auto'
+    audioRef.current = audio
+    audio.addEventListener('ended', () => {
+      if (audioRef.current === audio) audioRef.current = null
+    })
+    audio.play().catch(() => {})
+  }
+
+  // 预加载本轮音频，首次点击不延迟
+  useEffect(() => {
+    order.slice(0, ROUND_SIZE).forEach((i) => {
+      const a = new Audio(
+        `${import.meta.env.BASE_URL}audio/${words[i].audio_file}`,
+      )
+      a.preload = 'auto'
+    })
+  }, [order])
+
+  // 卸载（含关闭弹窗）时清掉复制提示与正在播的音频
+  useEffect(
+    () => () => {
+      window.clearTimeout(copyTimer.current)
+      audioRef.current?.pause()
+      audioRef.current = null
+    },
+    [],
+  )
 
   const start = () => {
     if (round.length === 0) return
@@ -138,7 +203,58 @@ export default function BookDialog({ book, onClose }: Props) {
           </svg>
         </button>
 
-        <h2 className="modal-title">{book.name}</h2>
+        <div className="modal-title-bar">
+          {editing ? (
+            <input
+              className="modal-title-input"
+              value={draft}
+              autoFocus
+              maxLength={24}
+              aria-label="词书名称"
+              placeholder="词书"
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  commitRename()
+                } else if (e.key === 'Escape') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  cancelRename()
+                }
+              }}
+              onBlur={commitRename}
+            />
+          ) : (
+            <button
+              type="button"
+              className="modal-title modal-title-edit"
+              onClick={() => {
+                setDraft(book.name)
+                setEditing(true)
+              }}
+              aria-label={`词书名称：${book.name}，点击修改`}
+              title="点击修改名称"
+            >
+              <span className="title-text">{book.name}</span>
+              <svg
+                className="edit-icon"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         <div className="book-body">
           {/* 左栏顶部：说明 */}
@@ -154,10 +270,13 @@ export default function BookDialog({ book, onClose }: Props) {
                   type="button"
                   className="word-row"
                   key={i}
-                  onClick={() => copy(words[i].word)}
-                  title="点击复制"
+                  onClick={() => {
+                    copy(words[i].word)
+                    playWord(i)
+                  }}
+                  title="点击复制并发音"
                 >
-                  {words[i].word}
+                  <span className="word-text">{words[i].word}</span>
                   {copied === words[i].word && (
                     <span className="copied-tag">已复制</span>
                   )}
