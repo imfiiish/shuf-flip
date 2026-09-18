@@ -6,15 +6,12 @@ import type { Word } from '../data/words'
 import { words } from '../data/words'
 import { preloadAudio, useAudioPlayer } from '../lib/audio'
 import { filterKey, loadFilter, matchesFilter } from '../lib/filter'
-import {
-  loadCenter,
-  loadRevealCounts,
-  saveCenter,
-  saveRevealCounts,
-} from '../lib/progress'
+import { loadCenter, loadRevealStore, saveCenter, saveRevealStore } from '../lib/progress'
 import { loadSession, saveSession } from '../lib/session'
 import { drawRound, saveOrder } from '../lib/rounds'
 import { getWord } from '../lib/dict'
+import { beginSession, flushBeacon, logEvent } from '../lib/analytics'
+import { logicalDay } from '../lib/day'
 import { tagLabel, tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
@@ -132,14 +129,38 @@ export default function Study() {
     ? (getWord(centerName) ?? null)
     : null
 
-  // 每个词「展开释义」的次数（只记 隐藏→显示 那次），存 localStorage，刷新后保留
+  // 展开次数：按逻辑日（本地 04:00 换日）分桶。加载时若已跨天，loadRevealStore 返回清空后的 store
+  const initialReveal = useRef<ReturnType<typeof loadRevealStore> | null>(null)
+  if (!initialReveal.current) initialReveal.current = loadRevealStore()
+  const revealInit = initialReveal.current!
   const [revealCounts, setRevealCounts] = useState<Record<string, number>>(
-    loadRevealCounts,
+    revealInit.store.counts,
   )
+  const dayRef = useRef(revealInit.store.day)
 
   useEffect(() => {
-    saveRevealCounts(revealCounts)
+    saveRevealStore({ day: dayRef.current, counts: revealCounts })
   }, [revealCounts])
+
+  // 跨天（04:00）时清零；在每次展开前调用。返回是否真的清零了
+  const ensureDay = useCallback((): boolean => {
+    const today = logicalDay()
+    if (dayRef.current === today) return false
+    const from = dayRef.current
+    dayRef.current = today
+    setRevealCounts({})
+    logEvent('counts_reset', { from, to: today })
+    return true
+  }, [])
+
+  // —— 埋点计时 ——
+  const enteredRef = useRef(false)
+  const aliveRef = useRef(true)
+  const viewStartRef = useRef(0)
+  const firstRevealRef = useRef<number | null>(null)
+  const roundIndexRef = useRef(1)
+  const leaveFnRef = useRef<() => void>(() => {})
+  const exitSentRef = useRef(false)
 
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
@@ -185,16 +206,120 @@ export default function Study() {
     return () => cancelAnimationFrame(raf)
   }, [center, deck, updateHover])
 
+  // 离开当前中心卡：补一条 card_leave（前/后停留）
+  const emitCardLeave = useCallback(() => {
+    if (!centerName || viewStartRef.current === 0) return
+    const now = performance.now()
+    const before =
+      firstRevealRef.current !== null
+        ? Math.round(firstRevealRef.current - viewStartRef.current)
+        : Math.round(now - viewStartRef.current)
+    const after =
+      firstRevealRef.current !== null
+        ? Math.round(now - firstRevealRef.current)
+        : 0
+    logEvent('card_leave', {
+      word: centerName,
+      dwellBeforeMs: before,
+      dwellAfterMs: after,
+    })
+    viewStartRef.current = 0
+    firstRevealRef.current = null
+  }, [centerName])
+  leaveFnRef.current = emitCardLeave
+
+  // 会话结束：一次只发一条
+  const emitExit = useCallback((reason: 'back' | 'unload') => {
+    if (exitSentRef.current) return
+    exitSentRef.current = true
+    logEvent('study_exit', { reason })
+  }, [])
+
+  // 进入学习：开始会话，记 study_enter / 首组 / 首张（StrictMode 下只执行一次）
+  useEffect(() => {
+    if (enteredRef.current) return
+    enteredRef.current = true
+    if (revealInit.previousDay) {
+      logEvent('counts_reset', {
+        from: revealInit.previousDay,
+        to: revealInit.store.day,
+      })
+    }
+    beginSession()
+    logEvent('study_enter', { filterKey: fk, deckSize: TOTAL })
+    logEvent('round_new', { index: roundIndexRef.current, words: deck })
+    viewStartRef.current = performance.now()
+    firstRevealRef.current = null
+    if (centerName) {
+      logEvent('card_view', {
+        word: centerName,
+        dir: 'init',
+        n: revealCounts[centerName] || 0,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 切窗口/切标签：记录可见性与焦点，供分析剔除空闲时间
+  useEffect(() => {
+    const onVis = () =>
+      logEvent('visibility', { state: document.visibilityState })
+    const onFocus = () => logEvent('focus', { state: 'focus' })
+    const onBlur = () => logEvent('focus', { state: 'blur' })
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [])
+
+  // 页面卸载（关标签/刷新/外跳）：尽力补一条 study_exit 并立即发出
+  useEffect(() => {
+    const onPageHide = () => {
+      emitExit('unload')
+      flushBeacon()
+    }
+    window.addEventListener('pagehide', onPageHide)
+    return () => window.removeEventListener('pagehide', onPageHide)
+  }, [emitExit])
+
+  // 真正离开 Study 页时补最后一张的 card_leave + study_exit（微任务区分 StrictMode 的假卸载）
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+      queueMicrotask(() => {
+        if (!aliveRef.current) {
+          leaveFnRef.current()
+          emitExit('back')
+        }
+      })
+    }
+  }, [emitExit])
+
   // 翻页
   const go = useCallback(
     (delta: number) => {
+      if (TOTAL === 0) return
+      emitCardLeave()
+      const next = (center + delta + TOTAL) % TOTAL
+      const name = deck[next]
+      viewStartRef.current = performance.now()
+      firstRevealRef.current = null
+      if (name) {
+        logEvent('card_view', {
+          word: name,
+          dir: delta > 0 ? 'right' : 'left',
+          n: revealCounts[name] || 0,
+        })
+      }
       setRevealed(false)
-      setCenter((c) => {
-        if (TOTAL === 0) return 0
-        return (c + delta + TOTAL) % TOTAL
-      })
+      setCenter(next)
     },
-    [TOTAL],
+    [TOTAL, center, deck, emitCardLeave, revealCounts],
   )
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
@@ -211,12 +336,18 @@ export default function Study() {
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {
+    const didReset = ensureDay()
     setRevealed(true)
     if (centerName) {
+      const n = (didReset ? 0 : revealCounts[centerName] || 0) + 1
       setRevealCounts((c) => ({ ...c, [centerName]: (c[centerName] || 0) + 1 }))
+      if (firstRevealRef.current === null) {
+        firstRevealRef.current = performance.now()
+      }
+      logEvent('reveal', { word: centerName, n })
     }
     play(centerWord?.audio_file)
-  }, [play, centerWord, centerName])
+  }, [play, centerWord, centerName, ensureDay, revealCounts])
 
   const toggleReveal = useCallback(() => {
     if (revealed) play(centerWord?.audio_file)
@@ -229,12 +360,24 @@ export default function Study() {
     const { order, round } = drawRound(book)
     saveOrder(fk, order)
     saveSession({ key: fk, words: round })
+    emitCardLeave()
+    roundIndexRef.current += 1
+    logEvent('round_new', { index: roundIndexRef.current, words: round })
+    viewStartRef.current = performance.now()
+    firstRevealRef.current = null
+    if (round[0]) {
+      logEvent('card_view', {
+        word: round[0],
+        dir: 'init',
+        n: revealCounts[round[0]] || 0,
+      })
+    }
     setRevealed(false)
     setHoveredName(null)
     setDeck(round)
     setCenter(0)
     setRoundTick((t) => t + 1)
-  }, [book, fk])
+  }, [book, fk, emitCardLeave, revealCounts])
 
   // 键盘：Space 释义 / Enter 换一轮 / H L 翻页
   useEffect(() => {

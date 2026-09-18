@@ -2,7 +2,7 @@
 // 在入口渲染前调用，把旧格式就地转成新格式；已是新格式则跳过。
 // 只能在词库顺序未变的前提下正确转换（当前词库是追加式扩展，符合）。
 import { words } from '../data/words'
-import { readJSON, writeJSON } from './storage'
+import { readJSON, removeItem, writeJSON } from './storage'
 
 const SESSION_KEY = 'vocab-session'
 const ORDERS_KEY = 'vocab-round-orders'
@@ -64,24 +64,10 @@ export function migrateIndexIds(): void {
     if (changed) writeJSON(ORDERS_KEY, next)
   }
 
-  // reveal-counts: { "60": 3 } → { "ignorance": 3 }
+  // reveal-counts: 改成按逻辑日分桶后，旧的终身计数一律清空（不迁移）
   const reveal = readObject(REVEAL_KEY)
-  if (reveal) {
-    let changed = false
-    const next: Record<string, number> = {}
-    for (const [k, v] of Object.entries(reveal)) {
-      if (typeof v !== 'number') continue
-      if (/^\d+$/.test(k)) {
-        const w = wordAt(Number(k))
-        if (w) {
-          next[w] = v
-          changed = true
-        }
-      } else {
-        next[k] = v
-      }
-    }
-    if (changed) writeJSON(REVEAL_KEY, next)
+  if (reveal && typeof reveal.day !== 'string') {
+    removeItem(REVEAL_KEY)
   }
 
   // centers: { "i:..|e:..|112.45": 6 } → { "i:..|e:..|ignorance.provoke": 6 }
