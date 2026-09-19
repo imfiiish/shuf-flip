@@ -305,6 +305,18 @@ body {
   align-items: center;
   color: var(--muted);
   font-size: 0.9rem;
+  /* 固定到页面底部，横向对齐中间卡片（同样左移 80px） */
+  position: fixed;
+  left: -80px;
+  right: 80px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  padding: 0 76px;
+}
+
+/* 学习页：卡片整体左移一点，右侧多留呼吸、更露出下一张卡（提示行固定在底部） */
+.stage {
+  position: relative;
+  left: -80px;
 }
 
 kbd {
@@ -1079,6 +1091,8 @@ kbd {
   .hints {
     gap: 16px;
     font-size: 0.82rem;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 0 60px;
   }
   .back-btn {
     top: max(12px, env(safe-area-inset-top));
