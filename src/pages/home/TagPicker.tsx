@@ -41,7 +41,7 @@ function nextMode(m: TagMode | undefined): TagMode | undefined {
 
 type Props = {
   onClose: () => void
-  onConfirm: (filter: TagFilter, count: number) => void
+  onConfirm: (filter: TagFilter) => void
   /** 已有的词书筛选条件，用于查重 */
   existing: TagFilter[]
 }
@@ -88,7 +88,7 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
     })
 
   const start = () => {
-    onConfirm(filter, count)
+    onConfirm(filter)
   }
 
   const chip = (t: string) => {

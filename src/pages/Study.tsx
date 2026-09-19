@@ -9,8 +9,7 @@ import { loadBooks } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
 import { filterKey, loadFilter, matchesFilter, saveFilter } from '../lib/filter'
 import { loadCenter, loadRevealStore, saveCenter, saveRevealStore } from '../lib/progress'
-import { loadSession, saveSession } from '../lib/session'
-import { drawRound, saveOrder } from '../lib/rounds'
+import { drawRound, fitOrder, loadOrder, ROUND_SIZE, saveOrder } from '../lib/rounds'
 import { getWord } from '../lib/dict'
 import { beginSession, flushBeacon, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
@@ -60,10 +59,12 @@ function slotOf(p: number, center: number, n: number): Slot {
 /** Study 挂载时的初始状态（只算一次） */
 type StudyInit = {
   fk: string
+  /** 当前词池 */
   book: string[]
-  deck: string[]
-  /** 自动进入某本词书时新开的一轮，需要落盘 */
-  fresh: { filter: TagFilter; key: string; order: string[]; round: string[] } | null
+  /** 校准后的完整词序；一轮 = order.slice(0, ROUND_SIZE) */
+  order: string[]
+  /** 自动进入某本词书时需要落盘的筛选（续上次时为 null） */
+  filter: TagFilter | null
   /** 一本词书都没有：回主页并弹出 TagPicker */
   needPick: boolean
 }
@@ -73,20 +74,23 @@ type StudyInit = {
  * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 下一轮。
  */
 export default function Study() {
-  // 初始牌组只算一次（StrictMode 下 render 会跑两遍，避免洗出两轮不同的牌）：
-  //  1) 续上次：session 与当前筛选对上且这一轮还有效 → 继续
+  // 初始状态只算一次（StrictMode 下 render 会跑两遍，避免洗出两轮不同的牌）。
+  // 一轮的唯一来源是 vocab-round-orders（不再单独存 session）：
+  //  1) 续上次：当前筛选存过顺序，且校准后仍有词 → 继续
   //  2) 否则有词书：进「最新创建」且有词的那本，直接开一轮（等价于点「开始学习」）
   //  3) 一本词书都没有 → 回主页并弹 TagPicker
   const initRef = useRef<StudyInit | null>(null)
   if (!initRef.current) {
+    const poolOf = (filter: TagFilter) =>
+      words.filter((w) => matchesFilter(w, filter)).map((w) => w.word)
+
     const f = loadFilter()
     const fk = filterKey(f)
-    const book = words.filter((w) => matchesFilter(w, f)).map((w) => w.word)
-    const s = loadSession()
-    const has = new Set(book)
-    const list = s && s.key === fk ? s.words.filter((w) => has.has(w)) : []
-    if (list.length > 0) {
-      initRef.current = { fk, book, deck: list, fresh: null, needPick: false }
+    const book = poolOf(f)
+    const stored = loadOrder(fk)
+    const fitted = stored ? fitOrder(stored, book) : null
+    if (fitted && fitted.length > 0) {
+      initRef.current = { fk, book, order: fitted, filter: null, needPick: false }
     } else {
       const books = loadBooks()
       const next = [...books]
@@ -94,24 +98,23 @@ export default function Study() {
         .map((b) => ({
           filter: b.filter,
           key: filterKey(b.filter),
-          pool: words.filter((w) => matchesFilter(w, b.filter)).map((w) => w.word),
+          pool: poolOf(b.filter),
         }))
         .find((b) => b.pool.length > 0)
       if (next) {
-        const { order, round } = drawRound(next.pool)
         initRef.current = {
           fk: next.key,
           book: next.pool,
-          deck: round,
-          fresh: { filter: next.filter, key: next.key, order, round },
+          order: fitOrder(loadOrder(next.key), next.pool),
+          filter: next.filter,
           needPick: false,
         }
       } else {
         initRef.current = {
           fk,
           book,
-          deck: [],
-          fresh: null,
+          order: [],
+          filter: null,
           needPick: books.length === 0,
         }
       }
@@ -119,16 +122,16 @@ export default function Study() {
   }
   const init = initRef.current!
   const { fk, book, needPick } = init
-  const hasRound = init.deck.length > 0
+  const round = init.order.slice(0, ROUND_SIZE)
+  const hasRound = round.length > 0
 
-  const [deck, setDeck] = useState(init.deck)
+  const [deck, setDeck] = useState(round)
 
-  // 自动进入某本词书时，把筛选 + 这一轮落盘，刷新 / 打开弹窗都一致
+  // 把校准后的顺序 / 自动进入时的筛选落盘，刷新后一致
   useEffect(() => {
-    if (!init.fresh) return
-    saveFilter(init.fresh.filter)
-    saveOrder(init.fresh.key, init.fresh.order)
-    saveSession({ key: init.fresh.key, words: init.fresh.round })
+    if (init.order.length === 0) return
+    saveOrder(init.fk, init.order)
+    if (init.filter) saveFilter(init.filter)
     // 只在挂载时执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -451,7 +454,6 @@ export default function Study() {
     if (book.length === 0) return
     const { order, round } = drawRound(book)
     saveOrder(fk, order)
-    saveSession({ key: fk, words: round })
     emitCardLeave()
     roundIndexRef.current += 1
     logEvent('round_new', { index: roundIndexRef.current, words: round })

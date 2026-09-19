@@ -40,12 +40,8 @@ function toWords(value: unknown): string[] | null {
 }
 
 export function migrateIndexIds(): void {
-  // session: { key, indices: number[] } → { key, words: string[] }
-  const session = readObject(SESSION_KEY)
-  if (session && session.words === undefined && session.indices !== undefined) {
-    const list = toWords(session.indices)
-    if (list) writeJSON(SESSION_KEY, { key: session.key, words: list })
-  }
+  // session 已废弃（一轮改由 vocab-round-orders 决定），清掉旧数据
+  removeItem(SESSION_KEY)
 
   // rounds: { filterKey: number[] } → { filterKey: string[] }
   const orders = readObject(ORDERS_KEY)

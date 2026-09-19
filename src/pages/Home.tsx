@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
+import { words } from '../data/words'
+import { matchesFilter } from '../lib/filter'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
 import BookDialog from './home/BookDialog'
@@ -64,7 +66,9 @@ export default function Home() {
                 title={`打开 ${book.name}`}
               >
                 <span className="book-title">{book.name}</span>
-                <span className="book-meta">{book.count} 词</span>
+                <span className="book-meta">
+                  {words.filter((w) => matchesFilter(w, book.filter)).length} 词
+                </span>
               </button>
               <button
                 type="button"
@@ -168,13 +172,10 @@ export default function Home() {
         <TagPicker
           existing={books.map((b) => b.filter)}
           onClose={() => setPickerOpen(false)}
-          onConfirm={(filter, count) => {
+          onConfirm={(filter) => {
             setBooks((b) => {
               if (b.length >= MAX_BOOKS) return b
-              return [
-                ...b,
-                { id: Date.now(), name: '词书', filter, count },
-              ]
+              return [...b, { id: Date.now(), name: '词书', filter }]
             })
             setPickerOpen(false)
           }}

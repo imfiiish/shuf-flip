@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
 import type { Book } from '../../lib/books'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
-import { loadOrder, saveOrder, ROUND_SIZE, drawRound } from '../../lib/rounds'
-import { saveSession } from '../../lib/session'
+import { fitOrder, loadOrder, ROUND_SIZE, saveOrder } from '../../lib/rounds'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
 import { words } from '../../data/words'
@@ -35,7 +34,7 @@ type Props = {
 
 /**
  * 点词书弹出的窗口：左栏是「本轮」的词表，右栏是操作。
- * 每轮从词书里随机推 20 个词；顺序按词书持久化，重开不重排（换一轮在 Study 页按 Enter）。
+ * 每轮从词书里随机推 20 个词；顺序按词书持久化，重开不重排（下一轮在 Study 页按 Enter）。
  */
 export default function BookDialog({ book, onClose, onRename }: Props) {
   const navigate = useNavigate()
@@ -62,18 +61,8 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     [book],
   )
 
-  // 上一轮顺序；没有或对不上就重新洗牌
-  const [order] = useState<string[]>(() => {
-    const stored = loadOrder(key)
-    if (
-      stored &&
-      stored.length === all.length &&
-      all.every((w) => stored.includes(w))
-    ) {
-      return stored
-    }
-    return drawRound(all).order
-  })
+  // 本轮顺序：保留仍存在的词、新词追加到末尾（词库变动不再整池重洗）
+  const [order] = useState<string[]>(() => fitOrder(loadOrder(key), all))
 
   // 顺序变化 → 按词书写回
   useEffect(() => {
@@ -124,7 +113,6 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const start = () => {
     if (round.length === 0) return
     saveFilter(book.filter)
-    saveSession({ key, words: round })
     navigate('/study')
   }
 
