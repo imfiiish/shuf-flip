@@ -16,7 +16,7 @@
   --on-danger: #ffffff;
 
   /* 评级黄（模糊） */
-  --warn: #ca8a04;
+  --warn: #a16207;
   --warn-solid: #eab308;
   --warn-ring: rgba(234, 179, 8, 0.4);
 
@@ -340,24 +340,32 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 26px;
-  border: 1.5px solid var(--border);
+  padding: 10px 22px 10px 16px;
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
   color: var(--text);
   font: inherit;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: transform 140ms ease, background 140ms ease,
     border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
+/* 数字做成一个实心色圆点，按钮本体用同色淡底 → 安静但有颜色 */
 .rating-btn kbd {
-  background: transparent;
-  border-color: currentColor;
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  font-size: 0.82rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .rating-btn:hover {
@@ -368,45 +376,68 @@ body {
   transform: translateY(0);
 }
 
-.rating-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
+/* 1 陌生（红）/ 2 模糊（黄）/ 3 熟悉（绿）：淡彩底 + 同色字 + 实心圆点 */
 .rating-btn.r {
   color: var(--danger);
-  border-color: var(--danger-ring);
+  background: color-mix(in srgb, var(--danger) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.rating-btn.r kbd {
+  background: var(--danger);
+  color: var(--on-danger);
 }
 
 .rating-btn.r:hover {
-  color: var(--on-danger);
-  background: var(--danger);
-  border-color: var(--danger);
-  box-shadow: 0 10px 26px -8px var(--danger-ring);
+  background: color-mix(in srgb, var(--danger) 20%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--danger-ring);
+}
+
+.rating-btn.r:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--danger-ring);
 }
 
 .rating-btn.y {
   color: var(--warn);
-  border-color: var(--warn-ring);
+  background: color-mix(in srgb, var(--warn-solid) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--warn-solid) 36%, transparent);
+}
+
+.rating-btn.y kbd {
+  background: var(--warn-solid);
+  color: #3b2a00;
 }
 
 .rating-btn.y:hover {
-  color: #2b1a00;
-  background: var(--warn-solid);
-  border-color: var(--warn-solid);
-  box-shadow: 0 10px 26px -8px var(--warn-ring);
+  background: color-mix(in srgb, var(--warn-solid) 26%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--warn-ring);
+}
+
+.rating-btn.y:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--warn-ring);
 }
 
 .rating-btn.g {
   color: var(--accent);
-  border-color: var(--accent-ring);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.rating-btn.g kbd {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .rating-btn.g:hover {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 10px 26px -8px var(--accent-ring);
+  background: color-mix(in srgb, var(--accent) 20%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--accent-ring);
+}
+
+.rating-btn.g:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 /* 学习页：卡片整体左移一点，右侧多留呼吸、更露出下一张卡（提示行固定在底部） */
