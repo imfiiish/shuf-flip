@@ -1,4 +1,5 @@
-// 事件日志：dev 下把动作追加到 logs/events-<逻辑日>.jsonl（经 Vite 中间件）
+// 事件日志：dev 下把动作追加到 logs/events-<page>-<逻辑日>.jsonl（经 Vite 中间件）
+// page = study / quiz，按 type 前缀路由：quiz_* → quiz，其余 → study
 //
 // - 每条事件带信封：t(ISO 本地) / ld(逻辑日) / sid(会话) / type
 // - 缓冲 + 微批量发送；页面隐藏/卸载用 sendBeacon 兜底
@@ -18,9 +19,9 @@ function newSid(): string {
   return `s-${Date.now().toString(36)}-${rand}`
 }
 
-/** 开始一个新的学习会话（进入 Study 页时调用） */
-export function beginSession(): void {
-  sid = newSid()
+/** 确保已有一个会话 id（不覆盖）：同一页面加载内 study↔quiz 共用一个 sid */
+export function ensureSession(): void {
+  if (!sid) sid = newSid()
 }
 
 function send(useBeacon: boolean): void {
@@ -57,7 +58,7 @@ export function flushBeacon(): void {
 /** 追加一条事件（dev 下才会真正发出） */
 export function logEvent(type: string, payload: Payload = {}): void {
   if (!isDev) return
-  if (!sid) beginSession()
+  if (!sid) ensureSession()
   const now = Date.now()
   buffer.push(
     JSON.stringify({ t: isoLocal(now), ld: logicalDay(now), sid, type, ...payload }),

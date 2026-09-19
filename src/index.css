@@ -15,6 +15,11 @@
   --danger-ring: rgba(239, 68, 68, 0.35);
   --on-danger: #ffffff;
 
+  /* 评级黄（模糊） */
+  --warn: #ca8a04;
+  --warn-solid: #eab308;
+  --warn-ring: rgba(234, 179, 8, 0.4);
+
   /* 浅色（默认） */
   --bg: #f2f8f6;
   --card: #ffffff;
@@ -45,6 +50,10 @@
   --danger: #f87171;
   --danger-ring: rgba(248, 113, 113, 0.45);
   --on-danger: #2b0b0b;
+
+  --warn: #facc15;
+  --warn-solid: #eab308;
+  --warn-ring: rgba(250, 204, 21, 0.4);
 
   --bg: #0e1413;
   --card: #16201e;
@@ -313,6 +322,93 @@ body {
   padding: 0 76px;
 }
 
+/* ---------- Quiz 页底部评级条 ---------- */
+.quiz-bar {
+  flex-direction: column;
+  gap: 14px;
+  /* 评级条比提示行高一档，往下顶一点让舞台多留空间 */
+  padding-bottom: 2px;
+}
+
+.quiz-ratings {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.rating-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 26px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease,
+    border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.rating-btn kbd {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
+  font-weight: 700;
+}
+
+.rating-btn:hover {
+  transform: translateY(-1px);
+}
+
+.rating-btn:active {
+  transform: translateY(0);
+}
+
+.rating-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.rating-btn.r {
+  color: var(--danger);
+  border-color: var(--danger-ring);
+}
+
+.rating-btn.r:hover {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 10px 26px -8px var(--danger-ring);
+}
+
+.rating-btn.y {
+  color: var(--warn);
+  border-color: var(--warn-ring);
+}
+
+.rating-btn.y:hover {
+  color: #2b1a00;
+  background: var(--warn-solid);
+  border-color: var(--warn-solid);
+  box-shadow: 0 10px 26px -8px var(--warn-ring);
+}
+
+.rating-btn.g {
+  color: var(--accent);
+  border-color: var(--accent-ring);
+}
+
+.rating-btn.g:hover {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 10px 26px -8px var(--accent-ring);
+}
+
 /* 学习页：卡片整体左移一点，右侧多留呼吸、更露出下一张卡（提示行固定在底部） */
 .stage {
   position: relative;
@@ -459,6 +555,17 @@ kbd {
 .logout-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--danger-ring);
+}
+
+/* Quiz「跳过」按钮：待确认（点了一次）时变红 */
+.skip-btn.armed,
+.skip-btn.armed:hover,
+.skip-btn.armed:active,
+.skip-btn.armed:focus-visible {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 8px 28px -6px var(--danger-ring);
 }
 
 /* ---------- 词书区（/ 页中间的大区域）---------- */
@@ -1093,6 +1200,13 @@ kbd {
     font-size: 0.82rem;
     bottom: max(12px, env(safe-area-inset-bottom));
     padding: 0 60px;
+  }
+  .quiz-bar {
+    gap: 8px;
+  }
+  .rating-btn {
+    padding: 8px 18px;
+    font-size: 0.95rem;
   }
   .back-btn {
     top: max(12px, env(safe-area-inset-top));

@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom'
 type Props = {
   to: string
   label: string
+  /** 传入则接管点击（例如 Quiz 的返回=跳过），不再按 to 导航 */
+  onClick?: () => void
 }
 
 /** 左上角圆形返回按钮（固定视口），to 指定返回目标 */
-export default function BackButton({ to, label }: Props) {
+export default function BackButton({ to, label, onClick }: Props) {
   const navigate = useNavigate()
 
   return (
     <button
       type="button"
       className="icon-btn back-btn"
-      onClick={() => navigate(to)}
+      onClick={() => (onClick ? onClick() : navigate(to))}
       aria-label={label}
       title={label}
     >

@@ -4,6 +4,7 @@ import { isLoggedIn } from './lib/auth'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Study from './pages/Study'
+import Quiz from './pages/Quiz'
 
 // 未登录访问受保护页面时，重定向回 /login
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -29,6 +30,14 @@ export default function App() {
           element={
             <RequireAuth>
               <Study />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/quiz"
+          element={
+            <RequireAuth>
+              <Quiz />
             </RequireAuth>
           }
         />
