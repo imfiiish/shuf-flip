@@ -57,12 +57,12 @@ function slotOf(p: number, center: number, n: number): Slot {
 
 /**
  * 学习页：只负责「翻」。
- * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 换一轮。
+ * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 下一轮。
  */
 export default function Study() {
   const navigate = useNavigate()
 
-  // 词书筛选 + 这一轮的词（session，word 字符串）；换一轮会替换 deck
+  // 词书筛选 + 这一轮的词（session，word 字符串）；下一轮会替换 deck
   const { fk, book, initialDeck } = useMemo(() => {
     const f = loadFilter()
     const fk = filterKey(f)
@@ -77,7 +77,7 @@ export default function Study() {
   }, [])
 
   const [deck, setDeck] = useState(initialDeck)
-  // 换一轮时递增，给舞台换 key → 重放进入 Study 页的入场动画（.cards 的 app-in）
+  // 下一轮时递增，给舞台换 key → 重放进入 Study 页的入场动画（.cards 的 app-in）
   const [roundTick, setRoundTick] = useState(0)
 
   // A1 等比缩放：舞台内部保持 1200×360 设计尺寸，按「视口 - 留白 - 提示行」算缩放比（≤1）
@@ -389,7 +389,7 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
-  // 换一轮：洗整本词书，取前 ROUND_SIZE 个作为新的一轮，并持久化
+  // 下一轮：洗整本词书，取前 ROUND_SIZE 个作为新的一轮，并持久化
   const nextRound = useCallback(() => {
     if (book.length === 0) return
     const { order, round } = drawRound(book)
@@ -406,7 +406,7 @@ export default function Study() {
     setRoundTick((t) => t + 1)
   }, [book, fk, emitCardLeave, beginCard])
 
-  // 键盘：Space 释义 / Enter 换一轮 / H L 翻页
+  // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const k = e.key
@@ -457,6 +457,29 @@ export default function Study() {
   return (
     <div className="app" ref={appRef}>
       <BackButton to="/" label="返回主页" />
+      {/* 右下角：下一轮（与左上角返回键镜像对称） */}
+      <button
+        type="button"
+        className="icon-btn next-round-btn"
+        onClick={nextRound}
+        aria-label="下一轮"
+        title="下一轮"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </button>
       <div
         className="stage"
         key={roundTick}
@@ -503,7 +526,7 @@ export default function Study() {
           <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
         </span>
         <span>
-          <kbd>Enter</kbd> 换一轮
+          <kbd>Enter</kbd> 下一轮
         </span>
       </div>
     </div>

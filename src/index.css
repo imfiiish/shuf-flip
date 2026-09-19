@@ -413,6 +413,13 @@ kbd {
   left: max(24px, env(safe-area-inset-left));
 }
 
+/* 学习页「下一轮」按钮：固定视口右下角，与左上角返回键镜像对称 */
+.next-round-btn {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
+}
+
 /* 主题切换按钮：固定视口左下角 */
 .theme-toggle {
   position: fixed;
@@ -1090,6 +1097,10 @@ kbd {
   .back-btn {
     top: max(12px, env(safe-area-inset-top));
     left: max(12px, env(safe-area-inset-left));
+  }
+  .next-round-btn {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: max(12px, env(safe-area-inset-right));
   }
 }
 
