@@ -9,7 +9,8 @@ import { loadBooks } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
 import { filterKey, loadFilter, matchesFilter, saveFilter } from '../lib/filter'
 import { loadCenter, loadRevealStore, saveCenter, saveRevealStore } from '../lib/progress'
-import { drawRound, fitOrder, loadOrder, ROUND_SIZE, saveOrder } from '../lib/rounds'
+import type { Cascade } from '../lib/cascade'
+import { advance, ensureCascade, loadCascade, saveCascade } from '../lib/cascade'
 import { getWord } from '../lib/dict'
 import { beginSession, flushBeacon, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
@@ -61,8 +62,8 @@ type StudyInit = {
   fk: string
   /** 当前词池 */
   book: string[]
-  /** 校准后的完整词序；一轮 = order.slice(0, ROUND_SIZE) */
-  order: string[]
+  /** 当前词书的级联状态（cascade.round 就是这一轮） */
+  cascade: Cascade
   /** 自动进入某本词书时需要落盘的筛选（续上次时为 null） */
   filter: TagFilter | null
   /** 一本词书都没有：回主页并弹出 TagPicker */
@@ -71,12 +72,12 @@ type StudyInit = {
 
 /**
  * 学习页：只负责「翻」。
- * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 下一轮。
+ * 牌组就是词书弹窗里那一轮（默认 ROUND_SIZE 个词），环形滑动，Space 展开，Enter 下一轮。
  */
 export default function Study() {
   // 初始状态只算一次（StrictMode 下 render 会跑两遍，避免洗出两轮不同的牌）。
-  // 一轮的唯一来源是 vocab-round-orders（不再单独存 session）：
-  //  1) 续上次：当前筛选存过顺序，且校准后仍有词 → 继续
+  // 一轮来自「级联窗口」（见 lib/cascade.ts、docs/sampling.md）：
+  //  1) 续上次：当前筛选存过级联，且校准后仍有词 → 继续
   //  2) 否则有词书：进「最新创建」且有词的那本，直接开一轮（等价于点「开始学习」）
   //  3) 一本词书都没有 → 回主页并弹 TagPicker
   const initRef = useRef<StudyInit | null>(null)
@@ -87,11 +88,16 @@ export default function Study() {
     const f = loadFilter()
     const fk = filterKey(f)
     const book = poolOf(f)
-    const stored = loadOrder(fk)
-    const fitted = stored ? fitOrder(stored, book) : null
-    if (fitted && fitted.length > 0) {
-      initRef.current = { fk, book, order: fitted, filter: null, needPick: false }
-    } else {
+
+    // 1) 续上次
+    if (loadCascade(fk)) {
+      const c = ensureCascade(fk, book)
+      if (c.round.length > 0) {
+        initRef.current = { fk, book, cascade: c, filter: null, needPick: false }
+      }
+    }
+    // 2) 否则有词书：进「最新创建」且有词的那本
+    if (!initRef.current) {
       const books = loadBooks()
       const next = [...books]
         .sort((a, b) => b.id - a.id)
@@ -105,7 +111,7 @@ export default function Study() {
         initRef.current = {
           fk: next.key,
           book: next.pool,
-          order: fitOrder(loadOrder(next.key), next.pool),
+          cascade: ensureCascade(next.key, next.pool),
           filter: next.filter,
           needPick: false,
         }
@@ -113,7 +119,7 @@ export default function Study() {
         initRef.current = {
           fk,
           book,
-          order: [],
+          cascade: { r: 0, levels: [], round: [] },
           filter: null,
           needPick: books.length === 0,
         }
@@ -122,15 +128,16 @@ export default function Study() {
   }
   const init = initRef.current!
   const { fk, book, needPick } = init
-  const round = init.order.slice(0, ROUND_SIZE)
+  const cascadeRef = useRef(init.cascade)
+  const round = init.cascade.round
   const hasRound = round.length > 0
 
   const [deck, setDeck] = useState(round)
 
-  // 把校准后的顺序 / 自动进入时的筛选落盘，刷新后一致
+  // 级联状态 / 自动进入时的筛选落盘，刷新后一致
   useEffect(() => {
-    if (init.order.length === 0) return
-    saveOrder(init.fk, init.order)
+    if (init.cascade.round.length === 0) return
+    saveCascade(init.fk, init.cascade)
     if (init.filter) saveFilter(init.filter)
     // 只在挂载时执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -449,18 +456,19 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
-  // 下一轮：洗整本词书，取前 ROUND_SIZE 个作为新的一轮，并持久化
+  // 下一轮：级联前进一轮（必要时按周期刷新各级），落盘并换牌
   const nextRound = useCallback(() => {
     if (book.length === 0) return
-    const { order, round } = drawRound(book)
-    saveOrder(fk, order)
+    const next = advance(cascadeRef.current, book)
+    cascadeRef.current = next
+    saveCascade(fk, next)
     emitCardLeave()
     roundIndexRef.current += 1
-    logEvent('round_new', { index: roundIndexRef.current, words: round })
-    if (round[0]) beginCard('init')
+    logEvent('round_new', { index: roundIndexRef.current, words: next.round })
+    if (next.round[0]) beginCard('init')
     setRevealed(false)
     setHoveredName(null)
-    setDeck(round)
+    setDeck(next.round)
     setCenter(0)
     setRoundTick((t) => t + 1)
   }, [book, fk, emitCardLeave, beginCard])

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
 import type { Book } from '../../lib/books'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
-import { fitOrder, loadOrder, ROUND_SIZE, saveOrder } from '../../lib/rounds'
+import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
 import { words } from '../../data/words'
@@ -34,7 +34,7 @@ type Props = {
 
 /**
  * 点词书弹出的窗口：左栏是「本轮」的词表，右栏是操作。
- * 每轮从词书里随机推 20 个词；顺序按词书持久化，重开不重排（下一轮在 Study 页按 Enter）。
+ * 每轮从词书里随机推 ROUND_SIZE 个词；顺序按词书持久化，重开不重排（下一轮在 Study 页按 Enter）。
  */
 export default function BookDialog({ book, onClose, onRename }: Props) {
   const navigate = useNavigate()
@@ -61,15 +61,15 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     [book],
   )
 
-  // 本轮顺序：保留仍存在的词、新词追加到末尾（词库变动不再整池重洗）
-  const [order] = useState<string[]>(() => fitOrder(loadOrder(key), all))
+  // 本轮来自级联窗口（没有存档则新建并画第一轮）
+  const [cascade] = useState(() => ensureCascade(key, all))
 
-  // 顺序变化 → 按词书写回
+  // 落盘
   useEffect(() => {
-    saveOrder(key, order)
-  }, [key, order])
+    saveCascade(key, cascade)
+  }, [key, cascade])
 
-  const round = order.slice(0, ROUND_SIZE)
+  const round = cascade.round
 
   // 点词 → 复制到剪贴板 + 播放发音
   const [copied, setCopied] = useState<string | null>(null)
@@ -101,12 +101,12 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
   useEffect(() => {
     preloadAudio(
-      order.slice(0, ROUND_SIZE).flatMap((name) => {
+      round.flatMap((name) => {
         const w = getWord(name)
         return w ? [w.audio_file] : []
       }),
     )
-  }, [order])
+  }, [round])
 
   useEffect(() => () => window.clearTimeout(copyTimer.current), [])
 

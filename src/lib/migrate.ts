@@ -27,38 +27,10 @@ function readObject(key: string): Record<string, unknown> | null {
   )
 }
 
-/** 旧的下标数组 → word 数组；已经是字符串数组则返回 null（无需迁移） */
-function toWords(value: unknown): string[] | null {
-  if (!Array.isArray(value)) return null
-  if (value.every((x) => typeof x === 'string')) return null
-  const out: string[] = []
-  for (const x of value) {
-    const w = wordAt(x)
-    if (w) out.push(w)
-  }
-  return out
-}
-
 export function migrateIndexIds(): void {
-  // session 已废弃（一轮改由 vocab-round-orders 决定），清掉旧数据
+  // 一轮已改由 vocab-cascade 决定，旧的 session / orders 一并清掉
   removeItem(SESSION_KEY)
-
-  // rounds: { filterKey: number[] } → { filterKey: string[] }
-  const orders = readObject(ORDERS_KEY)
-  if (orders) {
-    let changed = false
-    const next: Record<string, string[]> = {}
-    for (const [k, v] of Object.entries(orders)) {
-      const converted = toWords(v)
-      if (converted) {
-        next[k] = converted
-        changed = true
-      } else if (Array.isArray(v)) {
-        next[k] = v.filter((x): x is string => typeof x === 'string')
-      }
-    }
-    if (changed) writeJSON(ORDERS_KEY, next)
-  }
+  removeItem(ORDERS_KEY)
 
   // reveal-counts: 改成按逻辑日分桶后，旧的终身计数一律清空（不迁移）
   const reveal = readObject(REVEAL_KEY)
