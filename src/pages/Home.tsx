@@ -27,7 +27,7 @@ export default function Home() {
   }, [books])
 
   return (
-    <div className="page home-page">
+    <div className="page">
       {/* 词书区：中间大区域，+ 始终排在最后一本后面 */}
       <div className="bookshelf">
         <div className="bookshelf-inner">

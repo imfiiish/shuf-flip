@@ -5,8 +5,8 @@ export default function Login() {
   const navigate = useNavigate()
 
   return (
-    <div className="page login-page">
-      <div className="panel login-panel">
+    <div className="page">
+      <div className="panel">
         <h1 className="brand">Vocab Cards</h1>
         <button
           className="btn btn-primary"

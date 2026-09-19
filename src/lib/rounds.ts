@@ -6,7 +6,7 @@ import { readMap, writeJSON } from './storage'
 export const ROUND_SIZE = 20
 
 /** 洗牌：返回打乱顺序的新数组 */
-export function shuffle<T>(pool: readonly T[]): T[] {
+function shuffle<T>(pool: readonly T[]): T[] {
   const arr = [...pool]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))

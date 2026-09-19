@@ -16,7 +16,7 @@ function isCount(n: unknown): n is number {
 }
 
 // ---- 展开次数（按逻辑日）----
-export type RevealStore = {
+type RevealStore = {
   /** 逻辑日 YYYY-MM-DD */
   day: string
   /** word 字符串 → 当天展开次数 */
