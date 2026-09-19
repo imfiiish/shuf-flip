@@ -219,6 +219,10 @@ export default function Study() {
   const aliveRef = useRef(true)
   const viewStartRef = useRef(0)
   const firstRevealRef = useRef<number | null>(null)
+  /** 当前这张卡的进入方向（合并进 card 事件） */
+  const dirRef = useRef<'init' | 'left' | 'right'>('init')
+  /** 当前这张卡展开过几次（合并进 card 事件） */
+  const visitRevealsRef = useRef(0)
   const roundIndexRef = useRef(1)
   const leaveFnRef = useRef<() => void>(() => {})
   const exitSentRef = useRef(false)
@@ -282,21 +286,19 @@ export default function Study() {
     else awayAfterRef.current += gap
   }, [])
 
-  // 进入一张卡：重置计时与离开累计
-  const beginCard = useCallback(
-    (name: string, dir: 'init' | 'left' | 'right') => {
-      viewStartRef.current = performance.now()
-      firstRevealRef.current = null
-      awayBeforeRef.current = 0
-      awayAfterRef.current = 0
-      awayAtRef.current =
-        !document.hasFocus() || document.hidden ? performance.now() : null
-      logEvent('card_view', { word: name, dir, n: revealCounts[name] || 0 })
-    },
-    [revealCounts],
-  )
+  // 进入一张卡：重置计时与离开累计（card 事件在离卡时统一记）
+  const beginCard = useCallback((dir: 'init' | 'left' | 'right') => {
+    viewStartRef.current = performance.now()
+    firstRevealRef.current = null
+    dirRef.current = dir
+    visitRevealsRef.current = 0
+    awayBeforeRef.current = 0
+    awayAfterRef.current = 0
+    awayAtRef.current =
+      !document.hasFocus() || document.hidden ? performance.now() : null
+  }, [])
 
-  // 离开当前中心卡：补一条 card_leave（前/后停留，已扣除切窗口时间）
+  // 离开当前中心卡：记一条 card（进卡/离卡合并；停留已扣除切窗口时间）
   const emitCardLeave = useCallback(() => {
     if (!centerName || viewStartRef.current === 0) return
     const now = performance.now()
@@ -307,13 +309,16 @@ export default function Study() {
         : now - viewStartRef.current
     const rawAfter =
       firstRevealRef.current !== null ? now - firstRevealRef.current : 0
-    logEvent('card_leave', {
+    logEvent('card', {
       word: centerName,
+      dir: dirRef.current,
       dwellBeforeMs: Math.max(0, Math.round(rawBefore - awayBeforeRef.current)),
       dwellAfterMs: Math.max(0, Math.round(rawAfter - awayAfterRef.current)),
+      reveals: visitRevealsRef.current,
     })
     viewStartRef.current = 0
     firstRevealRef.current = null
+    visitRevealsRef.current = 0
     awayBeforeRef.current = 0
     awayAfterRef.current = 0
     awayAtRef.current = null
@@ -339,15 +344,16 @@ export default function Study() {
       })
     }
     beginSession()
-    logEvent('study_enter', { filterKey: fk, deckSize: TOTAL })
+    logEvent('study_enter', { filterKey: fk })
     logEvent('round_new', { index: roundIndexRef.current, words: deck })
-    if (centerName) beginCard(centerName, 'init')
+    if (centerName) beginCard('init')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 切窗口/切标签：记录可见性与焦点，并结算「离开」时长（hidden 或 blur）
+  // 切窗口/切标签：结算「离开」时长（hidden 或 blur），away 状态变化时记一条
   useEffect(() => {
-    const syncAway = () => {
+    let wasAway = !document.hasFocus() || document.hidden
+    const syncAway = (by: 'visibility' | 'focus') => {
       const awayNow = !document.hasFocus() || document.hidden
       const now = performance.now()
       if (awayNow) {
@@ -355,19 +361,14 @@ export default function Study() {
       } else {
         closeAway(now)
       }
+      if (awayNow !== wasAway) {
+        wasAway = awayNow
+        logEvent('away', { away: awayNow, by })
+      }
     }
-    const onVis = () => {
-      logEvent('visibility', { state: document.visibilityState })
-      syncAway()
-    }
-    const onFocus = () => {
-      logEvent('focus', { state: 'focus' })
-      syncAway()
-    }
-    const onBlur = () => {
-      logEvent('focus', { state: 'blur' })
-      syncAway()
-    }
+    const onVis = () => syncAway('visibility')
+    const onFocus = () => syncAway('focus')
+    const onBlur = () => syncAway('focus')
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('focus', onFocus)
     window.addEventListener('blur', onBlur)
@@ -381,6 +382,7 @@ export default function Study() {
   // 页面卸载（关标签/刷新/外跳）：尽力补一条 study_exit 并立即发出
   useEffect(() => {
     const onPageHide = () => {
+      leaveFnRef.current() // 补最后一张卡（card 在离卡时才写）
       emitExit('unload')
       flushBeacon()
     }
@@ -388,7 +390,7 @@ export default function Study() {
     return () => window.removeEventListener('pagehide', onPageHide)
   }, [emitExit])
 
-  // 真正离开 Study 页时补最后一张的 card_leave + study_exit（微任务区分 StrictMode 的假卸载）
+  // 真正离开 Study 页时补最后一张的 card + study_exit（微任务区分 StrictMode 的假卸载）
   useEffect(() => {
     aliveRef.current = true
     return () => {
@@ -409,12 +411,11 @@ export default function Study() {
       if (TOTAL === 0) return
       emitCardLeave()
       const next = (center + delta + TOTAL) % TOTAL
-      const name = deck[next]
-      if (name) beginCard(name, delta > 0 ? 'right' : 'left')
+      beginCard(delta > 0 ? 'right' : 'left')
       setRevealed(false)
       setCenter(next)
     },
-    [TOTAL, center, deck, emitCardLeave, beginCard],
+    [TOTAL, center, emitCardLeave, beginCard],
   )
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
@@ -431,18 +432,17 @@ export default function Study() {
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {
-    const didReset = ensureDay()
+    ensureDay()
     setRevealed(true)
     if (centerName) {
-      const n = (didReset ? 0 : revealCounts[centerName] || 0) + 1
       setRevealCounts((c) => ({ ...c, [centerName]: (c[centerName] || 0) + 1 }))
+      visitRevealsRef.current += 1
       if (firstRevealRef.current === null) {
         firstRevealRef.current = performance.now()
       }
-      logEvent('reveal', { word: centerName, n })
     }
     play(centerWord?.audio_file)
-  }, [play, centerWord, centerName, ensureDay, revealCounts])
+  }, [play, centerWord, centerName, ensureDay])
 
   const toggleReveal = useCallback(() => {
     if (revealed) play(centerWord?.audio_file)
@@ -457,7 +457,7 @@ export default function Study() {
     emitCardLeave()
     roundIndexRef.current += 1
     logEvent('round_new', { index: roundIndexRef.current, words: round })
-    if (round[0]) beginCard(round[0], 'init')
+    if (round[0]) beginCard('init')
     setRevealed(false)
     setHoveredName(null)
     setDeck(round)
