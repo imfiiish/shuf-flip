@@ -173,11 +173,11 @@ export default function CardDeck({
         onMouseMove={onCardsMouseMove}
         onMouseLeave={onCardsMouseLeave}
       >
-        {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动 */}
+        {/* 固定按词序渲染，DOM 顺序稳定，翻页只改 transform → 平滑环形滑动。
+            所有卡片始终挂载（超出窗口的放 pos-off-l/r 隐身），避免快速翻页时
+            重新挂载导致的「闪现」 */}
         {deck.map((name, p) => {
           const slot = slotOf(p, center, TOTAL)
-          // 数字槽位超出窗口就不渲染；'B' / 'S' 始终渲染
-          if (typeof slot === 'number' && Math.abs(slot) > SIDE) return null
           const word = getWord(name)
           if (!word) return null
           return (
@@ -215,10 +215,17 @@ function Card({
   onClick,
 }: CardProps) {
   const isCenter = slot === 0
+  // 超出窗口的槽位不用具体 pos-N，而是落到右侧/左侧的隐身位（仍挂载，只隐起来）
+  const off = typeof slot === 'number' && Math.abs(slot) > SIDE
+  const posClass = off
+    ? slot > 0
+      ? 'pos-off-r'
+      : 'pos-off-l'
+    : `pos-${slot}`
 
   return (
     <div
-      className={`card pos-${slot}${isCenter ? ' active' : ''}${
+      className={`card ${posClass}${isCenter ? ' active' : ''}${
         hovered ? ' hovered' : ''
       }`}
       data-word={word.word}

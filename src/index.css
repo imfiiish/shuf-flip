@@ -200,6 +200,22 @@ body {
   pointer-events: none;
 }
 
+/* 更远的隱身位：超出窗口的卡片都停在这里（一直挂载，只隱起来），
+   避免快速翻页时挂载/卸载造成的一下「闪现」 */
+.pos-off-r {
+  transform: translate(-50%, -50%) translateX(1000px) scale(0.7);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.pos-off-l {
+  transform: translate(-50%, -50%) translateX(-1000px) scale(0.7);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* 偶数张时的正背面：藏在中间卡背后，不可见 */
 .pos-B {
   transform: translate(-50%, -50%) scale(0.6);
