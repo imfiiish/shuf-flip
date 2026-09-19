@@ -1036,20 +1036,6 @@ kbd {
   box-shadow: none;
 }
 
-/* 过滤后没有词 */
-.empty-study {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  color: var(--muted);
-}
-
-.empty-study p {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
 /* ---------- 动画 ---------- */
 
 /* 入场：整体浮现 */

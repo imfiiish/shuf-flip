@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import type { Word } from '../data/words'
 import { words } from '../data/words'
@@ -60,10 +60,10 @@ function slotOf(p: number, center: number, n: number): Slot {
  * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 下一轮。
  */
 export default function Study() {
-  const navigate = useNavigate()
-
-  // 词书筛选 + 这一轮的词（session，word 字符串）；下一轮会替换 deck
-  const { fk, book, initialDeck } = useMemo(() => {
+  // 词书筛选 + 这一轮的词（session，word 字符串）；下一轮会替换 deck。
+  // hasRound=false（没 session / 对不上 / 词全被过滤）→ 下面重定向回主页选词书，
+  // 所以这里不再退回「整个词池」。
+  const { fk, book, initialDeck, hasRound } = useMemo(() => {
     const f = loadFilter()
     const fk = filterKey(f)
     const book = words.filter((w) => matchesFilter(w, f)).map((w) => w.word)
@@ -71,9 +71,9 @@ export default function Study() {
     if (s && s.key === fk) {
       const has = new Set(book)
       const list = s.words.filter((w) => has.has(w))
-      if (list.length > 0) return { fk, book, initialDeck: list }
+      if (list.length > 0) return { fk, book, initialDeck: list, hasRound: true }
     }
-    return { fk, book, initialDeck: book }
+    return { fk, book, initialDeck: [], hasRound: false }
   }, [])
 
   const [deck, setDeck] = useState(initialDeck)
@@ -271,6 +271,7 @@ export default function Study() {
 
   // 进入学习：开始会话，记 study_enter / 首组 / 首张（StrictMode 下只执行一次）
   useEffect(() => {
+    if (!hasRound) return // 没有有效的一轮：马上重定向，不记这次学习
     if (enteredRef.current) return
     enteredRef.current = true
     if (revealInit.previousDay) {
@@ -334,6 +335,7 @@ export default function Study() {
     aliveRef.current = true
     return () => {
       aliveRef.current = false
+      if (!hasRound) return // 没真正进入过（重定向中），没有可收尾的
       queueMicrotask(() => {
         if (!aliveRef.current) {
           leaveFnRef.current()
@@ -341,7 +343,7 @@ export default function Study() {
         }
       })
     }
-  }, [emitExit])
+  }, [emitExit, hasRound])
 
   // 翻页
   const go = useCallback(
@@ -436,23 +438,8 @@ export default function Study() {
     return () => window.removeEventListener('keydown', onKey)
   }, [go, toggleReveal, nextRound])
 
-  if (TOTAL === 0) {
-    return (
-      <div className="app">
-        <BackButton to="/" label="返回主页" />
-        <div className="empty-study">
-          <p>还没有可学的词</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => navigate('/')}
-          >
-            去选词书
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // 没有有效的一轮 → 回主页重新选词书（用 <Navigate>，不先闪一下整池）
+  if (!hasRound) return <Navigate to="/" replace />
 
   return (
     <div className="app" ref={appRef}>
