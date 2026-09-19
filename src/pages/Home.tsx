@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
@@ -10,7 +10,7 @@ import TagPicker from './home/TagPicker'
 
 export default function Home() {
   const navigate = useNavigate()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const location = useLocation()
   const [activeBook, setActiveBook] = useState<Book | null>(null)
   // 旧数据里的自动名「词书1/2…」规整为「词书」；自定义名保留
   const [books, setBooks] = useState<Book[]>(() =>
@@ -18,7 +18,22 @@ export default function Home() {
       /^词书\d+$/.test(b.name) ? { ...b, name: '词书' } : b,
     ),
   )
+  // 没有词书 / 从 Study 跳回来要求选词书 → 自动弹出 TagPicker
+  const [pickerOpen, setPickerOpen] = useState(() => {
+    const st = location.state as { openPicker?: boolean } | null
+    return !!st?.openPicker || books.length === 0
+  })
   const [confirmId, setConfirmId] = useState<number | null>(null)
+
+  // 清掉「要求弹选词书」的路由 state，避免刷新时重复弹
+  useEffect(() => {
+    const st = location.state as { openPicker?: boolean } | null
+    if (st?.openPicker) {
+      navigate(location.pathname, { replace: true, state: null })
+    }
+    // 只在挂载时清一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const atLimit = books.length >= MAX_BOOKS
 

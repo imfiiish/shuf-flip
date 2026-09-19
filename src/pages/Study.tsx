@@ -5,7 +5,9 @@ import BackButton from '../components/BackButton'
 import type { Word } from '../data/words'
 import { words } from '../data/words'
 import { preloadAudio, useAudioPlayer } from '../lib/audio'
-import { filterKey, loadFilter, matchesFilter } from '../lib/filter'
+import { loadBooks } from '../lib/books'
+import type { TagFilter } from '../lib/filter'
+import { filterKey, loadFilter, matchesFilter, saveFilter } from '../lib/filter'
 import { loadCenter, loadRevealStore, saveCenter, saveRevealStore } from '../lib/progress'
 import { loadSession, saveSession } from '../lib/session'
 import { drawRound, saveOrder } from '../lib/rounds'
@@ -55,28 +57,81 @@ function slotOf(p: number, center: number, n: number): Slot {
   return d
 }
 
+/** Study 挂载时的初始状态（只算一次） */
+type StudyInit = {
+  fk: string
+  book: string[]
+  deck: string[]
+  /** 自动进入某本词书时新开的一轮，需要落盘 */
+  fresh: { filter: TagFilter; key: string; order: string[]; round: string[] } | null
+  /** 一本词书都没有：回主页并弹出 TagPicker */
+  needPick: boolean
+}
+
 /**
  * 学习页：只负责「翻」。
  * 牌组就是词书弹窗里那一轮（默认 20 个词），环形滑动，Space 展开，Enter 下一轮。
  */
 export default function Study() {
-  // 词书筛选 + 这一轮的词（session，word 字符串）；下一轮会替换 deck。
-  // hasRound=false（没 session / 对不上 / 词全被过滤）→ 下面重定向回主页选词书，
-  // 所以这里不再退回「整个词池」。
-  const { fk, book, initialDeck, hasRound } = useMemo(() => {
+  // 初始牌组只算一次（StrictMode 下 render 会跑两遍，避免洗出两轮不同的牌）：
+  //  1) 续上次：session 与当前筛选对上且这一轮还有效 → 继续
+  //  2) 否则有词书：进「最新创建」且有词的那本，直接开一轮（等价于点「开始学习」）
+  //  3) 一本词书都没有 → 回主页并弹 TagPicker
+  const initRef = useRef<StudyInit | null>(null)
+  if (!initRef.current) {
     const f = loadFilter()
     const fk = filterKey(f)
     const book = words.filter((w) => matchesFilter(w, f)).map((w) => w.word)
     const s = loadSession()
-    if (s && s.key === fk) {
-      const has = new Set(book)
-      const list = s.words.filter((w) => has.has(w))
-      if (list.length > 0) return { fk, book, initialDeck: list, hasRound: true }
+    const has = new Set(book)
+    const list = s && s.key === fk ? s.words.filter((w) => has.has(w)) : []
+    if (list.length > 0) {
+      initRef.current = { fk, book, deck: list, fresh: null, needPick: false }
+    } else {
+      const books = loadBooks()
+      const next = [...books]
+        .sort((a, b) => b.id - a.id)
+        .map((b) => ({
+          filter: b.filter,
+          key: filterKey(b.filter),
+          pool: words.filter((w) => matchesFilter(w, b.filter)).map((w) => w.word),
+        }))
+        .find((b) => b.pool.length > 0)
+      if (next) {
+        const { order, round } = drawRound(next.pool)
+        initRef.current = {
+          fk: next.key,
+          book: next.pool,
+          deck: round,
+          fresh: { filter: next.filter, key: next.key, order, round },
+          needPick: false,
+        }
+      } else {
+        initRef.current = {
+          fk,
+          book,
+          deck: [],
+          fresh: null,
+          needPick: books.length === 0,
+        }
+      }
     }
-    return { fk, book, initialDeck: [], hasRound: false }
-  }, [])
+  }
+  const init = initRef.current!
+  const { fk, book, needPick } = init
+  const hasRound = init.deck.length > 0
 
-  const [deck, setDeck] = useState(initialDeck)
+  const [deck, setDeck] = useState(init.deck)
+
+  // 自动进入某本词书时，把筛选 + 这一轮落盘，刷新 / 打开弹窗都一致
+  useEffect(() => {
+    if (!init.fresh) return
+    saveFilter(init.fresh.filter)
+    saveOrder(init.fresh.key, init.fresh.order)
+    saveSession({ key: init.fresh.key, words: init.fresh.round })
+    // 只在挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // 下一轮时递增，给舞台换 key → 重放进入 Study 页的入场动画（.cards 的 app-in）
   const [roundTick, setRoundTick] = useState(0)
 
@@ -439,7 +494,14 @@ export default function Study() {
   }, [go, toggleReveal, nextRound])
 
   // 没有有效的一轮 → 回主页重新选词书（用 <Navigate>，不先闪一下整池）
-  if (!hasRound) return <Navigate to="/" replace />
+  if (!hasRound)
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={needPick ? { openPicker: true } : undefined}
+      />
+    )
 
   return (
     <div className="app" ref={appRef}>
