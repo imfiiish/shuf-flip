@@ -11,7 +11,7 @@ type DotColor = 'r' | 'y' | 'g' | 'empty'
 //   1~3 次：1/2/3 绿；4~6 次：1/2/3 黄；7~9 次：1/2/3 红
 //   9 次以后照常计数，但显示停在 3 个红
 const DOT_TIERS: DotColor[] = ['g', 'y', 'r']
-export function dotColors(n: number): DotColor[] {
+function dotColors(n: number): DotColor[] {
   if (n <= 0) return ['empty', 'empty', 'empty']
   const tier = Math.min(Math.floor((n - 1) / 3), DOT_TIERS.length - 1)
   const filled = n >= 9 ? 3 : ((n - 1) % 3) + 1
@@ -20,19 +20,19 @@ export function dotColors(n: number): DotColor[] {
   )
 }
 
-// 每侧渲染 2 张：±1 可见，±2 是屏外过渡位（保证环形无缝）
+// 可视窗口半径：±1 可见、±2 屏外过渡位，再往外落到 .pos-off-*（仍挂载，只隐起来）
 const SIDE = 2
 
 // 舞台的设计尺寸（A1 等比缩放的基准，与 index.css 的 .cards 保持一致）
-export const STAGE_W = 1200
-export const STAGE_H = 360
+const STAGE_W = 1200
+const STAGE_H = 360
 
 /** 卡片槽位：数字为环形位置，'B' 偶数张的正背面，'S' 只剩两张时的右侧位 */
 export type Slot = number | 'B' | 'S'
 
 // 计算某个卡片（deck 里的位置）相对当前中心的位置：
 // 0 居中，±1 可见，±2 屏外过渡位；偶数张时正背面用 'B'（藏在中间背后）
-export function slotOf(p: number, center: number, n: number): Slot {
+function slotOf(p: number, center: number, n: number): Slot {
   let d = (p - center) % n
   if (d < 0) d += n
   // 只剩两张：另一张露出 3/5
@@ -45,7 +45,7 @@ export function slotOf(p: number, center: number, n: number): Slot {
 /**
  * A1 等比缩放：舞台内部保持 1200×360 设计尺寸，
  * 按「视口 - 留白 - 提示行」算缩放比（≤1）。页面把返回的 ref 挂到
- * `.app` 和最底部那行（`.hints` / `.quiz-bar`）上。
+ * `.app` 和最底部那行（`.hints`）上。
  */
 export function useStageScale(): {
   appRef: React.RefObject<HTMLDivElement>
@@ -242,7 +242,7 @@ function Card({
       <div className="inner">
         <div className="word">{word.word}</div>
 
-        {/* 默认只显示单词；按空格后才显示音标和释义 */}
+        {/* 展开时才显示音标和释义（Quiz 不展开，永远不显示） */}
         {isCenter && revealed && (
           <div className="detail">
             <div className="phonetic">{word.phonetic}</div>

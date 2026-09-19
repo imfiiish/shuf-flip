@@ -11,7 +11,7 @@ import type { TagFilter } from './filter'
 import { readJSON, removeItem, writeJSON } from './storage'
 
 /** 每份 quiz 抽取的词数 */
-export const QUIZ_SIZE = 16
+const QUIZ_SIZE = 16
 
 /** Ctrl+Z 撤销栈深度：最多连续撤 3 次 */
 export const UNDO_LIMIT = 3

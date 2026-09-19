@@ -9,13 +9,13 @@ import { readMap, writeJSON } from './storage'
 export const ROUND_SIZE = 16
 
 /** 活跃窗口（最小池）大小 */
-export const WINDOW = 64
+const WINDOW = 64
 
 /** 活跃窗口寿命（轮）：每这么多轮，活跃窗口从上一级重抽一次 */
 export const WINDOW_ROUNDS = 8
 
 /** 每级倍率：第 i 级周期 = WINDOW_ROUNDS × MULT^i */
-export const MULT = 3
+const MULT = 3
 
 /** 一本词书的级联状态（按 filterKey 持久化） */
 export type Cascade = {
@@ -28,7 +28,7 @@ export type Cascade = {
 }
 
 /** 级联链：64, 128, …（都 < N），最后接 N。例：N=2000 → [64,128,256,512,1024,2000] */
-export function chainOf(n: number): number[] {
+function chainOf(n: number): number[] {
   const c: number[] = []
   for (let s = WINDOW; s < n; s *= 2) c.push(s)
   c.push(n)

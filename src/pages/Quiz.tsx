@@ -355,7 +355,7 @@ export default function Quiz() {
         onCardClick={onCardClick}
       />
 
-      <div className="hints quiz-bar" ref={hintsRef}>
+      <div className="hints" ref={hintsRef}>
         <div className="quiz-ratings">
           <button
             type="button"

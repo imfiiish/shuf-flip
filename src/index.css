@@ -107,9 +107,11 @@ body {
 }
 
 /* 入场动画放在这层：内层 .cards 的 transform 被缩放占用，不能再被动画覆盖。
-   本身作为 flex 子项，尺寸即缩放后的舞台，和提示行一起居中（与原来一致） */
+   本身作为 flex 子项，尺寸即缩放后的舞台，和提示行一起居中（与原来一致）。
+   整体左移 80px：右侧多留呼吸、更露出下一张卡，提示行也相应左对齐 */
 .stage {
   position: relative;
+  left: -80px;
   width: calc(1200px * var(--stage-scale, 1));
   height: calc(360px * var(--stage-scale, 1));
   animation: app-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -339,13 +341,6 @@ body {
 }
 
 /* ---------- Quiz 页底部评级条 ---------- */
-.quiz-bar {
-  flex-direction: column;
-  gap: 14px;
-  /* 评级条比提示行高一档，往下顶一点让舞台多留空间 */
-  padding-bottom: 2px;
-}
-
 .quiz-ratings {
   display: flex;
   gap: 16px;
@@ -454,12 +449,6 @@ body {
 .rating-btn.g:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-ring);
-}
-
-/* 学习页：卡片整体左移一点，右侧多留呼吸、更露出下一张卡（提示行固定在底部） */
-.stage {
-  position: relative;
-  left: -80px;
 }
 
 kbd {
@@ -1247,9 +1236,6 @@ kbd {
     font-size: 0.82rem;
     bottom: max(12px, env(safe-area-inset-bottom));
     padding: 0 60px;
-  }
-  .quiz-bar {
-    gap: 8px;
   }
   .rating-btn {
     padding: 8px 18px;
