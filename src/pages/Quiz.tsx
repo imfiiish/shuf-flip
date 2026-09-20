@@ -7,7 +7,6 @@ import { preloadAudio, useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { poolOf } from '../lib/filter'
 import { useWheelFlip } from '../lib/wheel'
-import { loadRevealStore } from '../lib/progress'
 import { logEvent, flushBeacon } from '../lib/analytics'
 import {
   clearQuiz,
@@ -60,10 +59,7 @@ export default function Quiz() {
   // A1 等比缩放（舞台 1200×360）+ 底部评级条测量
   const { appRef, hintsRef, scale } = useStageScale()
 
-  // 展开次数圆点：与 Study 共用同一份存储（quiz 里只读、不改）
-  const initialReveal = useRef<ReturnType<typeof loadRevealStore> | null>(null)
-  if (!initialReveal.current) initialReveal.current = loadRevealStore()
-  const revealCounts = initialReveal.current.store.counts
+  // 展开次数圆点：quiz 不展开、不显示，故不读取
 
   // 音频：按需播放 + 预加载本次 quiz，首次不延迟
   const play = useAudioPlayer()
@@ -354,7 +350,6 @@ export default function Quiz() {
       <CardDeck
         deck={remaining}
         center={safeCenter}
-        revealCounts={revealCounts}
         scale={scale}
         onCardClick={onCardClick}
       />

@@ -238,8 +238,8 @@ function Card({
       data-word={word.word}
       onClick={onClick}
     >
-      {/* 展开过几次：顶部居中的实心圆 */}
-      {isCenter && dots > 0 && (
+      {/* 展开释义后才显示「展开过几次」的圆点 */}
+      {isCenter && revealed && dots > 0 && (
         <div className="dots">
           {dotColors(dots).map((c, i) => (
             <span key={i} className={`dot ${c}`} />
