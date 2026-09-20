@@ -6,6 +6,7 @@ import { getWord } from '../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { poolOf } from '../lib/filter'
+import { useWheelFlip } from '../lib/wheel'
 import { loadRevealStore } from '../lib/progress'
 import { logEvent, flushBeacon } from '../lib/analytics'
 import {
@@ -218,6 +219,9 @@ export default function Quiz() {
     },
     [remaining.length, centerName, logCardLeave, beginCard],
   )
+
+  // 滚轮翻卡
+  useWheelFlip(go)
 
   // 跳过 = 结束（Enter 或右下角按钮，均两次确认）
   const skip = useCallback(() => {

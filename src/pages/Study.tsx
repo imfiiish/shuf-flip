@@ -23,6 +23,7 @@ import {
 } from '../lib/cascade'
 import { getWord } from '../lib/dict'
 import { copyText } from '../lib/clipboard'
+import { useWheelFlip } from '../lib/wheel'
 import { ensureSession, flushBeacon, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
@@ -337,6 +338,9 @@ export default function Study() {
     },
     [TOTAL, center, emitCardLeave, beginCard, clearCopy],
   )
+
+  // 滚轮翻卡
+  useWheelFlip(go)
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
   const play = useAudioPlayer()
