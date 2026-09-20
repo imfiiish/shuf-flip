@@ -59,6 +59,9 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
   const copyTimer = useRef<number | undefined>(undefined)
 
+  // 卸载时清掉未触发的「已复制」计时器
+  useEffect(() => () => window.clearTimeout(copyTimer.current), [])
+
   const showCopied = (word: string) => {
     setCopied(word)
     window.clearTimeout(copyTimer.current)

@@ -144,8 +144,9 @@ export default function Study() {
 
   // 中心卡变化 → 记「碰到」（全局按词去重，永久累计）
   useEffect(() => {
+    if (quizArmed) return // 只是被重定向到 quiz，没真的看
     if (centerName) markSeen(centerName)
-  }, [centerName])
+  }, [centerName, quizArmed])
 
   // 展开次数：按逻辑日（本地 04:00 换日）分桶。加载时若已跨天，loadRevealStore 返回清空后的 store
   const initialReveal = useRef<ReturnType<typeof loadRevealStore> | null>(null)

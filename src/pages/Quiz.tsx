@@ -134,7 +134,10 @@ export default function Quiz() {
       doneRef.current = true
       if (quiz) {
         const c = loadCascade(quiz.fk)
-        if (c) saveCascade(quiz.fk, advance(c, poolOf(quiz.filter)))
+        // 只在批次一致时推进，避免重复/错位 advance
+        if (c && c.r === quiz.batch) {
+          saveCascade(quiz.fk, advance(c, poolOf(quiz.filter)))
+        }
         clearQuiz()
       }
       emitExit(reason)
