@@ -154,3 +154,11 @@ export function saveCascade(key: string, c: Cascade): void {
   map[key] = c
   writeJSON(KEY, map)
 }
+
+/** 删除某本词书的级联状态（删书时用） */
+export function removeCascade(key: string): void {
+  const map = readMap<Cascade>(KEY, isCascade)
+  if (!(key in map)) return
+  delete map[key]
+  writeJSON(KEY, map)
+}

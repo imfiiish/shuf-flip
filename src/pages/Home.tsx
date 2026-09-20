@@ -4,7 +4,8 @@ import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
 import { words } from '../data/words'
-import { matchesFilter } from '../lib/filter'
+import { filterKey, matchesFilter } from '../lib/filter'
+import { removeCascade } from '../lib/cascade'
 import { coverageCounts } from '../lib/coverage'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
@@ -93,6 +94,7 @@ export default function Home() {
                 onClick={() => {
                   if (confirmId === book.id) {
                     setBooks((b) => b.filter((x) => x.id !== book.id))
+                    removeCascade(filterKey(book.filter))
                     setActiveBook((a) => (a?.id === book.id ? null : a))
                     setConfirmId(null)
                   } else {

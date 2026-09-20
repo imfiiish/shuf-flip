@@ -126,16 +126,16 @@ export default function Study() {
   // A1 等比缩放（舞台 1200×360）+ 底部提示行测量
   const { appRef, hintsRef, scale } = useStageScale()
 
-  const centerKey = useMemo(() => `${fk}|${deck.join('.')}`, [fk, deck])
+  const deckKey = useMemo(() => deck.join('.'), [deck])
   const TOTAL = deck.length
 
   const [center, setCenter] = useState(() =>
-    TOTAL ? Math.min(loadCenter(centerKey), TOTAL - 1) : 0,
+    TOTAL ? Math.min(loadCenter(fk, deckKey), TOTAL - 1) : 0,
   )
 
   useEffect(() => {
-    saveCenter(centerKey, center)
-  }, [centerKey, center])
+    saveCenter(fk, deckKey, center)
+  }, [fk, deckKey, center])
 
   const centerName: string | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerName

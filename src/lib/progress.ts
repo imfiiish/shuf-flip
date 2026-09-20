@@ -1,15 +1,11 @@
 // 学习相关的持久化
 // - 展开次数（全局，所有词书互通）：按逻辑日（本地 04:00 换日）分桶，跨天清零
-// - 每本词书/每一轮的位置：center（按 key 分开）
+// - 每本词书的位置：center（每个 filterKey 只保一条当前 deck 的记录）
 import { readMap, readJSON, writeJSON } from './storage'
 import { logicalDay } from './day'
 
 const REVEAL_KEY = 'vocab-reveal-counts'
 const CENTERS_KEY = 'vocab-centers'
-
-function isIndex(n: unknown): n is number {
-  return Number.isInteger(n) && (n as number) >= 0
-}
 
 function isCount(n: unknown): n is number {
   return Number.isInteger(n) && (n as number) > 0
@@ -55,18 +51,34 @@ export function saveRevealStore(store: RevealStore): void {
   writeJSON(REVEAL_KEY, store)
 }
 
-// ---- 位置（按 key 分开）----
-function loadCenterMap(): Record<string, number> {
-  return readMap<number>(CENTERS_KEY, isIndex)
+// ---- 位置（按 filterKey）----
+// 值里带本轮 deck 的签名：只有 deck 一致才恢复 center；每个 key 只留当前一条，
+// 避免每轮换新 deck 就新增一条、无限增长（也就不会每次翻卡都解析一个越来越大的 map）
+type CenterEntry = { deck: string; center: number }
+
+function isCenterEntry(v: unknown): v is CenterEntry {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as { deck?: unknown; center?: unknown }
+  return (
+    typeof o.deck === 'string' &&
+    Number.isInteger(o.center) &&
+    (o.center as number) >= 0
+  )
 }
 
-export function loadCenter(key: string): number {
-  return loadCenterMap()[key] ?? 0
+function loadCenterMap(): Record<string, CenterEntry> {
+  return readMap<CenterEntry>(CENTERS_KEY, isCenterEntry)
 }
 
-export function saveCenter(key: string, center: number): void {
+/** 读本轮位置；存的 deck 与当前不一致则视为 0 */
+export function loadCenter(key: string, deck: string): number {
+  const e = loadCenterMap()[key]
+  return e && e.deck === deck ? e.center : 0
+}
+
+export function saveCenter(key: string, deck: string, center: number): void {
   const map = loadCenterMap()
-  if (center > 0) map[key] = center
+  if (center > 0) map[key] = { deck, center }
   else delete map[key]
   writeJSON(CENTERS_KEY, map)
 }
