@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 
 const THRESHOLD = 24 // 触发一次翻卡所需的累积位移（px）
-const COOLDOWN = 20 // 两次翻卡之间的最短间隔（ms）
+const COOLDOWN = 120 // 两次翻卡之间的最短间隔（ms）
 
 export function useWheelFlip(flip: (delta: 1 | -1) => void): void {
   const flipRef = useRef(flip)
