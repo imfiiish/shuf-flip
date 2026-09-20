@@ -96,6 +96,8 @@ type CardDeckProps = {
   center: number
   /** 中心卡是否展开释义 */
   revealed?: boolean
+  /** 中心卡短暂顶替词语显示的提示（如「已复制」）；null 不显示 */
+  centerNotice?: string | null
   /** 展开次数（word → 次数），用于圆点 */
   revealCounts?: Record<string, number>
   /** 舞台缩放比（来自 useStageScale） */
@@ -114,6 +116,7 @@ export default function CardDeck({
   deck,
   center,
   revealed = false,
+  centerNotice = null,
   revealCounts = {},
   scale,
   stageKey,
@@ -186,6 +189,7 @@ export default function CardDeck({
               word={word}
               slot={slot}
               revealed={slot === 0 && revealed}
+              notice={slot === 0 ? centerNotice : null}
               hovered={hoveredName === name}
               dots={revealCounts[name] || 0}
               onClick={() => onCardClick?.(name, slot)}
@@ -203,6 +207,8 @@ type CardProps = {
   revealed?: boolean
   hovered?: boolean
   dots?: number
+  /** 短暂顶替词语显示的提示（仅中心卡） */
+  notice?: string | null
   onClick?: () => void
 }
 
@@ -212,6 +218,7 @@ function Card({
   revealed = false,
   hovered = false,
   dots = 0,
+  notice = null,
   onClick,
 }: CardProps) {
   const isCenter = slot === 0
@@ -240,7 +247,12 @@ function Card({
         </div>
       )}
       <div className="inner">
-        <div className="word">{word.word}</div>
+        {/* 复制后短暂用「已复制」顶掉词的位置（沿用当时的小字青色样式），
+            1s 后与单词交叉淡出 */}
+        <div className={`word${isCenter && notice ? ' copying' : ''}`}>
+          <span className="word-text">{word.word}</span>
+          {isCenter && notice && <span className="copy-notice">{notice}</span>}
+        </div>
 
         {/* 展开时才显示音标和释义（Quiz 不展开，永远不显示） */}
         {isCenter && revealed && (

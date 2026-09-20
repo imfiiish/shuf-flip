@@ -282,10 +282,40 @@ body {
   background: var(--dot-empty);
 }
 
-/* 字号统一，两侧缩小交给 scale，滑动时不会跳字 */
+/* 字号统一，两侧缩小交给 scale，滑动时不会跳字。
+   最小高度按词的字号预留，复制提示顶替时高度不变、不抖动 */
 .word {
+  position: relative;
   font-size: 2rem;
   font-weight: 600;
+  line-height: 1.2;
+  min-height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 单词：复制时淡出、1s 后淡入 */
+.word-text {
+  transition: opacity 220ms ease;
+}
+
+/* 复制中：单词让位给「已复制」 */
+.word.copying .word-text {
+  opacity: 0;
+}
+
+/* 复制后顶替词语显示：小字青色，只淡入 */
+.copy-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  animation: fade-in 140ms ease-out;
 }
 
 .detail {

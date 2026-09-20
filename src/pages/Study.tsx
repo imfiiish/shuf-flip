@@ -22,6 +22,7 @@ import {
   WINDOW_ROUNDS,
 } from '../lib/cascade'
 import { getWord } from '../lib/dict'
+import { copyText } from '../lib/clipboard'
 import { ensureSession, flushBeacon, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
@@ -183,6 +184,15 @@ export default function Study() {
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
 
+  // Ctrl/Cmd+C 复制当前词后，用「已复制」顶替词语 1s（只淡入，无淡出）
+  const [copyNotice, setCopyNotice] = useState<string | null>(null)
+  const copyTimerRef = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(copyTimerRef.current), [])
+  const clearCopy = useCallback(() => {
+    window.clearTimeout(copyTimerRef.current)
+    setCopyNotice(null)
+  }, [])
+
   // 结算一段「离开」：按是否已展开，累加到对应阶段（忽略 <1s 的短暂失焦）
   const closeAway = useCallback((now: number) => {
     const start = awayAtRef.current
@@ -322,9 +332,10 @@ export default function Study() {
       const next = (center + delta + TOTAL) % TOTAL
       beginCard(delta > 0 ? 'right' : 'left')
       setRevealed(false)
+      clearCopy()
       setCenter(next)
     },
-    [TOTAL, center, emitCardLeave, beginCard],
+    [TOTAL, center, emitCardLeave, beginCard, clearCopy],
   )
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
@@ -358,6 +369,18 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
+  // 复制当前中心词到剪贴板（Ctrl/Cmd+C）
+  const copyCurrent = useCallback(() => {
+    if (!centerName) return
+    void copyText(centerName).then((ok) => {
+      if (!ok) return
+      logEvent('study_copy', { word: centerName, revealed })
+      window.clearTimeout(copyTimerRef.current)
+      setCopyNotice('已复制')
+      copyTimerRef.current = window.setTimeout(() => setCopyNotice(null), 1000)
+    })
+  }, [centerName, revealed])
+
   // 下一轮：到 quiz 边界先插 quiz；否则级联前进一轮（必要时按周期刷新各级）
   const nextRound = useCallback(() => {
     if (book.length === 0) return
@@ -379,16 +402,24 @@ export default function Study() {
     logEvent('study_round', { index: roundIndexRef.current, words: next.round })
     if (next.round[0]) beginCard('init')
     setRevealed(false)
+    clearCopy()
     setDeck(next.round)
     setCenter(0)
     setRoundTick((t) => t + 1)
-  }, [book, fk, emitCardLeave, emitExit, beginCard, navigate])
+  }, [book, fk, emitCardLeave, emitExit, beginCard, navigate, clearCopy])
 
   // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const k = e.key
 
+      // Ctrl/Cmd+C：复制当前词（页面不可选中，接管原生复制）
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && k.toLowerCase() === 'c') {
+        e.preventDefault()
+        if (e.repeat) return
+        copyCurrent()
+        return
+      }
       if (k === ' ') {
         e.preventDefault() // 防止页面滚动
         if (e.repeat) return // 按住时忽略自动重复，避免疯狂重播
@@ -412,7 +443,7 @@ export default function Study() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, toggleReveal, nextRound])
+  }, [go, toggleReveal, nextRound, copyCurrent])
 
   // 已到 quiz 边界（Study 已 arm）：一律去 /quiz
   if (quizArmed) return <Navigate to="/quiz" replace />
@@ -464,6 +495,7 @@ export default function Study() {
         deck={deck}
         center={center}
         revealed={revealed}
+        centerNotice={copyNotice}
         revealCounts={revealCounts}
         scale={scale}
         stageKey={roundTick}
@@ -471,11 +503,6 @@ export default function Study() {
       />
 
       <div className="hints" ref={hintsRef}>
-        <span>
-          <kbd>H</kbd>
-          <kbd>L</kbd>/<kbd>←</kbd>
-          <kbd>→</kbd> 翻页
-        </span>
         <span>
           <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
         </span>

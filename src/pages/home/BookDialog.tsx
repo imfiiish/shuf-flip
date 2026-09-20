@@ -2,28 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
 import type { Book } from '../../lib/books'
+import { copyText } from '../../lib/clipboard'
 import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
 import { words } from '../../data/words'
-
-/** clipboard API 不可用时的兜底复制 */
-function fallbackCopy(text: string): boolean {
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    ta.remove()
-    return ok
-  } catch {
-    return false
-  }
-}
 
 type Props = {
   book: Book
@@ -82,14 +66,9 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   const copy = (word: string) => {
-    const p = navigator.clipboard?.writeText(word)
-    if (p) {
-      p.then(() => showCopied(word)).catch(() => {
-        if (fallbackCopy(word)) showCopied(word)
-      })
-    } else if (fallbackCopy(word)) {
-      showCopied(word)
-    }
+    void copyText(word).then((ok) => {
+      if (ok) showCopied(word)
+    })
   }
 
   // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
