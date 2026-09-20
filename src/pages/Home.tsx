@@ -5,6 +5,7 @@ import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
 import { words } from '../data/words'
 import { matchesFilter } from '../lib/filter'
+import { coverageCounts } from '../lib/coverage'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
 import BookDialog from './home/BookDialog'
@@ -48,7 +49,15 @@ export default function Home() {
       {/* 词书区：中间大区域，+ 始终排在最后一本后面 */}
       <div className="bookshelf">
         <div className="bookshelf-inner">
-          {books.map((book) => (
+          {books.map((book) => {
+            const bookWords = words
+              .filter((w) => matchesFilter(w, book.filter))
+              .map((w) => w.word)
+            const total = bookWords.length
+            const { seen, revealed } = coverageCounts(bookWords)
+            const seenPct = total ? (seen / total) * 100 : 0
+            const revPct = total ? (revealed / total) * 100 : 0
+            return (
             <div
               className="book-item"
               key={book.id}
@@ -63,12 +72,20 @@ export default function Home() {
                   setConfirmId(null)
                   setActiveBook(book)
                 }}
-                title={`打开 ${book.name}`}
+                title={`${book.name} · 碰到 ${seen} · 翻开 ${revealed} · 共 ${total}`}
               >
-                <span className="book-title">{book.name}</span>
-                <span className="book-meta">
-                  {words.filter((w) => matchesFilter(w, book.filter)).length} 词
+                <span className="spine" aria-hidden="true">
+                  <span
+                    className="spine-yellow"
+                    style={{ height: `${seenPct}%` }}
+                  />
+                  <span
+                    className="spine-green"
+                    style={{ height: `${revPct}%` }}
+                  />
                 </span>
+                <span className="book-title">{book.name}</span>
+                <span className="book-meta">{total} 词</span>
               </button>
               <button
                 type="button"
@@ -98,7 +115,8 @@ export default function Home() {
                 )}
               </button>
             </div>
-          ))}
+            )
+          })}
 
           {!atLimit && (
             <button
