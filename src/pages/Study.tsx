@@ -22,7 +22,7 @@ import {
   WINDOW_ROUNDS,
 } from '../lib/cascade'
 import { getWord } from '../lib/dict'
-import { markRevealed, markSeen } from '../lib/coverage'
+import { markSeen } from '../lib/coverage'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
 import { ensureSession, logEvent } from '../lib/analytics'
@@ -346,7 +346,6 @@ export default function Study() {
     ensureDay()
     setRevealed(true)
     if (centerName) {
-      markRevealed(centerName)
       setRevealCounts((c) => ({ ...c, [centerName]: (c[centerName] || 0) + 1 }))
       visitRevealsRef.current += 1
       if (firstRevealRef.current === null) {

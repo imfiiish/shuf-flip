@@ -6,7 +6,8 @@ import { logout } from '../lib/auth'
 import { allWords } from '../data/words'
 import { filterKey, matchesFilter } from '../lib/filter'
 import { removeCascade } from '../lib/cascade'
-import { coverageCounts } from '../lib/coverage'
+import { coverageSeen } from '../lib/coverage'
+import { revealedCount } from '../lib/progress'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
 import BookDialog from './home/BookDialog'
@@ -55,7 +56,8 @@ export default function Home() {
               .filter((w) => matchesFilter(w, book.filter))
               .map((w) => w.word)
             const total = bookWords.length
-            const { seen, revealed } = coverageCounts(bookWords)
+            const seen = coverageSeen(bookWords)
+            const revealed = revealedCount(bookWords)
             const seenPct = total ? (seen / total) * 100 : 0
             const revPct = total ? (revealed / total) * 100 : 0
             return (

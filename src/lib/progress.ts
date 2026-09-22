@@ -1,9 +1,9 @@
 // 学习相关的持久化（IndexedDB）
-// - 翻开次数：按「词」保两级 —— 当天次数（圆点用，4:00 换日归零）+ 终身总次数；
-//   每天一条 revealDay 记录，历史永久保留、不搬动
+// - 翻开次数：每天一条 revealDay 记录（当天圆点用，4:00 换日归零），历史永久保留；
+//   终身总次数 = 各天之和，启动时汇总进内存（不再单独存）
 // - 每本词书的位置：center（按 filterKey，一条）
 import { logicalDay } from './day'
-import { getKV, loadKeys, loadStore, put, del } from './kv'
+import { loadStore, put, del } from './kv'
 
 // ---- 翻开次数 ----
 type DayCounts = Record<string, number>
@@ -13,7 +13,7 @@ let todayDay = ''
 let todayCounts: DayCounts = {}
 /** 最近一次记录的逻辑日（判断是否跨天，给 counts_reset 用） */
 let lastDay: string | null = null
-/** word → 终身总次数 */
+/** word → 终身总次数（由 revealDay 汇总） */
 let totals = new Map<string, number>()
 
 /**
@@ -34,7 +34,7 @@ export function loadRevealStore(now: number = Date.now()): {
 }
 
 /**
- * 落盘当天次数：增量并入终身总次数（不丢历史）。
+ * 落盘当天次数（只写今天这条）。终身总次数由内存增量维护，不落盘。
  * counts 是「当天全量」，传入即可，内部对比上一次做增量。
  */
 export function saveRevealStore(store: { day: string; counts: DayCounts }): void {
@@ -46,16 +46,19 @@ export function saveRevealStore(store: { day: string; counts: DayCounts }): void
 
   for (const [w, n] of Object.entries(store.counts)) {
     const prev = todayCounts[w] ?? 0
-    if (n > prev) {
-      const total = (totals.get(w) ?? 0) + (n - prev)
-      totals.set(w, total)
-      put('revealTotal', w, total)
-    }
+    if (n > prev) totals.set(w, (totals.get(w) ?? 0) + (n - prev))
   }
 
   todayCounts = { ...store.counts }
   put('revealDay', todayDay, todayCounts)
   lastDay = todayDay
+}
+
+/** 某个词表里有多少词翻开过（终身总次数 > 0） */
+export function revealedCount(words: readonly string[]): number {
+  let n = 0
+  for (const w of words) if ((totals.get(w) ?? 0) > 0) n += 1
+  return n
 }
 
 // ---- 位置（按 filterKey）----
@@ -94,18 +97,25 @@ export function saveCenter(key: string, deck: string, center: number): void {
 export async function hydrateProgress(): Promise<void> {
   const today = logicalDay()
 
-  const rawTotals = await loadStore('revealTotal')
+  // 汇总所有天的翻开次数 → 终身总次数，并取最近一天 / 当天次数
+  const days = await loadStore('revealDay')
   totals = new Map()
-  for (const [w, n] of Object.entries(rawTotals)) {
-    if (typeof n === 'number') totals.set(w, n)
+  let last: string | null = null
+  for (const [date, v] of Object.entries(days)) {
+    if (last === null || date > last) last = date
+    if (v && typeof v === 'object') {
+      for (const [w, n] of Object.entries(v as DayCounts)) {
+        if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
+      }
+    }
   }
-
-  const keys = (await loadKeys('revealDay')).sort()
-  lastDay = keys.length ? keys[keys.length - 1] : null
-
-  const day = await getKV<DayCounts>('revealDay', today)
+  lastDay = last
+  const todayRec = days[today]
   todayDay = today
-  todayCounts = day && typeof day === 'object' ? { ...day } : {}
+  todayCounts =
+    todayRec && typeof todayRec === 'object'
+      ? { ...(todayRec as DayCounts) }
+      : {}
 
   const rawCenters = await loadStore('centers')
   centers = new Map()

@@ -5,16 +5,14 @@
 // 按「更新粒度」分 store，改一条不碰其它：
 //   cascade      key=filterKey  一本词书一条
 //   centers      key=filterKey  一本词书一条
-//   coverage     key=word       1=碰到 2=翻开
-//   revealDay    key=date       当天 {word: n}（每天分开、永久保留）
-//   revealTotal  key=word       终身翻开次数
+//   coverage     key=word       1=碰到
+//   revealDay    key=date       当天 {word: n}（每天分开、永久保留；总次数由各天汇总）
 //   misc         key            quiz 等零散
 const STORES = [
   'cascade',
   'centers',
   'coverage',
   'revealDay',
-  'revealTotal',
   'misc',
 ] as const
 type StoreName = (typeof STORES)[number]
@@ -45,11 +43,15 @@ function fallbackWrite(s: StoreName, obj: Record<string, unknown>): void {
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('vocab', 1)
+    const req = indexedDB.open('vocab', 2)
     req.onupgradeneeded = () => {
       const d = req.result
       for (const s of STORES) {
         if (!d.objectStoreNames.contains(s)) d.createObjectStore(s)
+      }
+      // v2：删掉废弃的 revealTotal（总次数改为由 revealDay 汇总）
+      if (d.objectStoreNames.contains('revealTotal')) {
+        d.deleteObjectStore('revealTotal')
       }
     }
     req.onsuccess = () => resolve(req.result)

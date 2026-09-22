@@ -33,11 +33,9 @@ async function importLegacy(): Promise<void> {
 
   if (localStorage.getItem(MIGRATED_KEY)) return
 
-  const coverage = readLS<{ seen?: string[]; revealed?: string[] }>('vocab-coverage')
+  const coverage = readLS<{ seen?: string[] }>('vocab-coverage')
   if (coverage) {
-    const revealed = new Set(coverage.revealed ?? [])
-    for (const w of coverage.seen ?? []) put('coverage', w, revealed.has(w) ? 2 : 1)
-    for (const w of revealed) put('coverage', w, 2)
+    for (const w of coverage.seen ?? []) put('coverage', w, 1)
   }
 
   const reveal = readLS<{ day?: string; counts?: Record<string, number> }>(
@@ -45,7 +43,6 @@ async function importLegacy(): Promise<void> {
   )
   if (reveal?.day && reveal.counts) {
     put('revealDay', reveal.day, reveal.counts)
-    for (const [w, n] of Object.entries(reveal.counts)) put('revealTotal', w, n)
   }
 
   const cascade = readLS<Record<string, unknown>>('vocab-cascade')
