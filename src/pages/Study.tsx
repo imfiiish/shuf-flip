@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import type { Word } from '../data/words'
-import { preloadAudio, useAudioPlayer } from '../lib/audio'
+import { useAudioPlayer } from '../lib/audio'
 import { activeFilter, loadBooks, setActiveFilter } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
 import { filterKey, poolOf } from '../lib/filter'
@@ -25,9 +25,10 @@ import { getWord } from '../lib/dict'
 import { markRevealed, markSeen } from '../lib/coverage'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
-import { ensureSession, flushBeacon, logEvent } from '../lib/analytics'
+import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
+import { useExitLifecycle, usePreloadWords } from '../lib/session'
 
 // 切窗口/失焦：短于此时长（ms）的忽略，避免点地址栏/通知误判为离开
 const AWAY_MIN_MS = 1000
@@ -174,7 +175,6 @@ export default function Study() {
 
   // —— 埋点计时 ——
   const enteredRef = useRef(false)
-  const aliveRef = useRef(true)
   const viewStartRef = useRef(0)
   const firstRevealRef = useRef<number | null>(null)
   /** 当前这张卡的进入方向（合并进 card 事件） */
@@ -306,31 +306,18 @@ export default function Study() {
     }
   }, [closeAway])
 
-  // 页面卸载（关标签/刷新/外跳）：尽力补一条 study_exit 并立即发出
-  useEffect(() => {
-    const onPageHide = () => {
+  // 关页补最后一张卡 + exit；真正卸载时补 back（共用 useExitLifecycle）
+  useExitLifecycle({
+    onPageHide: () => {
       leaveFnRef.current() // 补最后一张卡（card 在离卡时才写）
       emitExit('unload')
-      flushBeacon()
-    }
-    window.addEventListener('pagehide', onPageHide)
-    return () => window.removeEventListener('pagehide', onPageHide)
-  }, [emitExit])
-
-  // 真正离开 Study 页时补最后一张的 card + study_exit（微任务区分 StrictMode 的假卸载）
-  useEffect(() => {
-    aliveRef.current = true
-    return () => {
-      aliveRef.current = false
+    },
+    onUnmount: () => {
       if (!hasRound || quizArmed) return // 没真正进入过（重定向中），没有可收尾的
-      queueMicrotask(() => {
-        if (!aliveRef.current) {
-          leaveFnRef.current()
-          emitExit('back')
-        }
-      })
-    }
-  }, [emitExit, hasRound, quizArmed])
+      leaveFnRef.current()
+      emitExit('back')
+    },
+  })
 
   // 翻页
   const go = useCallback(
@@ -352,14 +339,7 @@ export default function Study() {
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
   const play = useAudioPlayer()
 
-  useEffect(() => {
-    preloadAudio(
-      deck.flatMap((name) => {
-        const w = getWord(name)
-        return w?.audio ? [w.audio] : []
-      }),
-    )
-  }, [deck])
+  usePreloadWords(deck)
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {

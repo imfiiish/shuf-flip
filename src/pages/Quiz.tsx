@@ -3,11 +3,12 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import { getWord } from '../lib/dict'
-import { preloadAudio, useAudioPlayer } from '../lib/audio'
+import { useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { filterFromKey, poolOf } from '../lib/filter'
 import { useWheelFlip } from '../lib/wheel'
-import { logEvent, flushBeacon } from '../lib/analytics'
+import { logEvent } from '../lib/analytics'
+import { useExitLifecycle, usePreloadWords } from '../lib/session'
 import {
   clearQuiz,
   loadQuiz,
@@ -38,7 +39,6 @@ export default function Quiz() {
   const [undo, setUndo] = useState<string[]>(() => quiz?.undo ?? [])
   // 右下角「跳过」按钮 / Enter：两次确认（第一次进入待确认，2.5s 自动取消）
   const [skipArmed, setSkipArmed] = useState(false)
-
   // 未评的词（保持原顺序）；已评的下标会移动
   const remaining = useMemo(
     () => order.filter((w) => !(w in ratings)),
@@ -63,15 +63,7 @@ export default function Quiz() {
 
   // 音频：按需播放 + 预加载本次 quiz，首次不延迟
   const play = useAudioPlayer()
-  useEffect(() => {
-    if (!quiz) return
-    preloadAudio(
-      quiz.words.flatMap((name) => {
-        const w = getWord(name)
-        return w?.audio ? [w.audio] : []
-      }),
-    )
-  }, [quiz])
+  usePreloadWords(order)
 
   // —— 埋点：quiz_enter / quiz_card / quiz_rate / quiz_undo / quiz_exit ——
   const viewStartRef = useRef(performance.now())
@@ -114,7 +106,6 @@ export default function Quiz() {
   }, [quiz, ratings, undo, center])
 
   // 结束/离开：一次只发一条 quiz_exit（补上「返回主页」「关页」的情况）
-  const aliveRef = useRef(true)
   const exitSentRef = useRef(false)
   const statsRef = useRef({ rated: 0, total: 0 })
   statsRef.current = { rated: Object.keys(ratings).length, total: order.length }
@@ -277,28 +268,15 @@ export default function Quiz() {
     return () => clearTimeout(t)
   }, [skipArmed])
 
-  // 关页/刷新：补一条 quiz_exit 并立即发出
-  useEffect(() => {
-    const onPageHide = () => {
-      emitExit('unload')
-      flushBeacon()
-    }
-    window.addEventListener('pagehide', onPageHide)
-    return () => window.removeEventListener('pagehide', onPageHide)
-  }, [emitExit])
-
-  // 真正离开 Quiz 页（比如点返回主页）时补一条 quiz_exit（微任务区分 StrictMode 假卸载）
-  useEffect(() => {
-    aliveRef.current = true
-    return () => {
-      aliveRef.current = false
+  // 关页补 exit；真正卸载（比如返回主页）补一条 back（共用 useExitLifecycle）
+  useExitLifecycle({
+    onPageHide: () => emitExit('unload'),
+    onUnmount: () => {
       if (!quiz) return // 没有真正进入 quiz（重定向中），不能发孤立的 exit
       if (doneRef.current) return // 正常结束已经记过
-      queueMicrotask(() => {
-        if (!aliveRef.current) emitExit('back')
-      })
-    }
-  }, [emitExit, quiz])
+      emitExit('back')
+    },
+  })
 
   // 意外情况：进来时已经全部评完（比如上一步完成后刷新），直接推进收尾
   const finishRef = useRef(finish)
