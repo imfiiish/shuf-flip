@@ -3,7 +3,7 @@
 // 每轮只从「活跃窗口」（最小池，WINDOW 个词）里均匀抽 ROUND_SIZE 个；
 // 活跃窗口每 WINDOW_ROUNDS 轮从上一级重抽一次，逐级 2 倍大小、周期 ×MULT，
 // 一直到整个词池。好处：短期锁住较高的重复率，长期又能覆盖全部词。
-import { readMap, writeJSON } from './storage'
+import { loadStore, put, del } from './kv'
 
 /** 每轮抽取的词数 */
 export const ROUND_SIZE = 16
@@ -126,8 +126,7 @@ export function ensureCascade(key: string, pool: readonly string[]): Cascade {
   return round.length === 0 && pool.length > 0 ? advance(state, pool) : state
 }
 
-// ---- 持久化 ----
-const KEY = 'vocab-cascade'
+// ---- 持久化（IndexedDB，按 filterKey 单条记录）----
 
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === 'string')
@@ -144,21 +143,29 @@ function isCascade(v: unknown): v is Cascade {
   )
 }
 
+let cache = new Map<string, Cascade>()
+
 /** 某本词书的级联状态（没有则 null） */
 export function loadCascade(key: string): Cascade | null {
-  return readMap<Cascade>(KEY, isCascade)[key] ?? null
+  return cache.get(key) ?? null
 }
 
 export function saveCascade(key: string, c: Cascade): void {
-  const map = readMap<Cascade>(KEY, isCascade)
-  map[key] = c
-  writeJSON(KEY, map)
+  cache.set(key, c)
+  put('cascade', key, c)
 }
 
 /** 删除某本词书的级联状态（删书时用） */
 export function removeCascade(key: string): void {
-  const map = readMap<Cascade>(KEY, isCascade)
-  if (!(key in map)) return
-  delete map[key]
-  writeJSON(KEY, map)
+  if (!cache.has(key)) return
+  cache.delete(key)
+  del('cascade', key)
+}
+
+export async function hydrateCascade(): Promise<void> {
+  const raw = await loadStore('cascade')
+  cache = new Map()
+  for (const [k, v] of Object.entries(raw)) {
+    if (isCascade(v)) cache.set(k, v)
+  }
 }

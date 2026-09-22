@@ -8,7 +8,7 @@
 //  - /study 挂载时若存在 QuizState → 重定向到 /quiz
 //  - /quiz 挂载时若不存在 QuizState → 重定向到 /study
 import type { TagFilter } from './filter'
-import { readJSON, removeItem, writeJSON } from './storage'
+import { getKV, put, del } from './kv'
 
 /** 每份 quiz 抽取的词数 */
 const QUIZ_SIZE = 16
@@ -35,8 +35,6 @@ export type QuizState = {
   /** 当前中心词在「未评列表 remaining」里的下标 */
   center: number
 }
-
-const KEY = 'vocab-quiz'
 
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === 'string')
@@ -78,17 +76,27 @@ function parseQuiz(v: unknown): QuizState | null {
   }
 }
 
+/** 当前待做的 quiz（内存） */
+let cache: QuizState | null = null
+
 /** 读当前待做的 quiz（没有 = null） */
 export function loadQuiz(): QuizState | null {
-  return readJSON<QuizState>(KEY, parseQuiz)
+  return cache
 }
 
 export function saveQuiz(state: QuizState): void {
-  writeJSON(KEY, state)
+  cache = state
+  put('misc', 'quiz', state)
 }
 
 export function clearQuiz(): void {
-  removeItem(KEY)
+  cache = null
+  del('misc', 'quiz')
+}
+
+export async function hydrateQuiz(): Promise<void> {
+  const raw = await getKV<unknown>('misc', 'quiz')
+  cache = raw == null ? null : parseQuiz(raw)
 }
 
 /** 洗牌取前 k 个 */
