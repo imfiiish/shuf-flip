@@ -1,5 +1,3 @@
-import { allWords } from '../data/words'
-
 // 全部 tag（固定集合，顺序即卡片上的展示顺序）
 export const ALL_TAGS = [
   '义务教育',
@@ -38,14 +36,4 @@ export function tagRank(tag: string): number {
 /** tag 展示名（现为原名；保留此函数便于以后加前缀处理） */
 export function tagLabel(tag: string): string {
   return tag
-}
-
-/** 词库里出现过的所有 tag（按展示顺序） */
-export function allTags(): string[] {
-  const set = new Set<string>()
-  allWords().forEach((w) => w.tags.forEach((t) => set.add(t)))
-  return [...set].sort((a, b) => {
-    const d = tagRank(a) - tagRank(b)
-    return d !== 0 ? d : a.localeCompare(b)
-  })
 }

@@ -2,12 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { migrateLegacy } from './lib/migrate'
 import { hydrate } from './lib/persist'
 import { loadWords } from './data/words'
-
-// 渲染前先清理旧存档（幂等）
-migrateLegacy()
 
 const root = createRoot(document.getElementById('root')!)
 

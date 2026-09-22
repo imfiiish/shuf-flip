@@ -1,6 +1,6 @@
 // 词库：运行时从 public/data/<lang>/words.json 加载。
 // 数据由 sources 生成；中文以后放 public/data/zh/，加载器带 lang 参数。
-export type Sense = {
+type Sense = {
   /** 词性（已归一化，如 n. / v. / adj. / 其它） */
   pos: string
   defs: string[]

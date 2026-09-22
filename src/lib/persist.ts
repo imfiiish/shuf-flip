@@ -22,6 +22,15 @@ function readLS<T>(key: string): T | null {
  * 读取时各自校验，旧的无效数据自然被丢弃。
  */
 async function importLegacy(): Promise<void> {
+  // 远古遗留 key：无条件清（幂等）
+  for (const k of ['vocab-session', 'vocab-round-orders']) {
+    try {
+      localStorage.removeItem(k)
+    } catch {
+      /* 忽略 */
+    }
+  }
+
   if (localStorage.getItem(MIGRATED_KEY)) return
 
   const coverage = readLS<{ seen?: string[]; revealed?: string[] }>('vocab-coverage')

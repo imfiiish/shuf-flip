@@ -9,7 +9,7 @@
 //   revealDay    key=date       当天 {word: n}（每天分开、永久保留）
 //   revealTotal  key=word       终身翻开次数
 //   misc         key            quiz 等零散
-export const STORES = [
+const STORES = [
   'cascade',
   'centers',
   'coverage',
@@ -17,7 +17,7 @@ export const STORES = [
   'revealTotal',
   'misc',
 ] as const
-export type StoreName = (typeof STORES)[number]
+type StoreName = (typeof STORES)[number]
 
 let useIdb = true
 let db: IDBDatabase | null = null
