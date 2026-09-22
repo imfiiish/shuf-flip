@@ -36,7 +36,6 @@ async function importLegacy(): Promise<void> {
   )
   if (reveal?.day && reveal.counts) {
     put('revealDay', reveal.day, reveal.counts)
-    put('misc', 'revealLast', reveal.day)
     for (const [w, n] of Object.entries(reveal.counts)) put('revealTotal', w, n)
   }
 

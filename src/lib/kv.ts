@@ -8,7 +8,7 @@
 //   coverage     key=word       1=碰到 2=翻开
 //   revealDay    key=date       当天 {word: n}（每天分开、永久保留）
 //   revealTotal  key=word       终身翻开次数
-//   misc         key            quiz / revealLast 等零散
+//   misc         key            quiz 等零散
 export const STORES = [
   'cascade',
   'centers',
@@ -91,6 +91,18 @@ export function loadStore(s: StoreName): Promise<Record<string, unknown>> {
     })
   }
   return Promise.resolve(fallbackRead(s))
+}
+
+/** 读取某 store 的所有 key（不取值） */
+export function loadKeys(s: StoreName): Promise<string[]> {
+  if (useIdb && db) {
+    return new Promise((resolve, reject) => {
+      const req = db!.transaction(s, 'readonly').objectStore(s).getAllKeys()
+      req.onsuccess = () => resolve(req.result.map(String))
+      req.onerror = () => reject(req.error)
+    })
+  }
+  return Promise.resolve(Object.keys(fallbackRead(s)))
 }
 
 /** 读取单个 key */

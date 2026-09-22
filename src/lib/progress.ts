@@ -3,7 +3,7 @@
 //   每天一条 revealDay 记录，历史永久保留、不搬动
 // - 每本词书的位置：center（按 filterKey，一条）
 import { logicalDay } from './day'
-import { getKV, loadStore, put, del } from './kv'
+import { getKV, loadKeys, loadStore, put, del } from './kv'
 
 // ---- 翻开次数 ----
 type DayCounts = Record<string, number>
@@ -55,10 +55,7 @@ export function saveRevealStore(store: { day: string; counts: DayCounts }): void
 
   todayCounts = { ...store.counts }
   put('revealDay', todayDay, todayCounts)
-  if (lastDay !== todayDay) {
-    lastDay = todayDay
-    put('misc', 'revealLast', todayDay)
-  }
+  lastDay = todayDay
 }
 
 // ---- 位置（按 filterKey）----
@@ -103,8 +100,8 @@ export async function hydrateProgress(): Promise<void> {
     if (typeof n === 'number') totals.set(w, n)
   }
 
-  const last = await getKV<string>('misc', 'revealLast')
-  lastDay = typeof last === 'string' ? last : null
+  const keys = (await loadKeys('revealDay')).sort()
+  lastDay = keys.length ? keys[keys.length - 1] : null
 
   const day = await getKV<DayCounts>('revealDay', today)
   todayDay = today

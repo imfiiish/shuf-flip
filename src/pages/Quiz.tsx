@@ -5,7 +5,7 @@ import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import { getWord } from '../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
-import { poolOf } from '../lib/filter'
+import { filterFromKey, poolOf } from '../lib/filter'
 import { useWheelFlip } from '../lib/wheel'
 import { logEvent, flushBeacon } from '../lib/analytics'
 import {
@@ -136,7 +136,7 @@ export default function Quiz() {
         const c = loadCascade(quiz.fk)
         // 只在批次一致时推进，避免重复/错位 advance
         if (c && c.r === quiz.batch) {
-          saveCascade(quiz.fk, advance(c, poolOf(quiz.filter)))
+          saveCascade(quiz.fk, advance(c, poolOf(filterFromKey(quiz.fk))))
         }
         clearQuiz()
       }

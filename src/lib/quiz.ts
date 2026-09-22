@@ -7,7 +7,6 @@
 //  - Study 到达 quiz 边界时先 armQuiz（抽词落盘）再跳 /quiz
 //  - /study 挂载时若存在 QuizState → 重定向到 /quiz
 //  - /quiz 挂载时若不存在 QuizState → 重定向到 /study
-import type { TagFilter } from './filter'
 import { getKV, put, del } from './kv'
 
 /** 每份 quiz 抽取的词数 */
@@ -24,8 +23,6 @@ export type QuizState = {
   fk: string
   /** 触发时的 cascade.r（批次：8/16/24…） */
   batch: number
-  /** 抽词所用的筛选，结束时用它还原词池 */
-  filter: TagFilter
   /** 本次 quiz 的词（已洗牌，顺序固定） */
   words: string[]
   /** word → 评分（未评 = 不在 map 里） */
@@ -44,17 +41,10 @@ function isRating(v: unknown): v is Rating {
   return v === 1 || v === 2 || v === 3
 }
 
-function isFilter(v: unknown): v is TagFilter {
-  if (typeof v !== 'object' || v === null) return false
-  const f = v as { include?: unknown; exclude?: unknown }
-  return isStringArray(f.include) && isStringArray(f.exclude)
-}
-
 function parseQuiz(v: unknown): QuizState | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
   if (typeof o.fk !== 'string' || typeof o.batch !== 'number') return null
-  if (!isFilter(o.filter)) return null
   if (!isStringArray(o.words) || !isStringArray(o.undo)) return null
   if (typeof o.ratings !== 'object' || o.ratings === null) return null
   const ratings: Record<string, Rating> = {}
@@ -68,7 +58,6 @@ function parseQuiz(v: unknown): QuizState | null {
   return {
     fk: o.fk,
     batch: o.batch,
-    filter: o.filter,
     words: o.words,
     ratings,
     undo: o.undo,
@@ -117,7 +106,6 @@ function pick(pool: readonly string[], k: number): string[] {
  */
 export function armQuiz(
   fk: string,
-  filter: TagFilter,
   windowWords: readonly string[],
   batch: number,
 ): QuizState {
@@ -126,7 +114,6 @@ export function armQuiz(
   const state: QuizState = {
     fk,
     batch,
-    filter: { include: [...filter.include], exclude: [...filter.exclude] },
     words: pick(windowWords, QUIZ_SIZE),
     ratings: {},
     undo: [],

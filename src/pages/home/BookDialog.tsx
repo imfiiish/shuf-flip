@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
-import type { Book } from '../../lib/books'
+import { setActiveFilter, type Book } from '../../lib/books'
 import { copyText } from '../../lib/clipboard'
-import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
+import { filterKey, matchesFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
@@ -97,7 +97,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
   const start = () => {
     if (round.length === 0) return
-    saveFilter(book.filter)
+    setActiveFilter(book.filter)
     navigate('/study')
   }
 

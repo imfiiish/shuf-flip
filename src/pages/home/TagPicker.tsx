@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
-import { loadFilter, matchesFilter, sameFilter } from '../../lib/filter'
+import { activeFilter, loadBooks } from '../../lib/books'
+import { matchesFilter, sameFilter } from '../../lib/filter'
 import { ALL_TAGS, TAG_GROUPS, tagLabel } from '../../lib/tags'
 import { allWords } from '../../data/words'
 
@@ -25,7 +26,7 @@ type Props = {
 export default function TagPicker({ onClose, onConfirm, existing }: Props) {
   // 初始状态从上次保存的选择恢复
   const [modes, setModes] = useState<Record<string, TagMode>>(() => {
-    const f = loadFilter()
+    const f = activeFilter(loadBooks()) ?? { include: [], exclude: [] }
     const m: Record<string, TagMode> = {}
     f.include.forEach((t) => (m[t] = 'include'))
     f.exclude.forEach((t) => (m[t] = 'exclude'))

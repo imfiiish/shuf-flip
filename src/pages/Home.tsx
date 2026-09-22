@@ -195,7 +195,10 @@ export default function Home() {
           onConfirm={(filter) => {
             setBooks((b) => {
               if (b.length >= MAX_BOOKS) return b
-              return [...b, { id: Date.now(), name: '词书', filter }]
+              return [
+                ...b.map((x) => ({ ...x, active: false })),
+                { id: Date.now(), name: '词书', filter, active: true },
+              ]
             })
             setPickerOpen(false)
           }}

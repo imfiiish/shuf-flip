@@ -4,9 +4,9 @@ import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import type { Word } from '../data/words'
 import { preloadAudio, useAudioPlayer } from '../lib/audio'
-import { loadBooks } from '../lib/books'
+import { activeFilter, loadBooks, setActiveFilter } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
-import { filterKey, loadFilter, poolOf, saveFilter } from '../lib/filter'
+import { filterKey, poolOf } from '../lib/filter'
 import {
   loadCenter,
   loadRevealStore,
@@ -60,7 +60,7 @@ export default function Study() {
   //  3) 一本词书都没有 → 回主页并弹 TagPicker
   const initRef = useRef<StudyInit | null>(null)
   if (!initRef.current) {
-    const f = loadFilter()
+    const f = activeFilter(loadBooks()) ?? { include: [], exclude: [] }
     const fk = filterKey(f)
     const book = poolOf(f)
 
@@ -116,7 +116,7 @@ export default function Study() {
   useEffect(() => {
     if (init.cascade.round.length === 0) return
     saveCascade(init.fk, init.cascade)
-    if (init.filter) saveFilter(init.filter)
+    if (init.filter) setActiveFilter(init.filter)
     // 只在挂载时执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -400,7 +400,7 @@ export default function Study() {
     // 学完 WINDOW_ROUNDS 轮、活跃窗口将换新 → 插入 quiz（不 advance，交给 quiz 结束后推进）
     if (c.r > 0 && c.r % WINDOW_ROUNDS === 0) {
       emitCardLeave()
-      armQuiz(fk, loadFilter(), c.levels[0] ?? book, c.r)
+      armQuiz(fk, c.levels[0] ?? book, c.r)
       logEvent('study_to_quiz', { batch: c.r })
       emitExit('quiz')
       navigate('/quiz')
