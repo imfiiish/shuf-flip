@@ -7,6 +7,7 @@ import { filterKey, matchesFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
+import { useWordDetails } from '../../lib/session'
 import { allWords } from '../../data/words'
 
 type Props = {
@@ -78,6 +79,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
+  const detailsReady = useWordDetails()
   const play = useAudioPlayer()
   const playWord = (name: string) => {
     const w = getWord(name)
@@ -85,13 +87,14 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   useEffect(() => {
+    if (!detailsReady) return
     preloadAudio(
       round.flatMap((name) => {
         const w = getWord(name)
         return w?.audio ? [w.audio] : []
       }),
     )
-  }, [round])
+  }, [round, detailsReady])
 
   useEffect(() => () => window.clearTimeout(copyTimer.current), [])
 

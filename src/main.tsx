@@ -3,12 +3,12 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { hydrate } from './lib/persist'
-import { loadWords } from './data/words'
+import { loadIndex } from './data/words'
 
 const root = createRoot(document.getElementById('root')!)
 
 // 词库 + 持久层都是异步的就绪条件，齐了再挂应用
-Promise.all([loadWords(), hydrate()]).then(
+Promise.all([loadIndex(), hydrate()]).then(
   () => {
     root.render(
       <StrictMode>

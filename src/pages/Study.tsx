@@ -28,7 +28,7 @@ import { useWheelFlip } from '../lib/wheel'
 import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
-import { useExitLifecycle, usePreloadWords } from '../lib/session'
+import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
 
 // 切窗口/失焦：短于此时长（ms）的忽略，避免点地址栏/通知误判为离开
 const AWAY_MIN_MS = 1000
@@ -337,9 +337,10 @@ export default function Study() {
   useWheelFlip(go)
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
+  const detailsReady = useWordDetails()
   const play = useAudioPlayer()
 
-  usePreloadWords(deck)
+  usePreloadWords(deck, detailsReady)
 
   // 首次：显示释义 + 朗读；已显示：只重播
   const reveal = useCallback(() => {
@@ -448,6 +449,9 @@ export default function Study() {
         state={needPick ? { openPicker: true } : undefined}
       />
     )
+
+  // 详情（音标/释义/音频）就绪前不渲染卡片
+  if (!detailsReady) return null
 
   const onCardClick = (_name: string, slot: Slot) => {
     if (slot === 0) toggleReveal()

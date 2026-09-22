@@ -8,7 +8,7 @@ import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { filterFromKey, poolOf } from '../lib/filter'
 import { useWheelFlip } from '../lib/wheel'
 import { logEvent } from '../lib/analytics'
-import { useExitLifecycle, usePreloadWords } from '../lib/session'
+import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
 import {
   clearQuiz,
   loadQuiz,
@@ -63,7 +63,8 @@ export default function Quiz() {
 
   // 音频：按需播放 + 预加载本次 quiz，首次不延迟
   const play = useAudioPlayer()
-  usePreloadWords(order)
+  const detailsReady = useWordDetails()
+  usePreloadWords(order, detailsReady)
 
   // —— 埋点：quiz_enter / quiz_card / quiz_rate / quiz_undo / quiz_exit ——
   const viewStartRef = useRef(performance.now())
@@ -289,6 +290,9 @@ export default function Quiz() {
 
   // 没有待做 quiz → 回 /study（互斥重定向）
   if (!quiz) return <Navigate to="/study" replace />
+
+  // 详情（音标/释义/音频）就绪前不渲染卡片
+  if (!detailsReady) return null
 
   const onCardClick = (_name: string, slot: Slot) => {
     if (slot === 0) playWord()

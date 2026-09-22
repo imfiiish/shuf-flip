@@ -259,7 +259,7 @@ function Card({
           <div className="detail">
             <div className="phonetic">{word.phonetic}</div>
             <div className="definition">
-              {word.senses.map((s) => (
+              {(word.senses ?? []).map((s) => (
                 <div className="sense" key={s.pos}>
                   <span className="sense-pos">{s.pos}</span>
                   <span className="sense-defs">{s.defs.join('；')}</span>
