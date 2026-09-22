@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-// 解码 events-*.jsonl
+// 解码 events-*.jsonl（仅新格式：头行 + 元组）
 //
-// 兼容两种格式：
-//   旧：{"t":"…","ld":"…","sid":"…","type":"…", …}
-//   新：头行 {"h":1,"sid":…,"ld":…,"p":…,"t0":…} + 元组 [code, dt, …args]
+// 头行：{"h":1,"sid":…,"ld":…,"p":…,"t0":…}
+// 事件：[code, dt, …args]
 //
 // 用法：node scripts/decode-events.mjs logs/events-study-2026-09-22.jsonl
 //       node scripts/decode-events.mjs <file> | jq .
@@ -39,13 +38,8 @@ for (const raw of readFileSync(file, 'utf8').split('\n')) {
   if (!raw.trim()) continue
   const v = JSON.parse(raw)
 
-  // 旧格式（对象带 type）直接透传
   if (!Array.isArray(v)) {
-    if (v.h === 1) {
-      header = v
-      continue
-    }
-    console.log(JSON.stringify(v))
+    if (v.h === 1) header = v
     continue
   }
 
@@ -57,10 +51,9 @@ for (const raw of readFileSync(file, 'utf8').split('\n')) {
   }
   const obj = {}
   d.fields.forEach((f, i) => (obj[f] = args[i]))
-  const t = header ? new Date(header.t0 + dt).toISOString() : dt
   console.log(
     JSON.stringify({
-      t,
+      t: header ? new Date(header.t0 + dt).toISOString() : dt,
       ld: header?.ld ?? null,
       sid: header?.sid ?? null,
       type: d.type,
