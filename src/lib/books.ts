@@ -1,5 +1,6 @@
 import type { TagFilter } from './filter'
 import { sameFilter } from './filter'
+import { isStringArray } from './guard'
 import { readJSON, writeJSON } from './storage'
 
 /** 一本词书 */
@@ -15,10 +16,6 @@ const KEY = 'vocab-books'
 
 /** 词书数量上限 */
 export const MAX_BOOKS = 3
-
-function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === 'string')
-}
 
 function isBook(v: unknown): v is Book {
   if (typeof v !== 'object' || v === null) return false

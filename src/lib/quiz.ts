@@ -8,6 +8,8 @@
 //  - /study 挂载时若存在 QuizState → 重定向到 /quiz
 //  - /quiz 挂载时若不存在 QuizState → 重定向到 /study
 import { getKV, put, del } from './kv'
+import { pick } from './random'
+import { isStringArray } from './guard'
 
 /** 每份 quiz 抽取的词数 */
 const QUIZ_SIZE = 16
@@ -31,10 +33,6 @@ export type QuizState = {
   undo: string[]
   /** 当前中心词在「未评列表 remaining」里的下标 */
   center: number
-}
-
-function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === 'string')
 }
 
 function isRating(v: unknown): v is Rating {
@@ -86,18 +84,6 @@ export function clearQuiz(): void {
 export async function hydrateQuiz(): Promise<void> {
   const raw = await getKV<unknown>('misc', 'quiz')
   cache = raw == null ? null : parseQuiz(raw)
-}
-
-/** 洗牌取前 k 个 */
-function pick(pool: readonly string[], k: number): string[] {
-  const a = [...pool]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const t = a[i]
-    a[i] = a[j]
-    a[j] = t
-  }
-  return a.slice(0, Math.max(0, Math.min(k, a.length)))
 }
 
 /**

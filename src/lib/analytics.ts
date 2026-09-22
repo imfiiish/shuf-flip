@@ -10,33 +10,11 @@
 // - 只在 import.meta.env.DEV 生效（生产没有中间件）
 // - 缓冲 + 微批量发送；页面隐藏/卸载用 sendBeacon 兜底
 import { logicalDay } from './day'
+import EVENTS from './events.json'
 
 type Payload = Record<string, unknown>
 
-/**
- * 事件表：code 固定（study 0–9 / quiz ≥10），fields 即元组里 `dt` 之后的参数顺序。
- * 增删事件只改这里 + 中间件的页面判定。
- */
-const EVENTS: { code: number; type: string; fields: string[] }[] = [
-  { code: 0, type: 'counts_reset', fields: ['from', 'to'] },
-  { code: 1, type: 'study_enter', fields: ['filterKey'] },
-  { code: 2, type: 'study_round', fields: ['index', 'words'] },
-  {
-    code: 3,
-    type: 'study_card',
-    fields: ['word', 'dir', 'dwellBeforeMs', 'dwellAfterMs', 'reveals'],
-  },
-  { code: 4, type: 'study_exit', fields: ['reason'] },
-  { code: 5, type: 'study_away', fields: ['away', 'by'] },
-  { code: 6, type: 'study_copy', fields: ['word', 'revealed'] },
-  { code: 7, type: 'study_to_quiz', fields: ['batch'] },
-  { code: 10, type: 'quiz_enter', fields: ['fk', 'batch', 'total'] },
-  { code: 11, type: 'quiz_card', fields: ['word', 'dir', 'dwellMs', 'plays'] },
-  { code: 12, type: 'quiz_rate', fields: ['word', 'rating', 'plays', 'left'] },
-  { code: 13, type: 'quiz_undo', fields: ['word', 'rating', 'undoLeft'] },
-  { code: 14, type: 'quiz_exit', fields: ['reason', 'rated', 'total'] },
-]
-
+// 事件表见 events.json（与 scripts/decode-events.mjs 共用）；code 0–9=study / ≥10=quiz
 const BY_TYPE = new Map(EVENTS.map((e) => [e.type, e]))
 
 const isDev = import.meta.env.DEV

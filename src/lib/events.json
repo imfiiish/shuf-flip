@@ -1,0 +1,15 @@
+[
+  { "code": 0, "type": "counts_reset", "fields": ["from", "to"] },
+  { "code": 1, "type": "study_enter", "fields": ["filterKey"] },
+  { "code": 2, "type": "study_round", "fields": ["index", "words"] },
+  { "code": 3, "type": "study_card", "fields": ["word", "dir", "dwellBeforeMs", "dwellAfterMs", "reveals"] },
+  { "code": 4, "type": "study_exit", "fields": ["reason"] },
+  { "code": 5, "type": "study_away", "fields": ["away", "by"] },
+  { "code": 6, "type": "study_copy", "fields": ["word", "revealed"] },
+  { "code": 7, "type": "study_to_quiz", "fields": ["batch"] },
+  { "code": 10, "type": "quiz_enter", "fields": ["fk", "batch", "total"] },
+  { "code": 11, "type": "quiz_card", "fields": ["word", "dir", "dwellMs", "plays"] },
+  { "code": 12, "type": "quiz_rate", "fields": ["word", "rating", "plays", "left"] },
+  { "code": 13, "type": "quiz_undo", "fields": ["word", "rating", "undoLeft"] },
+  { "code": 14, "type": "quiz_exit", "fields": ["reason", "rated", "total"] }
+]

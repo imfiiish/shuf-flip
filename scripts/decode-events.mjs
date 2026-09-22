@@ -7,25 +7,13 @@
 // 用法：node scripts/decode-events.mjs logs/events-study-2026-09-22.jsonl
 //       node scripts/decode-events.mjs <file> | jq .
 //
-// 注意：事件表需与 src/lib/analytics.ts 的 EVENTS 保持一致。
+// 注意：事件表来自 src/lib/events.json（与 src/lib/analytics.ts 共用）。
 import { readFileSync } from 'node:fs'
 
-const EVENTS = [
-  [0, 'counts_reset', ['from', 'to']],
-  [1, 'study_enter', ['filterKey']],
-  [2, 'study_round', ['index', 'words']],
-  [3, 'study_card', ['word', 'dir', 'dwellBeforeMs', 'dwellAfterMs', 'reveals']],
-  [4, 'study_exit', ['reason']],
-  [5, 'study_away', ['away', 'by']],
-  [6, 'study_copy', ['word', 'revealed']],
-  [7, 'study_to_quiz', ['batch']],
-  [10, 'quiz_enter', ['fk', 'batch', 'total']],
-  [11, 'quiz_card', ['word', 'dir', 'dwellMs', 'plays']],
-  [12, 'quiz_rate', ['word', 'rating', 'plays', 'left']],
-  [13, 'quiz_undo', ['word', 'rating', 'undoLeft']],
-  [14, 'quiz_exit', ['reason', 'rated', 'total']],
-]
-const DEF = new Map(EVENTS.map(([code, type, fields]) => [code, { type, fields }]))
+const EVENTS = JSON.parse(
+  readFileSync(new URL('../src/lib/events.json', import.meta.url), 'utf8'),
+)
+const DEF = new Map(EVENTS.map((e) => [e.code, { type: e.type, fields: e.fields }]))
 
 const file = process.argv[2]
 if (!file) {

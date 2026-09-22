@@ -4,6 +4,8 @@
 // 活跃窗口每 WINDOW_ROUNDS 轮从上一级重抽一次，逐级 2 倍大小、周期 ×MULT，
 // 一直到整个词池。好处：短期锁住较高的重复率，长期又能覆盖全部词。
 import { loadStore, put, del } from './kv'
+import { pick } from './random'
+import { isStringArray } from './guard'
 
 /** 每轮抽取的词数 */
 export const ROUND_SIZE = 16
@@ -38,18 +40,6 @@ function chainOf(n: number): number[] {
 /** 第 i 级窗口的周期（轮） */
 function periodOf(i: number): number {
   return WINDOW_ROUNDS * MULT ** i
-}
-
-/** 洗牌取前 k 个（均匀随机，不重复） */
-function pick(pool: readonly string[], k: number): string[] {
-  const a = [...pool]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const t = a[i]
-    a[i] = a[j]
-    a[j] = t
-  }
-  return a.slice(0, Math.max(0, Math.min(k, a.length)))
 }
 
 /** 全新级联：顶层 = 整个池，逐级均匀抽下去 */
@@ -127,10 +117,6 @@ export function ensureCascade(key: string, pool: readonly string[]): Cascade {
 }
 
 // ---- 持久化（IndexedDB，按 filterKey 单条记录）----
-
-function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === 'string')
-}
 
 function isCascade(v: unknown): v is Cascade {
   if (typeof v !== 'object' || v === null) return false
