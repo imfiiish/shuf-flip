@@ -336,26 +336,24 @@ body {
   flex-direction: column;
   gap: 4px;
   line-height: 1.5;
-  text-align: left;
 }
 
 .sense {
   display: flex;
+  justify-content: center;
   gap: 10px;
   align-items: baseline;
 }
 
 .sense-pos {
   flex: 0 0 auto;
-  min-width: 3.4em;
-  text-align: right;
   color: var(--muted);
   font-size: 0.85em;
   font-style: italic;
 }
 
 .sense-defs {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .load-error {
