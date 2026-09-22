@@ -41,9 +41,24 @@ function fallbackWrite(s: StoreName, obj: Record<string, unknown>): void {
   }
 }
 
+/** 打开数据库；被阻塞 / 超时则拒绝，由上层回退（绝不阻塞启动） */
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    let settled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const finish = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      if (timer !== undefined) clearTimeout(timer)
+      fn()
+    }
+
     const req = indexedDB.open('vocab', 2)
+    // 被别的标签页占着旧版本时 onblocked 会先到，超时兜底
+    timer = setTimeout(
+      () => finish(() => reject(new Error('indexedDB open timeout'))),
+      4000,
+    )
     req.onupgradeneeded = () => {
       const d = req.result
       for (const s of STORES) {
@@ -54,8 +69,15 @@ function openDB(): Promise<IDBDatabase> {
         d.deleteObjectStore('revealTotal')
       }
     }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
+    req.onsuccess = () => {
+      if (settled) {
+        req.result.close() // 已经回退了，别再占着连接
+        return
+      }
+      finish(() => resolve(req.result))
+    }
+    req.onerror = () => finish(() => reject(req.error))
+    req.onblocked = () => finish(() => reject(new Error('indexedDB blocked')))
   })
 }
 

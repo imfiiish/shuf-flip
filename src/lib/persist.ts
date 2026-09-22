@@ -31,7 +31,13 @@ async function importLegacy(): Promise<void> {
     }
   }
 
-  if (localStorage.getItem(MIGRATED_KEY)) return
+  let done = false
+  try {
+    done = localStorage.getItem(MIGRATED_KEY) === '1'
+  } catch {
+    return // localStorage 不可用：跳过迁移
+  }
+  if (done) return
 
   const coverage = readLS<{ seen?: string[] }>('vocab-coverage')
   if (coverage) {
@@ -77,14 +83,27 @@ async function importLegacy(): Promise<void> {
 }
 
 export async function hydrate(): Promise<void> {
-  await initKV()
-  await importLegacy()
-  await Promise.all([
-    hydrateCascade(),
-    hydrateCoverage(),
-    hydrateProgress(),
-    hydrateQuiz(),
-  ])
+  // 持久层是「加分项」：任何异常都不应阻止应用渲染
+  try {
+    await initKV()
+  } catch (e) {
+    console.warn('[kv] init failed', e)
+  }
+  try {
+    await importLegacy()
+  } catch (e) {
+    console.warn('[kv] migrate failed', e)
+  }
+  try {
+    await Promise.all([
+      hydrateCascade(),
+      hydrateCoverage(),
+      hydrateProgress(),
+      hydrateQuiz(),
+    ])
+  } catch (e) {
+    console.warn('[kv] hydrate failed', e)
+  }
 
   if (typeof window !== 'undefined') {
     const flushAll = () => void flush()
