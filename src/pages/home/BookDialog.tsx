@@ -7,7 +7,7 @@ import { filterKey, matchesFilter, saveFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
 import { preloadAudio, useAudioPlayer } from '../../lib/audio'
-import { words } from '../../data/words'
+import { allWords } from '../../data/words'
 
 type Props = {
   book: Book
@@ -41,7 +41,10 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
   const key = useMemo(() => filterKey(book.filter), [book])
   const all = useMemo(
-    () => words.filter((w) => matchesFilter(w, book.filter)).map((w) => w.word),
+    () =>
+      allWords()
+        .filter((w) => matchesFilter(w, book.filter))
+        .map((w) => w.word),
     [book],
   )
 
@@ -78,14 +81,14 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const play = useAudioPlayer()
   const playWord = (name: string) => {
     const w = getWord(name)
-    if (w) play(w.audio_file)
+    if (w) play(w.audio)
   }
 
   useEffect(() => {
     preloadAudio(
       round.flatMap((name) => {
         const w = getWord(name)
-        return w ? [w.audio_file] : []
+        return w?.audio ? [w.audio] : []
       }),
     )
   }, [round])

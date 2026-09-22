@@ -332,8 +332,36 @@ body {
 }
 
 .definition {
-  white-space: pre-line; /* definition 里的 \n 换行 */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   line-height: 1.5;
+  text-align: left;
+}
+
+.sense {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.sense-pos {
+  flex: 0 0 auto;
+  min-width: 3.4em;
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.85em;
+  font-style: italic;
+}
+
+.sense-defs {
+  flex: 1 1 auto;
+}
+
+.load-error {
+  padding: 24px;
+  color: var(--danger);
+  font-size: 0.95rem;
 }
 
 /* tags 贴卡片底部：用 · 分隔，颜色和音标一致 */

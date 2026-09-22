@@ -1,5 +1,5 @@
 import type { Word } from '../data/words'
-import { words } from '../data/words'
+import { allWords } from '../data/words'
 import { readJSON, writeJSON } from './storage'
 
 /** 选中 tag 的两态：包含 / 排除（不选 = 不在 map 里） */
@@ -48,7 +48,9 @@ export function filterKey(f: TagFilter): string {
 
 /** 当前筛选下的词池（word 字符串数组，保持词库顺序） */
 export function poolOf(f: TagFilter): string[] {
-  return words.filter((w) => matchesFilter(w, f)).map((w) => w.word)
+  return allWords()
+    .filter((w) => matchesFilter(w, f))
+    .map((w) => w.word)
 }
 
 /** 两个筛选条件是否等价（include / exclude 都按集合比较，与顺序无关） */

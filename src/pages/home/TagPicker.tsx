@@ -2,35 +2,10 @@ import { useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
 import { loadFilter, matchesFilter, sameFilter } from '../../lib/filter'
-import { CEFR_PREFIX, allTags, tagLabel } from '../../lib/tags'
-import { words } from '../../data/words'
+import { ALL_TAGS, TAG_GROUPS, tagLabel } from '../../lib/tags'
+import { allWords } from '../../data/words'
 
-const TAGS = allTags()
-
-// tag 分组（按国内备考习惯）。CEFR 自动归组，未列出的进「其他」
-const GROUP_DEFS: { label: string; tags: string[] }[] = [
-  { label: '中学', tags: ['初中', '高中'] },
-  { label: '大学', tags: ['CET4', 'CET6', '考研'] },
-  { label: '留学', tags: ['IELTS', 'TOEFL', 'SAT', 'GRE', 'GMAT'] },
-  { label: '专业', tags: ['TEM4', 'TEM8', 'BEC'] },
-]
-
-const GROUPS = (() => {
-  const used = new Set<string>()
-  const groups = GROUP_DEFS.map(({ label, tags }) => {
-    const list = tags.filter((t) => TAGS.includes(t))
-    list.forEach((t) => used.add(t))
-    return { label, tags: list }
-  }).filter((g) => g.tags.length > 0)
-
-  const cefr = TAGS.filter((t) => t.startsWith(CEFR_PREFIX))
-  if (cefr.length) groups.push({ label: 'CEFR', tags: cefr })
-
-  const rest = TAGS.filter((t) => !used.has(t) && !t.startsWith(CEFR_PREFIX))
-  if (rest.length) groups.push({ label: '其他', tags: rest })
-
-  return groups
-})()
+const TAGS = ALL_TAGS
 
 // 点击循环：不选 → 包含 → 排除 → 不选
 function nextMode(m: TagMode | undefined): TagMode | undefined {
@@ -68,7 +43,7 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
   }, [modes])
 
   const count = useMemo(
-    () => words.filter((w) => matchesFilter(w, filter)).length,
+    () => allWords().filter((w) => matchesFilter(w, filter)).length,
     [filter],
   )
 
@@ -117,7 +92,7 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
       </p>
 
       <div className="tag-groups">
-        {GROUPS.map((g) => (
+        {TAG_GROUPS.map((g) => (
           <div className="tag-group" key={g.label} role="group" aria-label={g.label}>
             <span className="tag-group-label">{g.label}</span>
             <div className="tag-group-chips">{g.tags.map(chip)}</div>

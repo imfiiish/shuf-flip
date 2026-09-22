@@ -68,7 +68,7 @@ export default function Quiz() {
     preloadAudio(
       quiz.words.flatMap((name) => {
         const w = getWord(name)
-        return w ? [w.audio_file] : []
+        return w?.audio ? [w.audio] : []
       }),
     )
   }, [quiz])
@@ -149,7 +149,7 @@ export default function Quiz() {
   // 空格：只发音，不显示释义
   const playWord = useCallback(() => {
     playsRef.current += 1
-    play(centerWord?.audio_file)
+    play(centerWord?.audio)
   }, [play, centerWord])
 
   // 评分：移除该词，自动滑到下一张未评卡

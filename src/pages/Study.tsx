@@ -356,7 +356,7 @@ export default function Study() {
     preloadAudio(
       deck.flatMap((name) => {
         const w = getWord(name)
-        return w ? [w.audio_file] : []
+        return w?.audio ? [w.audio] : []
       }),
     )
   }, [deck])
@@ -373,11 +373,11 @@ export default function Study() {
         firstRevealRef.current = performance.now()
       }
     }
-    play(centerWord?.audio_file)
+    play(centerWord?.audio)
   }, [play, centerWord, centerName, ensureDay])
 
   const toggleReveal = useCallback(() => {
-    if (revealed) play(centerWord?.audio_file)
+    if (revealed) play(centerWord?.audio)
     else reveal()
   }, [revealed, play, reveal, centerWord])
 

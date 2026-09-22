@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
 import { logout } from '../lib/auth'
-import { words } from '../data/words'
+import { allWords } from '../data/words'
 import { filterKey, matchesFilter } from '../lib/filter'
 import { removeCascade } from '../lib/cascade'
 import { coverageCounts } from '../lib/coverage'
@@ -51,7 +51,7 @@ export default function Home() {
       <div className="bookshelf">
         <div className="bookshelf-inner">
           {books.map((book) => {
-            const bookWords = words
+            const bookWords = allWords()
               .filter((w) => matchesFilter(w, book.filter))
               .map((w) => w.word)
             const total = bookWords.length

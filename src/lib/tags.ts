@@ -1,39 +1,49 @@
-import { words } from '../data/words'
+import { allWords } from '../data/words'
 
-export const CEFR_PREFIX = 'CEFR.'
-
-// tags 展示顺序（CEFR.A1/A2/B1/B2/C1/C2 都归到 CEFR；未列出的排最后）
-const TAG_ORDER = [
-  '初中',
-  '高中',
+// 全部 tag（固定集合，顺序即卡片上的展示顺序）
+export const ALL_TAGS = [
+  '义务教育',
+  '必修',
+  '选择性必修',
   'CET4',
   'CET6',
-  '考研',
-  'IELTS',
-  'TOEFL',
-  'TEM4',
-  'TEM8',
-  'CEFR',
-  'SAT',
-  'GRE',
-  'GMAT',
-  'BEC',
+  'Oxford3000',
+  'Oxford5000',
+  'A1',
+  'A2',
+  'B1',
+  'B2',
+  'C1',
 ] as const
 
+// TagPicker 分组
+export const TAG_GROUPS: { label: string; tags: string[] }[] = [
+  {
+    label: '国内升学',
+    tags: ['义务教育', '必修', '选择性必修', 'CET4', 'CET6'],
+  },
+  {
+    label: '出国留学',
+    tags: ['Oxford3000', 'Oxford5000', 'A1', 'A2', 'B1', 'B2', 'C1'],
+  },
+]
+
+const ORDER: readonly string[] = ALL_TAGS
+
 export function tagRank(tag: string): number {
-  const i = TAG_ORDER.findIndex((t) => tag === t || tag.startsWith(`${t}.`))
-  return i === -1 ? TAG_ORDER.length : i
+  const i = ORDER.indexOf(tag)
+  return i === -1 ? ORDER.length : i
 }
 
-/** tag 的展示名：CEFR.A1 → A1（同一排已有「CEFR」标签），其余原样 */
+/** tag 展示名（现为原名；保留此函数便于以后加前缀处理） */
 export function tagLabel(tag: string): string {
-  return tag.startsWith(CEFR_PREFIX) ? tag.slice(CEFR_PREFIX.length) : tag
+  return tag
 }
 
-/** 词库里出现过的所有 tag（去重），按展示顺序排列 */
+/** 词库里出现过的所有 tag（按展示顺序） */
 export function allTags(): string[] {
   const set = new Set<string>()
-  words.forEach((w) => w.tags.forEach((t) => set.add(t)))
+  allWords().forEach((w) => w.tags.forEach((t) => set.add(t)))
   return [...set].sort((a, b) => {
     const d = tagRank(a) - tagRank(b)
     return d !== 0 ? d : a.localeCompare(b)
