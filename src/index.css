@@ -29,16 +29,16 @@
   --on-danger: #f6efe3;
 
   /* 评级三色：酒红（陌生）→ 古金（模糊）→ 松绿（熟悉），深色宝石调 */
-  --rate-r: #8e2f3f;
-  --rate-r-ring: rgba(142, 47, 63, 0.36);
+  --rate-r: #6b2330;
+  --rate-r-ring: rgba(107, 35, 48, 0.38);
   --rate-r-on: #fdf4f5;
-  --rate-y: #8a6416;
-  --rate-y-solid: #c0912c;
-  --rate-y-ring: rgba(192, 145, 44, 0.4);
+  --rate-y: #6a4b10;
+  --rate-y-solid: #98721f;
+  --rate-y-ring: rgba(152, 114, 31, 0.42);
   --rate-y-on: #3b2a00;
-  --rate-g: #3f6b4f;
-  --rate-g-ring: rgba(63, 107, 79, 0.36);
-  --rate-g-on: #f2f7f4;
+  --rate-g: #2e513b;
+  --rate-g-ring: rgba(46, 81, 59, 0.38);
+  --rate-g-on: #eef4f0;
 
   /* 浅色（默认）：暖纸 */
   --bg: #f2ece0;
@@ -71,16 +71,16 @@
   --danger-ring: rgba(230, 216, 191, 0.35);
   --on-danger: #201a11;
 
-  --rate-r: #c97482;
-  --rate-r-ring: rgba(201, 116, 130, 0.42);
+  --rate-r: #9e5563;
+  --rate-r-ring: rgba(158, 85, 99, 0.45);
   --rate-r-on: #2b0d12;
-  --rate-y: #d4aa55;
-  --rate-y-solid: #d4aa55;
-  --rate-y-ring: rgba(212, 170, 85, 0.42);
-  --rate-y-on: #3b2a00;
-  --rate-g: #84ad93;
-  --rate-g-ring: rgba(132, 173, 147, 0.42);
-  --rate-g-on: #10241a;
+  --rate-y: #b28a3a;
+  --rate-y-solid: #b28a3a;
+  --rate-y-ring: rgba(178, 138, 58, 0.45);
+  --rate-y-on: #2e2100;
+  --rate-g: #62866f;
+  --rate-g-ring: rgba(98, 134, 111, 0.45);
+  --rate-g-on: #0c1c14;
 
   --bg: #14120e;
   --card: #1e1b15;
