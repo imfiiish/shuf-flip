@@ -1,8 +1,15 @@
 {
-  "name": "vocab-cards-ts",
+  "name": "shuf-flip",
   "private": true,
   "version": "0.0.1",
+  "description": "Vocabulary flashcards: shuffle a deck and flip to reveal.",
   "license": "MIT",
+  "author": "imfiiish",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/imfiiish/shuf-flip.git"
+  },
+  "homepage": "https://github.com/imfiiish/shuf-flip#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",
