@@ -1,7 +1,7 @@
 // 一轮的抽样逻辑：级联窗口（见 docs/sampling.md）
 //
 // 每轮只从「活跃窗口」（最小池，WINDOW 个词）里均匀抽 ROUND_SIZE 个；
-// 活跃窗口每 WINDOW_ROUNDS 轮从上一级重抽一次，逐级 2 倍大小、周期 ×MULT，
+// 活跃窗口每 WINDOW_ROUNDS 轮从上一级重抽一次，逐级 ×GROW 大小、周期 ×MULT，
 // 一直到整个词池。好处：短期锁住较高的重复率，长期又能覆盖全部词。
 import { loadStore, put, del } from './kv'
 import { pick } from './random'
@@ -16,7 +16,10 @@ const WINDOW = 64
 /** 活跃窗口寿命（轮）：每这么多轮，活跃窗口从上一级重抽一次 */
 export const WINDOW_ROUNDS = 8
 
-/** 每级倍率：第 i 级周期 = WINDOW_ROUNDS × MULT^i */
+/** 每级窗口的词数倍率：64 → 256 → 1024 … */
+const GROW = 4
+
+/** 每级周期倍率：第 i 级周期 = WINDOW_ROUNDS × MULT^i（与 GROW 解耦） */
 const MULT = 3
 
 /** 一本词书的级联状态（按 filterKey 持久化） */
@@ -29,10 +32,18 @@ export type Cascade = {
   round: string[]
 }
 
-/** 级联链：64, 128, …（都 < N），最后接 N。例：N=2000 → [64,128,256,512,1024,2000] */
+/**
+ * 级联链：从 WINDOW 起每级 ×GROW，最后接 N。
+ * 顶部最后一跳若超过 2×，补一个「半池」级把它压到 ≤2×；
+ * 但半池级离 N 太近（不足 last/4）就不补，免得出现几乎一样的两级。
+ * 例：N=2000 → [64,256,1024,2000]；N=4096 → [64,256,1024,2048,4096]
+ */
 function chainOf(n: number): number[] {
+  if (n <= WINDOW) return [n]
   const c: number[] = []
-  for (let s = WINDOW; s < n; s *= 2) c.push(s)
+  for (let s = WINDOW; s < n; s *= GROW) c.push(s)
+  const last = c[c.length - 1]
+  if (n > 2 * last && n - 2 * last >= last / 4) c.push(2 * last)
   c.push(n)
   return c
 }
