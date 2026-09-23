@@ -230,6 +230,15 @@ function Card({
       : 'pos-off-l'
     : `pos-${slot}`
 
+  const showNotice = isCenter && notice
+  // 复制后短暂用「已复制」顶掉词的位置；正反面都放一份，哪面朝上都能看到
+  const wordLine = (
+    <div className={`word${showNotice ? ' copying' : ''}`}>
+      <span className="word-text">{word.word}</span>
+      {showNotice && <span className="copy-notice">{notice}</span>}
+    </div>
+  )
+
   return (
     <div
       className={`card ${posClass}${isCenter ? ' active' : ''}${
@@ -238,50 +247,54 @@ function Card({
       data-word={word.word}
       onClick={onClick}
     >
-      {/* 展开释义后才显示「展开过几次」的圆点 */}
-      {isCenter && revealed && dots > 0 && (
-        <div className="dots">
-          {dotColors(dots).map((c, i) => (
-            <span key={i} className={`dot ${c}`} />
-          ))}
-        </div>
-      )}
-      <div className="inner">
-        {/* 复制后短暂用「已复制」顶掉词的位置（沿用当时的小字青色样式），
-            1s 后与单词交叉淡出 */}
-        <div className={`word${isCenter && notice ? ' copying' : ''}`}>
-          <span className="word-text">{word.word}</span>
-          {isCenter && notice && <span className="copy-notice">{notice}</span>}
+      {/* 双面卡：展开释义 = rotateY 翻到背面（Quiz 永远只显示正面） */}
+      <div className={`card-flip${isCenter && revealed ? ' flipped' : ''}`}>
+        {/* 正面：只有单词（+ 复制提示） */}
+        <div className="face front">
+          <div className="inner">{wordLine}</div>
         </div>
 
-        {/* 展开时才显示音标和释义（Quiz 不展开，永远不显示） */}
-        {isCenter && revealed && (
-          <div className="detail">
-            <div className="phonetic">{word.phonetic}</div>
-            <div className="definition">
-              {(word.senses ?? []).map((s) => (
-                <div className="sense" key={s.pos}>
-                  <span className="sense-pos">{s.pos}</span>
-                  <span className="sense-defs">{s.defs.join('；')}</span>
-                </div>
+        {/* 背面：单词 + 音标 + 释义 + tags；圆点在展开后才显示 */}
+        <div className="face back">
+          {isCenter && revealed && dots > 0 && (
+            <div className="dots">
+              {dotColors(dots).map((c, i) => (
+                <span key={i} className={`dot ${c}`} />
               ))}
             </div>
+          )}
+          <div className="inner">
+            {wordLine}
+            {/* 展开时才显示音标和释义（Quiz 不展开，永远不显示） */}
+            {isCenter && revealed && (
+              <div className="detail">
+                <div className="phonetic">{word.phonetic}</div>
+                <div className="definition">
+                  {(word.senses ?? []).map((s) => (
+                    <div className="sense" key={s.pos}>
+                      <span className="sense-pos">{s.pos}</span>
+                      <span className="sense-defs">{s.defs.join('；')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* 释义展开时，tags 贴卡片底部，用 · 分隔 */}
-      {isCenter && revealed && word.tags.length > 0 && (
-        <div className="tag-list">
-          {[...word.tags]
-            .sort((a, b) => tagRank(a) - tagRank(b))
-            .map((tag) => (
-              <span className="tag" key={tag}>
-                {tagLabel(tag)}
-              </span>
-            ))}
+          {/* 释义展开时，tags 贴卡片底部，用 · 分隔 */}
+          {isCenter && revealed && word.tags.length > 0 && (
+            <div className="tag-list">
+              {[...word.tags]
+                .sort((a, b) => tagRank(a) - tagRank(b))
+                .map((tag) => (
+                  <span className="tag" key={tag}>
+                    {tagLabel(tag)}
+                  </span>
+                ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
