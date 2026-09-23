@@ -4,9 +4,7 @@
 
 Vocabulary flashcards: shuffle a deck and flip to reveal.
 
-![](images/study-light.png)
-
-![](images/study-dark.png)
+![](images/study.png)
 
 ## Getting started
 
