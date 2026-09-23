@@ -1148,8 +1148,9 @@ kbd {
   animation: fade-in 160ms ease-out;
 }
 
-/* 词名：过长时省略，不与右侧复制提示重叠 */
-.word-text {
+/* 词表行里的词名：过长时省略，不与右侧复制提示重叠（只作用于词表，
+   避免裁掉卡片单词 g/p/q 的下伸部） */
+.word-row .word-text {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
