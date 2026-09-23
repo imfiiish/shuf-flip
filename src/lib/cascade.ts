@@ -86,12 +86,18 @@ function fitLevels(stored: string[][] | null, pool: readonly string[]): string[]
         out.push(w)
       }
     }
-    for (const w of parent) {
-      if (out.length >= size) break
-      if (!seen.has(w)) {
-        seen.add(w)
-        out.push(w)
+    // 补足槽位：从「父级里尚未保留的」中均匀抽，而不是顺着父级顺序取前几个。
+    // 父级顺序 = 旧词在前、新词（词库靠后）在后；顺取会系统性偏向旧词/靠前的词，
+    // 使新词迟迟进不了下级，且结果依赖词库排列顺序。
+    if (out.length < size) {
+      const rest: string[] = []
+      for (const w of parent) {
+        if (!seen.has(w)) {
+          seen.add(w)
+          rest.push(w)
+        }
       }
+      out.push(...pick(rest, size - out.length))
     }
     levels[i] = out
   }
