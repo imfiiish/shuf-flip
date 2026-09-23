@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>深色底子对比 · 保留 08/17 + 18 新组</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px;
+    background: #060606; color: #ccc;
+    font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 6px; }
+  p.note { color: #888; font-size: .82rem; margin: 0 0 26px; line-height: 1.6; max-width: 920px; }
+  h2 { font-size: .9rem; margin: 30px 0 14px; color: #bbb; font-weight: 600; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
+  .mock {
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,.07);
+  }
+  .mock.keep { border-color: #8a6a3a; box-shadow: 0 0 0 1px #8a6a3a inset; }
+  .label {
+    font-size: .74rem; color: var(--muted);
+    margin-bottom: 12px; font-weight: 600;
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  }
+  .label em { font-style: normal; opacity: .65; }
+  .badge {
+    background: #8a6a3a; color: #fff;
+    font-size: .62rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--card-active);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 14px 14px;
+    text-align: center;
+    box-shadow: 0 16px 34px -16px rgba(0,0,0,.55);
+  }
+  .dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot.g { background: var(--rate-g); }
+  .dot.y { background: var(--rate-y-solid); }
+  .dot.r { background: var(--rate-r); }
+  .word { font-family: Georgia, 'Songti SC', serif; font-size: 1.5rem; margin: 4px 0 2px; }
+  .pos { color: var(--muted); font-size: .78rem; }
+  .def { color: var(--muted); font-size: .84rem; margin-top: 8px; }
+
+  .listrow {
+    display: flex; justify-content: space-between;
+    margin-top: 12px; padding: 8px 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; font-size: .82rem;
+  }
+  .listrow span:last-child { color: var(--muted); }
+
+  .bookrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .book {
+    position: relative; width: 74px; height: 104px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 5px 10px 10px 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; color: var(--text); overflow: hidden; flex: none;
+  }
+  .spine { position: absolute; inset: 0 auto 0 0; width: 7px; background: var(--border); overflow: hidden; }
+  .spine i, .spine b { position: absolute; left: 0; right: 0; bottom: 0; display: block; }
+  .spine i { background: var(--rate-y-solid); height: 62%; }
+  .spine b { background: var(--rate-g); height: 34%; }
+  .bookmeta { font-size: .78rem; color: var(--muted); line-height: 1.7; }
+
+  .btns { display: flex; gap: 7px; margin-top: 12px; }
+  .btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 6px; border-radius: 9px;
+    font: inherit; font-size: .78rem; font-weight: 600;
+    border: 1px solid transparent; cursor: default; white-space: nowrap;
+  }
+  .btn kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 17px; height: 17px; border-radius: 50%;
+    font-size: .66rem; font-weight: 700; border: 0; flex: none;
+  }
+  .btn.r { color: var(--rate-r); border-color: color-mix(in srgb, var(--rate-r) 32%, transparent);
+           background: color-mix(in srgb, var(--rate-r) 12%, var(--card)); }
+  .btn.r kbd { background: var(--rate-r); color: var(--rate-r-on); }
+  .btn.y { color: var(--rate-y); border-color: color-mix(in srgb, var(--rate-y-solid) 40%, transparent);
+           background: color-mix(in srgb, var(--rate-y-solid) 16%, var(--card)); }
+  .btn.y kbd { background: var(--rate-y-solid); color: var(--rate-y-on); }
+  .btn.g { color: var(--rate-g); border-color: color-mix(in srgb, var(--rate-g) 30%, transparent);
+           background: color-mix(in srgb, var(--rate-g) 12%, var(--card)); }
+  .btn.g kbd { background: var(--rate-g); color: var(--rate-g-on); }
+
+  .actions { display: flex; gap: 7px; margin-top: 12px; }
+  .actions .accent {
+    flex: 1; padding: 8px; border-radius: 9px; border: 0;
+    background: var(--accent); color: var(--on-accent);
+    font: inherit; font-size: .82rem; font-weight: 600; cursor: default;
+  }
+  .actions .ghost {
+    flex: 1; padding: 8px; border-radius: 9px;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+    font: inherit; font-size: .82rem; cursor: default;
+  }
+
+  .mock {
+    --rate-r: #9e5563; --rate-r-on: #2b0d12;
+    --rate-y: #b28a3a; --rate-y-solid: #b28a3a; --rate-y-on: #2e2100;
+    --rate-g: #62866f; --rate-g-on: #0c1c14;
+  }
+</style>
+</head>
+<body>
+  <h1>深色底子对比</h1>
+  <p class="note">
+    上面 2 个是保留的 08 / 17；下面 18 个是新的方向。评级色固定 o3，只看深色底子。<br />
+    报编号，或混搭（如「N05 的底 + N13 的卡片」），或说「这批还不行，再换一批」。
+  </p>
+
+  <h2>保留</h2>
+  <div class="grid" id="keep"></div>
+
+  <h2>新 18 组</h2>
+  <div class="grid" id="news"></div>
+
+  <script>
+    // [编号, 名称, bg, card, cardActive, border, text, muted, accent, onAccent?]
+    const KEEP = [
+      ['08', '深红棕', '#1a1210', '#2a1d19', '#34241f', '#4b362e', '#f3e8e0', '#b09a8d', '#d6b48f'],
+      ['17', '酒红墨', '#170f12', '#24161b', '#2e1c23', '#452b34', '#f0e4e8', '#ac94a0', '#d2b48c'],
+    ];
+    const NEW = [
+      ['01', '玫瑰木',   '#191112', '#281b1e', '#322327', '#4a3439', '#f2e6e7', '#b09ba0', '#d3aa93'],
+      ['02', '赤陶夜',   '#1b1310', '#2c1f1a', '#36271f', '#503a2e', '#f4e9df', '#b6a08f', '#d9ab7f'],
+      ['03', '铁锈',     '#180f0b', '#271812', '#321f17', '#4d3125', '#f3e7dc', '#b39a89', '#d69f78'],
+      ['04', '栗棕',     '#17110c', '#271c14', '#312319', '#493526', '#f2e8da', '#b39f88', '#cfae82'],
+      ['05', '深可可',   '#16100b', '#251a11', '#2f2216', '#493525', '#f2e7d6', '#b39e84', '#d0aa76'],
+      ['06', '焦糖',     '#1a120c', '#2b1d10', '#362415', '#513a22', '#f5e9d6', '#bda480', '#e0b06a'],
+      ['07', '琥珀夜',   '#1a1408', '#2a2010', '#342815', '#4e3d20', '#f3ead2', '#baa87e', '#ddb45a'],
+      ['08', '蜂蜜暗',   '#1b160c', '#2b2314', '#352c1a', '#4f4327', '#f4ecd8', '#bdb083', '#dcc06a'],
+      ['09', '黑曜石',   '#0b0a0a', '#1a1616', '#231d1d', '#382f2f', '#f2e8e6', '#a89a98', '#d2a98e'],
+      ['10', '酒窖',     '#140f14', '#221722', '#2b1e2c', '#402e41', '#efe3f0', '#a892ab', '#d0a9b5'],
+      ['11', '树莓墨',   '#161014', '#251820', '#2f1f29', '#462f3c', '#f2e3ea', '#b095a3', '#d6a0b0'],
+      ['12', '紫罗兰墨', '#130f1a', '#1e1829', '#271f33', '#39304a', '#ebe4f2', '#a294b0', '#d0b48c'],
+      ['13', '午夜蓝金', '#0c1018', '#151b27', '#1c2432', '#293343', '#eee8dc', '#9da3ad', '#d4af6e'],
+      ['14', '藏青',     '#0c1120', '#141b31', '#1b2440', '#2a3760', '#e5e8f4', '#929ab5', '#cbb086'],
+      ['15', '深海墨',   '#0b1214', '#131f22', '#1a282c', '#26383d', '#e6eef0', '#93a3a6', '#cbb086'],
+      ['16', '石板蓝灰', '#12151a', '#1c2129', '#242b35', '#333c49', '#e9ecf1', '#969fac', '#c9b083'],
+      ['17', '松林墨',   '#0d1310', '#161f1a', '#1d2822', '#2b3a30', '#e3ece5', '#8ea297', '#cbb086'],
+      ['18', '苔藓',     '#121510', '#1c2118', '#242b1f', '#35402b', '#eaeade', '#9fa58c', '#c8b87e'],
+    ];
+
+    function mock([n, name, bg, card, active, border, text, muted, accent, onAccent], keep) {
+      return `
+      <div class="mock${keep ? ' keep' : ''}" style="
+        --bg:${bg}; --card:${card}; --card-active:${active}; --border:${border};
+        --text:${text}; --muted:${muted}; --accent:${accent}; --on-accent:${onAccent || '#221b10'};
+      ">
+        <div class="label">
+          <span>${keep ? '★ ' : ''}${n} · ${name}</span>
+          <span>${keep ? '<span class="badge">保留</span>' : `<em>${bg}</em>`}</span>
+        </div>
+        <div class="card">
+          <div class="dots"><span class="dot g"></span><span class="dot y"></span><span class="dot r"></span></div>
+          <div class="word">serendipity</div>
+          <div class="pos">/ˌserənˈdɪpəti/ · n.</div>
+          <div class="def">意外发现珍奇事物的能力</div>
+        </div>
+        <div class="listrow"><span>serendipity</span><span>意外之喜</span></div>
+        <div class="bookrow">
+          <div class="book"><span class="spine"><i></i><b></b></span>Book</div>
+          <div class="bookmeta">碰到 62%<br />翻开 34%</div>
+        </div>
+        <div class="btns">
+          <div class="btn r"><kbd>1</kbd>陌生</div>
+          <div class="btn y"><kbd>2</kbd>模糊</div>
+          <div class="btn g"><kbd>3</kbd>熟悉</div>
+        </div>
+        <div class="actions">
+          <button class="accent">开始</button>
+          <button class="ghost">跳过</button>
+        </div>
+      </div>`;
+    }
+
+    document.getElementById('keep').innerHTML = KEEP.map(v => mock(v, true)).join('');
+    document.getElementById('news').innerHTML = NEW.map(v => mock(v, false)).join('');
+  </script>
+</body>
+</html>
