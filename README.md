@@ -4,11 +4,9 @@
 
 抽认卡背单词：洗牌抽卡，翻牌看释义。
 
-![](docs/images/study.png)
+![](docs/images/study-light.png)
 
-![](docs/images/home.png)
-
-![](docs/images/dialog.png)
+![](docs/images/study-dark.png)
 
 ## 快速开始
 
