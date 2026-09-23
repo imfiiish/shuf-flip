@@ -28,17 +28,17 @@
   --danger-ring: rgba(58, 50, 38, 0.4);
   --on-danger: #f6efe3;
 
-  /* 评级三色：只用于「陌生/模糊/熟悉」（卡片圆点、评级按钮、书脊） */
-  --rate-r: #b4452f;
-  --rate-r-ring: rgba(180, 69, 47, 0.35);
-  --rate-r-on: #fdf8f2;
-  --rate-y: #946312;
-  --rate-y-solid: #d8a12a;
-  --rate-y-ring: rgba(216, 161, 42, 0.4);
+  /* 评级三色：酒红（陌生）→ 古金（模糊）→ 松绿（熟悉），深色宝石调 */
+  --rate-r: #8e2f3f;
+  --rate-r-ring: rgba(142, 47, 63, 0.36);
+  --rate-r-on: #fdf4f5;
+  --rate-y: #8a6416;
+  --rate-y-solid: #c0912c;
+  --rate-y-ring: rgba(192, 145, 44, 0.4);
   --rate-y-on: #3b2a00;
-  --rate-g: #4f6b3d;
-  --rate-g-ring: rgba(79, 107, 61, 0.35);
-  --rate-g-on: #fbfaf5;
+  --rate-g: #3f6b4f;
+  --rate-g-ring: rgba(63, 107, 79, 0.36);
+  --rate-g-on: #f2f7f4;
 
   /* 浅色（默认）：暖纸 */
   --bg: #f2ece0;
@@ -71,16 +71,16 @@
   --danger-ring: rgba(230, 216, 191, 0.35);
   --on-danger: #201a11;
 
-  --rate-r: #e0806c;
-  --rate-r-ring: rgba(224, 128, 108, 0.4);
-  --rate-r-on: #2b0f08;
-  --rate-y: #e5b23c;
-  --rate-y-solid: #e0a72b;
-  --rate-y-ring: rgba(224, 167, 43, 0.4);
+  --rate-r: #c97482;
+  --rate-r-ring: rgba(201, 116, 130, 0.42);
+  --rate-r-on: #2b0d12;
+  --rate-y: #d4aa55;
+  --rate-y-solid: #d4aa55;
+  --rate-y-ring: rgba(212, 170, 85, 0.42);
   --rate-y-on: #3b2a00;
-  --rate-g: #9fbe78;
-  --rate-g-ring: rgba(159, 190, 120, 0.4);
-  --rate-g-on: #16240f;
+  --rate-g: #84ad93;
+  --rate-g-ring: rgba(132, 173, 147, 0.42);
+  --rate-g-on: #10241a;
 
   --bg: #14120e;
   --card: #1e1b15;
@@ -848,12 +848,12 @@ kbd {
     border-color 180ms ease, color 180ms ease;
 }
 
-/* 书脊：底红（未碰到），黄=碰到、绿=翻开，从下往上 */
+/* 书脊：底色=未碰到（纸色），黄=碰到、绿=翻开，从下往上 */
 .spine {
   position: absolute;
   inset: 0 auto 0 0;
   width: 9px;
-  background: var(--rate-r);
+  background: var(--border);
   overflow: hidden;
   pointer-events: none;
 }
