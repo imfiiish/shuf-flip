@@ -18,8 +18,8 @@
   --radius-pill: 999px;
 
   /* 主题色：与纸面统一的暖墨棕（不再用红黄绿做主色） */
-  --accent: #6b563a;
-  --accent-ring: rgba(107, 86, 58, 0.35);
+  --accent: #7a5f36;
+  --accent-ring: rgba(122, 95, 54, 0.35);
   /* 亮色下的中性投影，给卡片一点纸的厚度 */
   --elevate: 0 10px 30px rgba(66, 48, 25, 0.1);
 
@@ -40,17 +40,17 @@
   --rate-g-ring: rgba(46, 81, 59, 0.38);
   --rate-g-on: #eef4f0;
 
-  /* 浅色（默认）：暖纸 */
-  --bg: #f2ece0;
-  --card: #fffdf7;
-  --card-active: #fffefa;
-  --border: #ddd1bb;
-  --text: #241f18;
-  --muted: #786c58;
-  --kbd-bg: #ece2d0;
-  --kbd-border: #d6c8ae;
-  --dot-empty: #cdc0a8;
-  --on-accent: #fbfaf5;
+  /* 浅色（默认）：羊皮纸 */
+  --bg: #efe6d3;
+  --card: #fdf8ec;
+  --card-active: #fffcf3;
+  --border: #ddcfb2;
+  --text: #2a2418;
+  --muted: #837458;
+  --kbd-bg: #f2e9d8;
+  --kbd-border: #ddcfb2;
+  --dot-empty: #d0c2a2;
+  --on-accent: #fdf8ec;
 
   /* hover 词行的浮起效果 */
   --row-hover-bg: var(--card-active);
@@ -62,10 +62,10 @@
 /* 手动暗色：强制（夜读） */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --accent: #cbb086;
-  --accent-ring: rgba(203, 176, 134, 0.38);
-  /* 暗色不需要中性投影（默认透明占位） */
-  --elevate: 0 0 #0000;
+  --accent: #c9bb8e;
+  --accent-ring: rgba(201, 187, 142, 0.4);
+  /* 暗色投影用绿黑，卡片才浮得起来 */
+  --elevate: 0 10px 30px rgba(6, 10, 4, 0.55);
 
   --danger: #e6d8bf;
   --danger-ring: rgba(230, 216, 191, 0.35);
@@ -82,15 +82,15 @@
   --rate-g-ring: rgba(98, 134, 111, 0.45);
   --rate-g-on: #0c1c14;
 
-  --bg: #14120e;
-  --card: #1e1b15;
-  --card-active: #242019;
-  --border: #383226;
-  --text: #ece5d7;
-  --muted: #9a8f79;
-  --kbd-bg: #262119;
-  --kbd-border: #3d3628;
-  --dot-empty: #4c4536;
+  --bg: #223026;
+  --card: #2c3c30;
+  --card-active: #35463a;
+  --border: #485c4d;
+  --text: #e7f1ea;
+  --muted: #a0b0a3;
+  --kbd-bg: #334439;
+  --kbd-border: #485c4d;
+  --dot-empty: #55695b;
   --on-accent: #221b10;
 
   --row-hover-bg: var(--card-active);
@@ -296,6 +296,32 @@ body {
 .pos-1,
 .pos-S {
   --face-shadow: 0 12px 30px -16px rgba(45, 32, 15, 0.4);
+}
+
+/* 暗色：卡片投影用绿黑（苔藓主题） */
+:root[data-theme='dark'] .pos-0 {
+  --face-shadow: 0 18px 40px -18px rgba(6, 10, 4, 0.6),
+    0 2px 6px -2px rgba(6, 10, 4, 0.5);
+}
+
+:root[data-theme='dark'] .card.hovered {
+  --face-shadow: 0 24px 52px -20px rgba(6, 10, 4, 0.65),
+    0 3px 10px -3px rgba(6, 10, 4, 0.55);
+}
+
+:root[data-theme='dark'] .pos-1,
+:root[data-theme='dark'] .pos-S {
+  --face-shadow: 0 12px 30px -16px rgba(6, 10, 4, 0.55);
+}
+
+:root[data-theme='dark'] .book {
+  box-shadow: 0 10px 24px -14px rgba(6, 10, 4, 0.6);
+}
+
+:root[data-theme='dark'] .book:hover,
+:root[data-theme='dark'] .book-item:hover .book {
+  box-shadow: 0 18px 38px -14px var(--accent-ring),
+    0 8px 18px -10px rgba(6, 10, 4, 0.55);
 }
 
 .inner {
