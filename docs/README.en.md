@@ -4,11 +4,11 @@
 
 Vocabulary flashcards: shuffle a deck and flip to reveal.
 
-![](screenshot.png)
+![](images/study.png)
 
-![](home.png)
+![](images/home.png)
 
-![](dialog.png)
+![](images/dialog.png)
 
 ## Getting started
 
