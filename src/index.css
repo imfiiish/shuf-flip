@@ -17,21 +17,28 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  /* 墨绿主色：纸面上更沉，不发荧光 */
-  --accent: #0f766e;
-  --accent-ring: rgba(15, 118, 110, 0.4);
+  /* 主题色：与纸面统一的暖墨棕（不再用红黄绿做主色） */
+  --accent: #6b563a;
+  --accent-ring: rgba(107, 86, 58, 0.35);
   /* 亮色下的中性投影，给卡片一点纸的厚度 */
   --elevate: 0 10px 30px rgba(66, 48, 25, 0.1);
 
-  /* 危险色（退出/删除）——砖红，像批注 */
-  --danger: #b4452f;
-  --danger-ring: rgba(180, 69, 47, 0.35);
-  --on-danger: #fdf8f2;
+  /* 危险/警示：中性墨色，不再抢红黄绿 */
+  --danger: #3a3226;
+  --danger-ring: rgba(58, 50, 38, 0.4);
+  --on-danger: #f6efe3;
 
-  /* 评级黄（模糊）——赭黄 */
-  --warn: #946312;
-  --warn-solid: #d8a12a;
-  --warn-ring: rgba(216, 161, 42, 0.4);
+  /* 评级三色：只用于「陌生/模糊/熟悉」（卡片圆点、评级按钮、书脊） */
+  --rate-r: #b4452f;
+  --rate-r-ring: rgba(180, 69, 47, 0.35);
+  --rate-r-on: #fdf8f2;
+  --rate-y: #946312;
+  --rate-y-solid: #d8a12a;
+  --rate-y-ring: rgba(216, 161, 42, 0.4);
+  --rate-y-on: #3b2a00;
+  --rate-g: #4f6b3d;
+  --rate-g-ring: rgba(79, 107, 61, 0.35);
+  --rate-g-on: #fbfaf5;
 
   /* 浅色（默认）：暖纸 */
   --bg: #f2ece0;
@@ -55,18 +62,25 @@
 /* 手动暗色：强制（夜读） */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --accent: #35c3ac;
-  --accent-ring: rgba(53, 195, 172, 0.42);
+  --accent: #cbb086;
+  --accent-ring: rgba(203, 176, 134, 0.38);
   /* 暗色不需要中性投影（默认透明占位） */
   --elevate: 0 0 #0000;
 
-  --danger: #e0806c;
-  --danger-ring: rgba(224, 128, 108, 0.4);
-  --on-danger: #2b0f08;
+  --danger: #e6d8bf;
+  --danger-ring: rgba(230, 216, 191, 0.35);
+  --on-danger: #201a11;
 
-  --warn: #e5b23c;
-  --warn-solid: #e0a72b;
-  --warn-ring: rgba(224, 167, 43, 0.4);
+  --rate-r: #e0806c;
+  --rate-r-ring: rgba(224, 128, 108, 0.4);
+  --rate-r-on: #2b0f08;
+  --rate-y: #e5b23c;
+  --rate-y-solid: #e0a72b;
+  --rate-y-ring: rgba(224, 167, 43, 0.4);
+  --rate-y-on: #3b2a00;
+  --rate-g: #9fbe78;
+  --rate-g-ring: rgba(159, 190, 120, 0.4);
+  --rate-g-on: #16240f;
 
   --bg: #14120e;
   --card: #1e1b15;
@@ -77,7 +91,7 @@
   --kbd-bg: #262119;
   --kbd-border: #3d3628;
   --dot-empty: #4c4536;
-  --on-accent: #0a1f1b;
+  --on-accent: #221b10;
 
   --row-hover-bg: var(--card-active);
   --row-hover-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
@@ -186,6 +200,7 @@ body {
   box-shadow: var(--face-shadow, var(--elevate));
   text-align: center;
   overflow: hidden;
+  transition: box-shadow 200ms ease, border-color 380ms ease;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -201,7 +216,8 @@ body {
   z-index: 3;
   --face-bg: var(--card-active);
   --face-border: 2px solid var(--accent);
-  --face-shadow: 0 6px 26px -10px var(--accent-ring), var(--elevate);
+  --face-shadow: 0 18px 40px -18px rgba(45, 32, 15, 0.5),
+    0 2px 6px -2px rgba(45, 32, 15, 0.28);
 }
 
 /* 右侧相邻：缩小 75%（540→405），露出 4/5（被中间遮 1/5） */
@@ -220,7 +236,8 @@ body {
 
 /* 悬浮：由 JS 按指针位置加 .hovered（见 Study.tsx），不再用 :hover */
 .card.hovered {
-  --face-shadow: 0 10px 42px -4px var(--accent-ring), var(--elevate);
+  --face-shadow: 0 24px 52px -20px rgba(45, 32, 15, 0.55),
+    0 3px 10px -3px rgba(45, 32, 15, 0.3);
 }
 
 .pos-1.hovered,
@@ -278,7 +295,7 @@ body {
 /* 右侧卡默认：比悬浮更弱的柔光 */
 .pos-1,
 .pos-S {
-  --face-shadow: 0 6px 26px -10px var(--accent-ring), var(--elevate);
+  --face-shadow: 0 12px 30px -16px rgba(45, 32, 15, 0.4);
 }
 
 .inner {
@@ -309,15 +326,15 @@ body {
 }
 
 .dot.g {
-  background: var(--accent);
+  background: var(--rate-g);
 }
 
 .dot.y {
-  background: #eab308;
+  background: var(--rate-y-solid);
 }
 
 .dot.r {
-  background: var(--danger);
+  background: var(--rate-r);
 }
 
 .dot.empty {
@@ -356,7 +373,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
+  color: var(--text);
   font-size: 0.85rem;
   font-weight: 600;
   animation: fade-in 140ms ease-out;
@@ -489,66 +506,66 @@ body {
 
 /* 1 陌生（红）/ 2 模糊（黄）/ 3 熟悉（绿）：淡彩底 + 同色字 + 实心圆点 */
 .rating-btn.r {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, var(--card));
-  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--rate-r);
+  background: color-mix(in srgb, var(--rate-r) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--rate-r) 30%, transparent);
 }
 
 .rating-btn.r kbd {
-  background: var(--danger);
-  color: var(--on-danger);
+  background: var(--rate-r);
+  color: var(--rate-r-on);
 }
 
 .rating-btn.r:hover {
-  background: color-mix(in srgb, var(--danger) 20%, var(--card));
-  box-shadow: 0 10px 24px -12px var(--danger-ring);
+  background: color-mix(in srgb, var(--rate-r) 20%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--rate-r-ring);
 }
 
 .rating-btn.r:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--danger-ring);
+  box-shadow: 0 0 0 3px var(--rate-r-ring);
 }
 
 .rating-btn.y {
-  color: var(--warn);
-  background: color-mix(in srgb, var(--warn-solid) 16%, var(--card));
-  border-color: color-mix(in srgb, var(--warn-solid) 36%, transparent);
+  color: var(--rate-y);
+  background: color-mix(in srgb, var(--rate-y-solid) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--rate-y-solid) 36%, transparent);
 }
 
 .rating-btn.y kbd {
-  background: var(--warn-solid);
-  color: #3b2a00;
+  background: var(--rate-y-solid);
+  color: var(--rate-y-on);
 }
 
 .rating-btn.y:hover {
-  background: color-mix(in srgb, var(--warn-solid) 26%, var(--card));
-  box-shadow: 0 10px 24px -12px var(--warn-ring);
+  background: color-mix(in srgb, var(--rate-y-solid) 26%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--rate-y-ring);
 }
 
 .rating-btn.y:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--warn-ring);
+  box-shadow: 0 0 0 3px var(--rate-y-ring);
 }
 
 .rating-btn.g {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--card));
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--rate-g);
+  background: color-mix(in srgb, var(--rate-g) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--rate-g) 30%, transparent);
 }
 
 .rating-btn.g kbd {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--rate-g);
+  color: var(--rate-g-on);
 }
 
 .rating-btn.g:hover {
-  background: color-mix(in srgb, var(--accent) 20%, var(--card));
-  box-shadow: 0 10px 24px -12px var(--accent-ring);
+  background: color-mix(in srgb, var(--rate-g) 20%, var(--card));
+  box-shadow: 0 10px 24px -12px var(--rate-g-ring);
 }
 
 .rating-btn.g:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--rate-g-ring);
 }
 
 kbd {
@@ -824,7 +841,7 @@ kbd {
   position: absolute;
   inset: 0 auto 0 0;
   width: 9px;
-  background: var(--danger);
+  background: var(--rate-r);
   overflow: hidden;
   pointer-events: none;
 }
@@ -843,13 +860,13 @@ kbd {
 .spine-yellow {
   background: linear-gradient(
     to top,
-    var(--warn-solid) calc(100% - 12px),
+    var(--rate-y-solid) calc(100% - 12px),
     transparent
   );
 }
 
 .spine-green {
-  background: linear-gradient(to top, var(--accent) calc(100% - 12px), transparent);
+  background: linear-gradient(to top, var(--rate-g) calc(100% - 12px), transparent);
 }
 
 @keyframes spine-grow {
