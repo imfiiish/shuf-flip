@@ -19,6 +19,19 @@
         } catch (e) {}
       })()
     </script>
+    <style>
+      /* 首屏关键背景：在 JS 注入 index.css 之前就给 html 上色，避免刷新闪白。
+         颜色须与 src/index.css 的 --bg 保持一致（亮 #efe6d3 / 暗 #223026）。
+         跟随 data-theme，切换主题时也会自动更新。 */
+      html {
+        background: #efe6d3;
+        color-scheme: light;
+      }
+      html[data-theme='dark'] {
+        background: #223026;
+        color-scheme: dark;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
