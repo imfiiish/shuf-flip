@@ -638,6 +638,19 @@ kbd {
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--text);
+  /* 中英品牌名叠在同一格，用透明度交替 */
+  display: grid;
+  text-align: center;
+}
+
+.brand span {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.brand span.on {
+  opacity: 1;
 }
 
 .btn {
