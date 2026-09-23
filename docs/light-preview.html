@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>亮色底子对比 · 洗牌翻牌</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px;
+    background: #202020; color: #ccc;
+    font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 6px; }
+  p.note { color: #999; font-size: .82rem; margin: 0 0 26px; line-height: 1.6; max-width: 920px; }
+  h2 { font-size: .9rem; margin: 30px 0 14px; color: #bbb; font-weight: 600; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
+  .mock {
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid rgba(0,0,0,.25);
+  }
+  .mock.keep { border-color: #8a6a3a; box-shadow: 0 0 0 1px #8a6a3a inset; }
+  .label {
+    font-size: .74rem; color: var(--muted);
+    margin-bottom: 12px; font-weight: 600;
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  }
+  .label em { font-style: normal; opacity: .9; }
+  .badge {
+    background: #8a6a3a; color: #fff;
+    font-size: .62rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--card-active);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 14px 14px;
+    text-align: center;
+    box-shadow: 0 16px 34px -16px rgba(66,48,25,.22);
+  }
+  .dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot.g { background: var(--rate-g); }
+  .dot.y { background: var(--rate-y-solid); }
+  .dot.r { background: var(--rate-r); }
+  .word { font-family: Georgia, 'Songti SC', serif; font-size: 1.5rem; margin: 4px 0 2px; }
+  .pos { color: var(--muted); font-size: .78rem; }
+  .def { color: var(--muted); font-size: .84rem; margin-top: 8px; }
+
+  .listrow {
+    display: flex; justify-content: space-between;
+    margin-top: 12px; padding: 8px 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; font-size: .82rem;
+  }
+  .listrow span:last-child { color: var(--muted); }
+
+  .bookrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .book {
+    position: relative; width: 74px; height: 104px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 5px 10px 10px 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; color: var(--text); overflow: hidden; flex: none;
+  }
+  .spine { position: absolute; inset: 0 auto 0 0; width: 7px; background: var(--border); overflow: hidden; }
+  .spine i, .spine b { position: absolute; left: 0; right: 0; bottom: 0; display: block; }
+  .spine i { background: var(--rate-y-solid); height: 62%; }
+  .spine b { background: var(--rate-g); height: 34%; }
+  .bookmeta { font-size: .78rem; color: var(--muted); line-height: 1.7; }
+
+  .btns { display: flex; gap: 7px; margin-top: 12px; }
+  .btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 6px; border-radius: 9px;
+    font: inherit; font-size: .78rem; font-weight: 600;
+    border: 1px solid transparent; cursor: default; white-space: nowrap;
+  }
+  .btn kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 17px; height: 17px; border-radius: 50%;
+    font-size: .66rem; font-weight: 700; border: 0; flex: none;
+  }
+  .btn.r { color: var(--rate-r); border-color: color-mix(in srgb, var(--rate-r) 32%, transparent);
+           background: color-mix(in srgb, var(--rate-r) 12%, var(--card)); }
+  .btn.r kbd { background: var(--rate-r); color: var(--rate-r-on); }
+  .btn.y { color: var(--rate-y); border-color: color-mix(in srgb, var(--rate-y-solid) 40%, transparent);
+           background: color-mix(in srgb, var(--rate-y-solid) 16%, var(--card)); }
+  .btn.y kbd { background: var(--rate-y-solid); color: var(--rate-y-on); }
+  .btn.g { color: var(--rate-g); border-color: color-mix(in srgb, var(--rate-g) 30%, transparent);
+           background: color-mix(in srgb, var(--rate-g) 12%, var(--card)); }
+  .btn.g kbd { background: var(--rate-g); color: var(--rate-g-on); }
+
+  .actions { display: flex; gap: 7px; margin-top: 12px; }
+  .actions .accent {
+    flex: 1; padding: 8px; border-radius: 9px; border: 0;
+    background: var(--accent); color: var(--on-accent);
+    font: inherit; font-size: .82rem; font-weight: 600; cursor: default;
+  }
+  .actions .ghost {
+    flex: 1; padding: 8px; border-radius: 9px;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+    font: inherit; font-size: .82rem; cursor: default;
+  }
+
+  .mock {
+    --rate-r: #6b2330; --rate-r-on: #fdf4f5;
+    --rate-y: #6a4b10; --rate-y-solid: #98721f; --rate-y-on: #3b2a00;
+    --rate-g: #2e513b; --rate-g-on: #eef4f0;
+  }
+</style>
+</head>
+<body>
+  <h1>亮色底子对比</h1>
+  <p class="note">
+    上面是当前提交的亮色；下面 18 个是纸色方向。评级色固定 o3，只看亮色底子（纸感/明度/冷暖）。<br />
+    报编号，或混搭，或说「这批还不行，再换一批」。
+  </p>
+
+  <h2>当前</h2>
+  <div class="grid" id="keep"></div>
+
+  <h2>新 18 组</h2>
+  <div class="grid" id="news"></div>
+
+  <script>
+    // [编号, 名称, bg, card, cardActive, border, text, muted, accent, onAccent?]
+    const KEEP = [
+      ['当前', '暖纸（提交版）', '#f2ece0', '#fffdf7', '#fffefa', '#ddd1bb', '#241f18', '#786c58', '#6b563a', '#fbfaf5'],
+    ];
+    const NEW = [
+      ['01', '白净',     '#f5f1e8', '#ffffff', '#ffffff', '#e2d9c8', '#221e17', '#7a6f5d', '#6b563a'],
+      ['02', '奶油',     '#f6efdf', '#fffcf2', '#fffdf6', '#e4d8bf', '#241f16', '#7c7057', '#6f5934', '#fdf8ee'],
+      ['03', '米白',     '#f4f1ea', '#fffefb', '#ffffff', '#e0dacf', '#23211c', '#7b7568', '#5f5747', '#faf8f3'],
+      ['04', '羊皮纸',   '#efe6d3', '#fdf8ec', '#fffcf3', '#ddcfb2', '#2a2418', '#837458', '#7a5f36', '#fdf8ec'],
+      ['05', '牛皮纸',   '#e8dcc4', '#f7eeda', '#fbf3e2', '#d3c3a0', '#2a2318', '#7e6f52', '#6f5830', '#fbf3e2'],
+      ['06', '旧书页',   '#ece1c8', '#fbf3df', '#fdf7e7', '#d8c8a4', '#2c2517', '#837454', '#755b2f', '#fdf7e7'],
+      ['07', '高对比纸', '#f2ece0', '#fffdf7', '#ffffff', '#cfc0a4', '#1b1712', '#726650', '#5c4a30', '#fbfaf5'],
+      ['08', '柔纸',     '#f1ece3', '#fdfbf6', '#fffefb', '#ded6c8', '#262119', '#7c7160', '#6b563a', '#fbfaf5'],
+      ['09', '象牙',     '#f3efe6', '#fffefa', '#ffffff', '#e0d8ca', '#24211b', '#7d766a', '#665739', '#fcfaf5'],
+      ['10', '报纸',     '#f0ede4', '#faf8f2', '#fdfcf8', '#d9d4c8', '#26241f', '#7a786e', '#4f4b42', '#faf8f2'],
+      ['11', '冷白',     '#f2f3f5', '#ffffff', '#ffffff', '#dcdfe4', '#1f2229', '#6f7480', '#4a5568', '#f7f8fa'],
+      ['12', '冷灰白',   '#f0f1f3', '#fcfcfd', '#ffffff', '#d8dbe0', '#212429', '#737780', '#55606f', '#f7f8fa'],
+      ['13', '灰纸',     '#eef0ee', '#fbfcfb', '#ffffff', '#d6dad7', '#222522', '#70756f', '#52605a', '#f6f8f6'],
+      ['14', '淡绿纸',   '#eef2ea', '#fbfdf9', '#ffffff', '#d5ddd0', '#22261f', '#6f7768', '#4f6046', '#f7faf5'],
+      ['15', '淡蓝纸',   '#eaeef4', '#fafcff', '#ffffff', '#d2dae6', '#1f242c', '#6d7684', '#4a5b72', '#f6f9fc'],
+      ['16', '米粉',     '#f5eeea', '#fffaf7', '#ffffff', '#e4d4cc', '#271f1c', '#7d6d66', '#6f4f45', '#fdf8f5'],
+      ['17', '暖粉',     '#f6efe9', '#fffbf7', '#ffffff', '#e6d8ce', '#261f1a', '#7e6e64', '#6b4f42', '#fdf9f5'],
+      ['18', '重墨纸',   '#efe9dd', '#fffdf8', '#ffffff', '#d8cdb6', '#17130d', '#6f6450', '#3f3325', '#f7f2e8'],
+    ];
+
+    function mock([n, name, bg, card, active, border, text, muted, accent, onAccent], keep) {
+      return `
+      <div class="mock${keep ? ' keep' : ''}" style="
+        --bg:${bg}; --card:${card}; --card-active:${active}; --border:${border};
+        --text:${text}; --muted:${muted}; --accent:${accent}; --on-accent:${onAccent || '#fbfaf5'};
+      ">
+        <div class="label">
+          <span>${keep ? '★ ' : ''}${n} · ${name}</span>
+          <span>${keep ? '<span class="badge">当前</span>' : `<em>${bg}</em>`}</span>
+        </div>
+        <div class="card">
+          <div class="dots"><span class="dot g"></span><span class="dot y"></span><span class="dot r"></span></div>
+          <div class="word">serendipity</div>
+          <div class="pos">/ˌserənˈdɪpəti/ · n.</div>
+          <div class="def">意外发现珍奇事物的能力</div>
+        </div>
+        <div class="listrow"><span>serendipity</span><span>意外之喜</span></div>
+        <div class="bookrow">
+          <div class="book"><span class="spine"><i></i><b></b></span>Book</div>
+          <div class="bookmeta">碰到 62%<br />翻开 34%</div>
+        </div>
+        <div class="btns">
+          <div class="btn r"><kbd>1</kbd>陌生</div>
+          <div class="btn y"><kbd>2</kbd>模糊</div>
+          <div class="btn g"><kbd>3</kbd>熟悉</div>
+        </div>
+        <div class="actions">
+          <button class="accent">开始</button>
+          <button class="ghost">跳过</button>
+        </div>
+      </div>`;
+    }
+
+    document.getElementById('keep').innerHTML = KEEP.map(v => mock(v, true)).join('');
+    document.getElementById('news').innerHTML = NEW.map(v => mock(v, false)).join('');
+  </script>
+</body>
+</html>
