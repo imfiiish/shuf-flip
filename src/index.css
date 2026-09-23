@@ -380,11 +380,23 @@ body {
 }
 
 .detail {
-  border-top: 1px solid var(--border);
+  position: relative;
   padding-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 分隔线用伪元素背景画，不用 border：
+   Gecko 在 3D 旋转面上画 border 会在翻面时闪黑块 */
+.detail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
 }
 
 .phonetic {
