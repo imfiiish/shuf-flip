@@ -194,13 +194,16 @@ body {
   display: flex;
   flex-direction: column;
   padding: 24px 20px;
-  border: var(--face-border, 1px solid var(--border));
+  /* 卡沿用 box-shadow 内环代替 border：Gecko 在 3D 旋转面上画 border
+     会在翻面时闪出黑块（Chrome 正常）。环走背景绘制，同样随卡翻。 */
+  border: 0;
   border-radius: var(--radius-md);
   background: var(--face-bg, var(--card));
-  box-shadow: var(--face-shadow, var(--elevate));
+  box-shadow: var(--face-ring, inset 0 0 0 1px var(--border)),
+    var(--face-shadow, var(--elevate));
   text-align: center;
   overflow: hidden;
-  transition: box-shadow 200ms ease, border-color 380ms ease;
+  transition: box-shadow 200ms ease;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -215,7 +218,7 @@ body {
   opacity: 1;
   z-index: 3;
   --face-bg: var(--card-active);
-  --face-border: 2px solid var(--accent);
+  --face-ring: inset 0 0 0 2px var(--accent);
   --face-shadow: 0 18px 40px -18px rgba(45, 32, 15, 0.5),
     0 2px 6px -2px rgba(45, 32, 15, 0.28);
 }
