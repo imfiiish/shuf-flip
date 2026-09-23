@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>深色底子对比 · 保留 08/17 + 18 新组</title>
+<title>深色底子 · 红绿两系各 10</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -28,7 +28,6 @@
     padding: 16px;
     border: 1px solid rgba(255,255,255,.07);
   }
-  .mock.keep { border-color: #8a6a3a; box-shadow: 0 0 0 1px #8a6a3a inset; }
   .label {
     font-size: .74rem; color: var(--muted);
     margin-bottom: 12px; font-weight: 600;
@@ -36,9 +35,9 @@
   }
   .label em { font-style: normal; opacity: .65; }
   .badge {
-    background: #8a6a3a; color: #fff;
+    background: #3a3a3a; color: #ddd;
     font-size: .62rem; font-weight: 700;
-    padding: 2px 7px; border-radius: 999px;
+    padding: 2px 7px; border-radius: 999px; margin-left: 6px;
   }
 
   .card {
@@ -124,54 +123,54 @@
 </style>
 </head>
 <body>
-  <h1>深色底子对比</h1>
+  <h1>深色底子 · 红系 10 + 绿系 10</h1>
   <p class="note">
-    上面 2 个是保留的 08 / 17；下面 18 个是新的方向。评级色固定 o3，只看深色底子。<br />
-    报编号，或混搭（如「N05 的底 + N13 的卡片」），或说「这批还不行，再换一批」。
+    只沿红色系和绿色系延伸（更深 / 更浅 / 更灰 / 更亮）。评级色固定 o3。标「已有」的是之前出现过的，其余是新延伸。<br />
+    报编号，或混搭，或说「再延伸一批」。
   </p>
 
-  <h2>保留</h2>
-  <div class="grid" id="keep"></div>
+  <h2>红色系</h2>
+  <div class="grid" id="red"></div>
 
-  <h2>新 18 组</h2>
-  <div class="grid" id="news"></div>
+  <h2>绿色系</h2>
+  <div class="grid" id="green"></div>
 
   <script>
-    // [编号, 名称, bg, card, cardActive, border, text, muted, accent, onAccent?]
-    const KEEP = [
-      ['08', '深红棕', '#1a1210', '#2a1d19', '#34241f', '#4b362e', '#f3e8e0', '#b09a8d', '#d6b48f'],
-      ['17', '酒红墨', '#170f12', '#24161b', '#2e1c23', '#452b34', '#f0e4e8', '#ac94a0', '#d2b48c'],
+    // [编号, 名称, bg, card, cardActive, border, text, muted, accent, 已有?]
+    const RED = [
+      ['R1', '深红棕',   '#1a1210', '#2a1d19', '#34241f', '#4b362e', '#f3e8e0', '#b09a8d', '#d6b48f', 1],
+      ['R2', '酒红墨',   '#170f12', '#24161b', '#2e1c23', '#452b34', '#f0e4e8', '#ac94a0', '#d2b48c', 1],
+      ['R3', '玫瑰木',   '#191112', '#281b1e', '#322327', '#4a3439', '#f2e6e7', '#b09ba0', '#d3aa93', 1],
+      ['R4', '铁锈',     '#180f0b', '#271812', '#321f17', '#4d3125', '#f3e7dc', '#b39a89', '#d69f78', 1],
+      ['R5', '栗棕',     '#17110c', '#271c14', '#312319', '#493526', '#f2e8da', '#b39f88', '#cfae82', 1],
+      ['R6', '深可可',   '#16100b', '#251a11', '#2f2216', '#493525', '#f2e7d6', '#b39e84', '#d0aa76', 1],
+      ['R7', '赤陶夜',   '#1b1310', '#2c1f1a', '#36271f', '#503a2e', '#f4e9df', '#b6a08f', '#d9ab7f', 1],
+      ['R8', '玫瑰灰',   '#181314', '#241d1f', '#2d2528', '#40373a', '#eee7e8', '#a89da0', '#c9a79f', 0],
+      ['R9', '勃艮第',   '#150c12', '#22141d', '#2b1a25', '#3f2837', '#efe2eb', '#a58fa0', '#cf9fb4', 0],
+      ['R10', '砖红夜',  '#1c110d', '#2b1a14', '#36221a', '#523428', '#f5e8e1', '#b79b8d', '#dda687', 0],
     ];
-    const NEW = [
-      ['01', '玫瑰木',   '#191112', '#281b1e', '#322327', '#4a3439', '#f2e6e7', '#b09ba0', '#d3aa93'],
-      ['02', '赤陶夜',   '#1b1310', '#2c1f1a', '#36271f', '#503a2e', '#f4e9df', '#b6a08f', '#d9ab7f'],
-      ['03', '铁锈',     '#180f0b', '#271812', '#321f17', '#4d3125', '#f3e7dc', '#b39a89', '#d69f78'],
-      ['04', '栗棕',     '#17110c', '#271c14', '#312319', '#493526', '#f2e8da', '#b39f88', '#cfae82'],
-      ['05', '深可可',   '#16100b', '#251a11', '#2f2216', '#493525', '#f2e7d6', '#b39e84', '#d0aa76'],
-      ['06', '焦糖',     '#1a120c', '#2b1d10', '#362415', '#513a22', '#f5e9d6', '#bda480', '#e0b06a'],
-      ['07', '琥珀夜',   '#1a1408', '#2a2010', '#342815', '#4e3d20', '#f3ead2', '#baa87e', '#ddb45a'],
-      ['08', '蜂蜜暗',   '#1b160c', '#2b2314', '#352c1a', '#4f4327', '#f4ecd8', '#bdb083', '#dcc06a'],
-      ['09', '黑曜石',   '#0b0a0a', '#1a1616', '#231d1d', '#382f2f', '#f2e8e6', '#a89a98', '#d2a98e'],
-      ['10', '酒窖',     '#140f14', '#221722', '#2b1e2c', '#402e41', '#efe3f0', '#a892ab', '#d0a9b5'],
-      ['11', '树莓墨',   '#161014', '#251820', '#2f1f29', '#462f3c', '#f2e3ea', '#b095a3', '#d6a0b0'],
-      ['12', '紫罗兰墨', '#130f1a', '#1e1829', '#271f33', '#39304a', '#ebe4f2', '#a294b0', '#d0b48c'],
-      ['13', '午夜蓝金', '#0c1018', '#151b27', '#1c2432', '#293343', '#eee8dc', '#9da3ad', '#d4af6e'],
-      ['14', '藏青',     '#0c1120', '#141b31', '#1b2440', '#2a3760', '#e5e8f4', '#929ab5', '#cbb086'],
-      ['15', '深海墨',   '#0b1214', '#131f22', '#1a282c', '#26383d', '#e6eef0', '#93a3a6', '#cbb086'],
-      ['16', '石板蓝灰', '#12151a', '#1c2129', '#242b35', '#333c49', '#e9ecf1', '#969fac', '#c9b083'],
-      ['17', '松林墨',   '#0d1310', '#161f1a', '#1d2822', '#2b3a30', '#e3ece5', '#8ea297', '#cbb086'],
-      ['18', '苔藓',     '#121510', '#1c2118', '#242b1f', '#35402b', '#eaeade', '#9fa58c', '#c8b87e'],
+    const GREEN = [
+      ['G1', '深松针',   '#0b120e', '#131d17', '#19261e', '#263a2e', '#dfeae2', '#8aa094', '#c6b584', 1],
+      ['G2', '松林墨',   '#0d1310', '#161f1a', '#1d2822', '#2b3a30', '#e3ece5', '#8ea297', '#cbb086', 1],
+      ['G3', '墨绿',     '#0f1512', '#18211c', '#1f2a24', '#2d3b33', '#e4ebe6', '#8fa096', '#cbb086', 1],
+      ['G4', '苔藓',     '#121510', '#1c2118', '#242b1f', '#35402b', '#eaeade', '#9fa58c', '#c8b87e', 1],
+      ['G5', '橄榄暗绿', '#14160f', '#202319', '#2a2e21', '#3b402e', '#eae8d8', '#a3a189', '#c9bd86', 1],
+      ['G6', '浅苔',     '#1a2219', '#242e21', '#2c3828', '#3f4d37', '#e9efe2', '#a3ad95', '#ccb87c', 0],
+      ['G7', '鼠尾草',   '#1e2a23', '#28342c', '#313e35', '#44544a', '#e8f0ea', '#a1ada2', '#c9b98d', 0],
+      ['G8', '嫩芽',     '#223026', '#2c3c30', '#35463a', '#485c4d', '#e7f1ea', '#a0b0a3', '#c9bb8e', 0],
+      ['G9', '抹茶',     '#28331e', '#333f27', '#3d4a2f', '#51603f', '#eef2de', '#adb694', '#d0bd7a', 0],
+      ['G10', '草绿',    '#364427', '#415031', '#4c5c3b', '#60704b', '#f2f5e6', '#b7bf9f', '#d8c688', 0],
     ];
 
-    function mock([n, name, bg, card, active, border, text, muted, accent, onAccent], keep) {
+    function mock([n, name, bg, card, active, border, text, muted, accent, had]) {
       return `
-      <div class="mock${keep ? ' keep' : ''}" style="
+      <div class="mock" style="
         --bg:${bg}; --card:${card}; --card-active:${active}; --border:${border};
-        --text:${text}; --muted:${muted}; --accent:${accent}; --on-accent:${onAccent || '#221b10'};
+        --text:${text}; --muted:${muted}; --accent:${accent}; --on-accent:#221b10;
       ">
         <div class="label">
-          <span>${keep ? '★ ' : ''}${n} · ${name}</span>
-          <span>${keep ? '<span class="badge">保留</span>' : `<em>${bg}</em>`}</span>
+          <span>${n} · ${name}${had ? '<span class="badge">已有</span>' : ''}</span>
+          <span><em>${bg}</em></span>
         </div>
         <div class="card">
           <div class="dots"><span class="dot g"></span><span class="dot y"></span><span class="dot r"></span></div>
@@ -196,8 +195,8 @@
       </div>`;
     }
 
-    document.getElementById('keep').innerHTML = KEEP.map(v => mock(v, true)).join('');
-    document.getElementById('news').innerHTML = NEW.map(v => mock(v, false)).join('');
+    document.getElementById('red').innerHTML = RED.map(mock).join('');
+    document.getElementById('green').innerHTML = GREEN.map(mock).join('');
   </script>
 </body>
 </html>
