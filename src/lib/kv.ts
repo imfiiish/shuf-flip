@@ -5,12 +5,16 @@
 // 按「更新粒度」分 store，改一条不碰其它：
 //   cascade      key=filterKey  一本词书一条
 //   centers      key=filterKey  一本词书一条
-//   coverage     key=word       1=碰到
+//   stats        key=word       词级学习统计（碰到/翻开回合数、上次时间）
+//   pendingQuiz  key=filterKey  自上次 quiz 以来 center 过的词
+//   coverage     key=word       1=碰到（旧数据，只读用于迁移，不再写入）
 //   revealDay    key=date       当天 {word: n}（每天分开、永久保留；总次数由各天汇总）
-//   misc         key            quiz 等零散
+//   misc         key            quiz / 回合序等零散
 const STORES = [
   'cascade',
   'centers',
+  'stats',
+  'pendingQuiz',
   'coverage',
   'revealDay',
   'misc',
@@ -53,7 +57,7 @@ function openDB(): Promise<IDBDatabase> {
       fn()
     }
 
-    const req = indexedDB.open('vocab', 2)
+    const req = indexedDB.open('vocab', 3)
     // 被别的标签页占着旧版本时 onblocked 会先到，超时兜底
     timer = setTimeout(
       () => finish(() => reject(new Error('indexedDB open timeout'))),
@@ -65,6 +69,7 @@ function openDB(): Promise<IDBDatabase> {
         if (!d.objectStoreNames.contains(s)) d.createObjectStore(s)
       }
       // v2：删掉废弃的 revealTotal（总次数改为由 revealDay 汇总）
+      // v3：新增 stats / pendingQuiz
       if (d.objectStoreNames.contains('revealTotal')) {
         d.deleteObjectStore('revealTotal')
       }

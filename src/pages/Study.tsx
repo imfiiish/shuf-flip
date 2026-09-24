@@ -23,7 +23,8 @@ import {
   WINDOW_ROUNDS,
 } from '../lib/cascade'
 import { getWord } from '../lib/dict'
-import { markSeen } from '../lib/coverage'
+import { enterRound, markCentered, markChecked } from '../lib/stats'
+import { addPending, takePending } from '../lib/pending'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
@@ -31,9 +32,6 @@ import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
-
-// 切窗口/失焦：短于此时长（ms）的忽略，避免点地址栏/通知误判为离开
-const AWAY_MIN_MS = 1000
 
 /** Study 挂载时的初始状态（只算一次） */
 type StudyInit = {
@@ -119,6 +117,7 @@ export default function Study() {
   useEffect(() => {
     if (init.cascade.round.length === 0) return
     saveCascade(init.fk, init.cascade)
+    enterRound(`${init.fk}#${init.cascade.r}`)
     if (init.filter) setActiveFilter(init.filter)
     // 只在挂载时执行一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,11 +144,14 @@ export default function Study() {
     ? (getWord(centerName) ?? null)
     : null
 
-  // 中心卡变化 → 记「碰到」（全局按词去重，永久累计）
+  // 中心卡变化 → 记「碰到」（按回合去重）+ 加入该书 quiz 待考池
   useEffect(() => {
     if (quizArmed) return // 只是被重定向到 quiz，没真的看
-    if (centerName) markSeen(centerName)
-  }, [centerName, quizArmed])
+    if (centerName) {
+      markCentered(centerName)
+      addPending(fk, centerName)
+    }
+  }, [centerName, quizArmed, fk])
 
   // 展开次数：按逻辑日（本地 04:00 换日）分桶。加载时若已跨天，loadRevealStore 返回清空后的 store
   const initialReveal = useRef<ReturnType<typeof loadRevealStore> | null>(null)
@@ -177,8 +179,8 @@ export default function Study() {
 
   // —— 埋点计时 ——
   const enteredRef = useRef(false)
-  const viewStartRef = useRef(0)
-  const firstRevealRef = useRef<number | null>(null)
+  /** 当前这张卡是否已进入（离卡时补一条 card 事件） */
+  const cardActiveRef = useRef(false)
   /** 当前这张卡的进入方向（合并进 card 事件） */
   const dirRef = useRef<'init' | 'left' | 'right'>('init')
   /** 当前这张卡展开过几次（合并进 card 事件） */
@@ -186,10 +188,6 @@ export default function Study() {
   const roundIndexRef = useRef(1)
   const leaveFnRef = useRef<() => void>(() => {})
   const exitSentRef = useRef(false)
-  // 切窗口计时：awayAtRef = 本次离开开始时刻；before/after 分别累计两个阶段的离开时长
-  const awayAtRef = useRef<number | null>(null)
-  const awayBeforeRef = useRef(0)
-  const awayAfterRef = useRef(0)
 
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
@@ -206,54 +204,24 @@ export default function Study() {
     setCopyNotice(null)
   }, [])
 
-  // 结算一段「离开」：按是否已展开，累加到对应阶段（忽略 <1s 的短暂失焦）
-  const closeAway = useCallback((now: number) => {
-    const start = awayAtRef.current
-    if (start === null) return
-    awayAtRef.current = null
-    const gap = now - start
-    if (gap < AWAY_MIN_MS) return
-    if (firstRevealRef.current === null) awayBeforeRef.current += gap
-    else awayAfterRef.current += gap
-  }, [])
-
-  // 进入一张卡：重置计时与离开累计（card 事件在离卡时统一记）
+  // 进入一张卡
   const beginCard = useCallback((dir: 'init' | 'left' | 'right') => {
-    viewStartRef.current = performance.now()
-    firstRevealRef.current = null
+    cardActiveRef.current = true
     dirRef.current = dir
     visitRevealsRef.current = 0
-    awayBeforeRef.current = 0
-    awayAfterRef.current = 0
-    awayAtRef.current =
-      !document.hasFocus() || document.hidden ? performance.now() : null
   }, [])
 
-  // 离开当前中心卡：记一条 card（进卡/离卡合并；停留已扣除切窗口时间）
+  // 离开当前中心卡：记一条 card（进卡/离卡合并）
   const emitCardLeave = useCallback(() => {
-    if (!centerName || viewStartRef.current === 0) return
-    const now = performance.now()
-    closeAway(now)
-    const rawBefore =
-      firstRevealRef.current !== null
-        ? firstRevealRef.current - viewStartRef.current
-        : now - viewStartRef.current
-    const rawAfter =
-      firstRevealRef.current !== null ? now - firstRevealRef.current : 0
+    if (!centerName || !cardActiveRef.current) return
     logEvent('study_card', {
       word: centerName,
       dir: dirRef.current,
-      dwellBeforeMs: Math.max(0, Math.round(rawBefore - awayBeforeRef.current)),
-      dwellAfterMs: Math.max(0, Math.round(rawAfter - awayAfterRef.current)),
       reveals: visitRevealsRef.current,
     })
-    viewStartRef.current = 0
-    firstRevealRef.current = null
+    cardActiveRef.current = false
     visitRevealsRef.current = 0
-    awayBeforeRef.current = 0
-    awayAfterRef.current = 0
-    awayAtRef.current = null
-  }, [centerName, closeAway])
+  }, [centerName])
   leaveFnRef.current = emitCardLeave
 
   // 会话结束：一次只发一条
@@ -282,17 +250,11 @@ export default function Study() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 切窗口/切标签：结算「离开」时长（hidden 或 blur），away 状态变化时记一条
+  // 切窗口/切标签：away 状态变化时记一条（用于统计学习时长）
   useEffect(() => {
     let wasAway = !document.hasFocus() || document.hidden
     const syncAway = (by: 'visibility' | 'focus') => {
       const awayNow = !document.hasFocus() || document.hidden
-      const now = performance.now()
-      if (awayNow) {
-        if (awayAtRef.current === null) awayAtRef.current = now
-      } else {
-        closeAway(now)
-      }
       if (awayNow !== wasAway) {
         wasAway = awayNow
         logEvent('study_away', { away: awayNow, by })
@@ -309,7 +271,7 @@ export default function Study() {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('blur', onBlur)
     }
-  }, [closeAway])
+  }, [])
 
   // 关页补最后一张卡 + exit；真正卸载时补 back（共用 useExitLifecycle）
   useExitLifecycle({
@@ -354,9 +316,7 @@ export default function Study() {
     if (centerName) {
       setRevealCounts((c) => ({ ...c, [centerName]: (c[centerName] || 0) + 1 }))
       visitRevealsRef.current += 1
-      if (firstRevealRef.current === null) {
-        firstRevealRef.current = performance.now()
-      }
+      markChecked(centerName)
     }
     play(centerWord?.audio)
   }, [play, centerWord, centerName, ensureDay])
@@ -384,16 +344,21 @@ export default function Study() {
     const c = cascadeRef.current
     // 学完 WINDOW_ROUNDS 轮、活跃窗口将换新 → 插入 quiz（不 advance，交给 quiz 结束后推进）
     if (c.r > 0 && c.r % WINDOW_ROUNDS === 0) {
-      emitCardLeave()
-      armQuiz(fk, c.levels[0] ?? book, c.r)
-      logEvent('study_to_quiz', { batch: c.r })
-      emitExit('quiz')
-      navigate('/quiz')
-      return
+      const cands = takePending(fk)
+      if (cands.length > 0) {
+        emitCardLeave()
+        armQuiz(fk, cands, c.r)
+        logEvent('study_to_quiz', { batch: c.r })
+        emitExit('quiz')
+        navigate('/quiz')
+        return
+      }
+      // 没 center 过任何词（待考池空）：不插 quiz，正常进入下一轮
     }
     const next = advance(c, book)
     cascadeRef.current = next
     saveCascade(fk, next)
+    enterRound(`${fk}#${next.r}`)
     emitCardLeave()
     roundIndexRef.current += 1
     logEvent('study_round', { index: roundIndexRef.current, words: next.round })

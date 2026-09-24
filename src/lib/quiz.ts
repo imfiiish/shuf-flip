@@ -1,7 +1,8 @@
 // Quiz（每 WINDOW_ROUNDS 轮一次的自测）
 //
-// 学完 8 轮、活跃窗口即将换新前，从「刚学完的那 64 词窗口」随机抽 16 个词，
-// 逐个打 1/2/3（陌生/模糊/熟悉）。状态持久化，刷新可续；结束/跳过后推进级联。
+// 学完 8 轮、活跃窗口即将换新前，从「这 8 轮里 center 过的词」（待考池）随机抽
+// 至多 16 个，逐个打 1/2/3（陌生/模糊/熟悉）。不足 16 时有几张考几张。
+// 状态持久化，刷新可续；结束/跳过后推进级联。
 //
 // 「是否待做 quiz」以本模块存的 QuizState 是否存在为准：
 //  - Study 到达 quiz 边界时先 armQuiz（抽词落盘）再跳 /quiz
@@ -87,12 +88,12 @@ export async function hydrateQuiz(): Promise<void> {
 }
 
 /**
- * 从活跃窗口抽词并落盘（Study 到达边界时调用）。已存在则不覆盖。
- * 返回当前生效的 QuizState。
+ * 从候选词（Study 传该书「待考池」：自上次 quiz 以来 center 过的词）抽词并落盘。
+ * 候选不足 QUIZ_SIZE 时有几张考几张；已存在则不覆盖。
  */
 export function armQuiz(
   fk: string,
-  windowWords: readonly string[],
+  candidates: readonly string[],
   batch: number,
 ): QuizState {
   const existing = loadQuiz()
@@ -100,7 +101,7 @@ export function armQuiz(
   const state: QuizState = {
     fk,
     batch,
-    words: pick(windowWords, QUIZ_SIZE),
+    words: pick(candidates, QUIZ_SIZE),
     ratings: {},
     undo: [],
     center: 0,

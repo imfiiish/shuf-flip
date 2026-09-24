@@ -68,25 +68,15 @@ export default function Quiz() {
   usePreloadWords(order, detailsReady)
 
   // —— 埋点：quiz_enter / quiz_card / quiz_rate / quiz_undo / quiz_exit ——
-  const viewStartRef = useRef(performance.now())
   const dirRef = useRef<'init' | 'left' | 'right'>('init')
-  /** 当前这张卡按了几次空格（发音） */
-  const playsRef = useRef(0)
 
   const beginCard = useCallback((dir: 'init' | 'left' | 'right') => {
-    viewStartRef.current = performance.now()
     dirRef.current = dir
-    playsRef.current = 0
   }, [])
 
   const logCardLeave = useCallback((name: string | null | undefined) => {
     if (!name) return
-    logEvent('quiz_card', {
-      word: name,
-      dir: dirRef.current,
-      dwellMs: Math.max(0, Math.round(performance.now() - viewStartRef.current)),
-      plays: playsRef.current,
-    })
+    logEvent('quiz_card', { word: name, dir: dirRef.current })
   }, [])
 
   useEffect(() => {
@@ -141,7 +131,6 @@ export default function Quiz() {
 
   // 空格：只发音，不显示释义
   const playWord = useCallback(() => {
-    playsRef.current += 1
     play(centerWord?.audio)
   }, [play, centerWord])
 
@@ -159,7 +148,6 @@ export default function Quiz() {
       logEvent('quiz_rate', {
         word: w,
         rating: v,
-        plays: playsRef.current,
         left: remaining.length - 1,
       })
       const newLen = remaining.length - 1
