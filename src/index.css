@@ -27,6 +27,9 @@
     0 2px 6px -2px rgba(45, 32, 15, 0.28);
   --card-shadow-hi: 0 24px 52px -20px rgba(45, 32, 15, 0.55),
     0 3px 10px -3px rgba(45, 32, 15, 0.3);
+  /* hover 再重一档 */
+  --card-shadow-hover: 0 26px 58px -20px rgba(45, 32, 15, 0.6),
+    0 4px 12px -3px rgba(45, 32, 15, 0.34);
 
   /* 危险/警示：中性墨色，不再抢红黄绿 */
   --danger: #3a3226;
@@ -76,6 +79,9 @@
     0 2px 6px -2px rgba(6, 10, 4, 0.5);
   --card-shadow-hi: 0 24px 52px -20px rgba(6, 10, 4, 0.65),
     0 3px 10px -3px rgba(6, 10, 4, 0.55);
+  /* hover 再重一档 */
+  --card-shadow-hover: 0 26px 58px -20px rgba(6, 10, 4, 0.72),
+    0 4px 12px -3px rgba(6, 10, 4, 0.6);
 
   --danger: #e6d8bf;
   --danger-ring: rgba(230, 216, 191, 0.35);
@@ -126,6 +132,12 @@ body {
   /* 整个页面不可选中（点词即复制） */
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* 选中高亮：用主题强调色，避免系统蓝和纸色不搭 */
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .app {
@@ -712,15 +724,15 @@ kbd {
   transform: none;
 }
 
-.login-field:focus-within {
-  box-shadow: var(--card-shadow-hi);
-}
-
-/* pin 阶段：同一个位置、同样大小，盒子隐去，只留四个圆 */
 .login-field.pin-mode,
 .login-field.pin-mode:focus-within {
   background: transparent;
   box-shadow: none;
+}
+
+/* username 卡片 hover：底部阴影再加一档（比 Study hover 更重） */
+.login-field.open:not(.pin-mode):hover {
+  box-shadow: var(--card-shadow-hover);
 }
 
 /* username 与 pin 叠在同一格，保证同尺寸 */
@@ -760,12 +772,39 @@ kbd {
   font-size: 1.05rem;
   text-align: center;
   outline: none;
-  caret-color: var(--accent);
+  caret-color: transparent;
   transition: opacity 220ms ease;
 }
 
 .login-input::placeholder {
   color: var(--muted);
+}
+
+/* kitty 式光标层：在文字下面画光标与余晖 */
+.login-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.login-field.open:not(.pin-mode) .login-trail {
+  opacity: 1;
+}
+
+/* 隐藏量尺（量文字宽度）*/
+.login-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
+  font: inherit;
+  font-size: 1.05rem;
 }
 
 /* 提示行：停笔后从卡片里撑开（高度/透明度/位移一起动） */
@@ -860,8 +899,15 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  cursor: text;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
   transition: opacity 220ms ease;
+}
+
+.pin-dots:hover .pin-dot:not(.on) {
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+  transform: scale(1.08);
 }
 
 .pin-dot {
@@ -922,7 +968,10 @@ kbd {
   text-align: center;
   outline: none;
   opacity: 0;
-  cursor: text;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .btn {
