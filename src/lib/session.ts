@@ -1,9 +1,8 @@
 // Study / Quiz 共用的卡片会话逻辑
 import { useEffect, useRef, useState } from 'react'
 import { preloadAudio } from './audio'
-import { getWord } from './dict'
 import { flushBeacon } from './analytics'
-import { detailsReady, loadDetails } from '../data/words'
+import { detailsReady, findWord, loadDetails } from '../data/words'
 
 /** 详情（音标/释义/音频）是否就绪；未就绪时触发加载并等其完成 */
 export function useWordDetails(): boolean {
@@ -23,7 +22,7 @@ export function usePreloadWords(names: readonly string[], ready = true): void {
     if (!ready) return
     preloadAudio(
       names.flatMap((n) => {
-        const w = getWord(n)
+        const w = findWord(n)
         return w?.audio ? [w.audio] : []
       }),
     )

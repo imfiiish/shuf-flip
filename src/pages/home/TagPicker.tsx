@@ -3,7 +3,7 @@ import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
 import { activeFilter, loadBooks } from '../../lib/books'
 import { matchesFilter, sameFilter } from '../../lib/filter'
-import { ALL_TAGS, TAG_GROUPS, tagLabel } from '../../lib/tags'
+import { ALL_TAGS, TAG_GROUPS } from '../../lib/tags'
 import { allWords } from '../../data/words'
 
 const TAGS = ALL_TAGS
@@ -69,7 +69,6 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
 
   const chip = (t: string) => {
     const m = modes[t]
-    const label = tagLabel(t)
     return (
       <button
         key={t}
@@ -77,9 +76,8 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
         className={`tag-chip${m ? ` ${m}` : ''}`}
         onClick={() => toggle(t)}
         aria-pressed={!!m}
-        title={label === t ? undefined : t}
       >
-        {label}
+        {t}
       </button>
     )
   }

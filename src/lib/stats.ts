@@ -1,7 +1,7 @@
 // 词级学习统计（全局按词、跨词书）。单位是「回合」，全部按回合去重：
 // 同一个词在一轮里 center 多少次、翻开多少次，都只算 1。
 //
-//   met              被 center 过的回合数（替代旧的布尔 coverage）
+//   met              被 center 过的回合数
 //   checked          翻开过释义的回合数（「查了答案」的回合数）
 //   lastAt           最后一次成为中心卡的时间戳 ms（复习调度按真实时间）
 //   lastRound        上次计入 met 的回合序（去重锁）
@@ -191,14 +191,4 @@ export async function hydrateStats(): Promise<void> {
   const rec = await getKV<{ seq?: number; sig?: string }>('misc', SEQ_KEY)
   seq = typeof rec?.seq === 'number' ? rec.seq : 0
   seqSig = typeof rec?.sig === 'string' ? rec.sig : ''
-
-  // 迁移旧 coverage（布尔 seen）→ stats.met=1
-  const cov = await loadStore('coverage')
-  for (const w of Object.keys(cov)) {
-    if (cache.has(w)) continue
-    const s = zero()
-    s.met = 1
-    cache.set(w, s)
-    put('stats', w, s)
-  }
 }

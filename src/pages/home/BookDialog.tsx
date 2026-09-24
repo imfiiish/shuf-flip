@@ -5,10 +5,9 @@ import { setActiveFilter, type Book } from '../../lib/books'
 import { copyText } from '../../lib/clipboard'
 import { filterKey, matchesFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
-import { getWord } from '../../lib/dict'
 import { useAudioPlayer } from '../../lib/audio'
 import { usePreloadWords, useWordDetails } from '../../lib/session'
-import { allWords } from '../../data/words'
+import { allWords, findWord } from '../../data/words'
 
 type Props = {
   book: Book
@@ -82,7 +81,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const detailsReady = useWordDetails()
   const play = useAudioPlayer()
   const playWord = (name: string) => {
-    const w = getWord(name)
+    const w = findWord(name)
     if (w) play(w.audio)
   }
 
@@ -163,7 +162,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
             <p className="book-empty">这本词书还没有词</p>
           ) : (
             round.map((name) => {
-              const w = getWord(name)
+              const w = findWord(name)
               if (!w) return null
               return (
                 <button

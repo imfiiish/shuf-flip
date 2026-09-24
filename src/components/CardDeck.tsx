@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
-import type { Word } from '../data/words'
-import { getWord } from '../lib/dict'
-import { tagLabel, tagRank } from '../lib/tags'
+import { findWord, type Word } from '../data/words'
+import { tagRank } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
@@ -184,7 +183,7 @@ export default function CardDeck({
             重新挂载导致的「闪现」 */}
         {deck.map((name, p) => {
           const slot = slotOf(p, center, TOTAL)
-          const word = getWord(name)
+          const word = findWord(name)
           if (!word) return null
           return (
             <Card
@@ -307,7 +306,7 @@ function Card({
                 .sort((a, b) => tagRank(a) - tagRank(b))
                 .map((tag) => (
                   <span className="tag" key={tag}>
-                    {tagLabel(tag)}
+                    {tag}
                   </span>
                 ))}
             </div>

@@ -1,20 +1,4 @@
-// 全部 tag（固定集合，顺序即卡片上的展示顺序）
-export const ALL_TAGS = [
-  '义务教育',
-  '必修',
-  '选择性必修',
-  'CET4',
-  'CET6',
-  'Oxford3000',
-  'Oxford5000',
-  'A1',
-  'A2',
-  'B1',
-  'B2',
-  'C1',
-] as const
-
-// TagPicker 分组
+// Tag 分组（固定集合；组内顺序即卡片/选择器上的展示顺序）
 export const TAG_GROUPS: { label: string; tags: string[] }[] = [
   {
     label: '国内升学',
@@ -26,14 +10,10 @@ export const TAG_GROUPS: { label: string; tags: string[] }[] = [
   },
 ]
 
-const ORDER: readonly string[] = ALL_TAGS
+/** 全部 tag（由 TAG_GROUPS 汇总，顺序一致） */
+export const ALL_TAGS: string[] = TAG_GROUPS.flatMap((g) => g.tags)
 
 export function tagRank(tag: string): number {
-  const i = ORDER.indexOf(tag)
-  return i === -1 ? ORDER.length : i
-}
-
-/** tag 展示名（现为原名；保留此函数便于以后加前缀处理） */
-export function tagLabel(tag: string): string {
-  return tag
+  const i = ALL_TAGS.indexOf(tag)
+  return i === -1 ? ALL_TAGS.length : i
 }

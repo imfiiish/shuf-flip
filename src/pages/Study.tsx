@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import StudyHelp from '../components/StudyHelp'
-import type { Word } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
 import { activeFilter, loadBooks, setActiveFilter } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
@@ -22,7 +21,7 @@ import {
   saveCascade,
   WINDOW_ROUNDS,
 } from '../lib/cascade'
-import { getWord } from '../lib/dict'
+import { findWord, type Word } from '../data/words'
 import { enterRound, markCentered, markChecked } from '../lib/stats'
 import { addPending, takePending } from '../lib/pending'
 import { flushAll, markProgressDirty } from '../lib/sync'
@@ -142,7 +141,7 @@ export default function Study() {
 
   const centerName: string | null = deck.length ? deck[center] : null
   const centerWord: Word | null = centerName
-    ? (getWord(centerName) ?? null)
+    ? (findWord(centerName) ?? null)
     : null
 
   // 中心卡变化 → 记「碰到」（按回合去重）+ 加入该书 quiz 待考池

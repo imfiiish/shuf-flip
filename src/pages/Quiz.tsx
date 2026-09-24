@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
-import { getWord } from '../lib/dict'
+import { findWord } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { filterFromKey, poolOf } from '../lib/filter'
@@ -56,7 +56,7 @@ export default function Quiz() {
     ? Math.min(center, remaining.length - 1)
     : 0
   const centerName: string | null = remaining[safeCenter] ?? null
-  const centerWord = centerName ? (getWord(centerName) ?? null) : null
+  const centerWord = centerName ? (findWord(centerName) ?? null) : null
 
   // 结束只收尾一次；期间不再回写存储
   const doneRef = useRef(false)
