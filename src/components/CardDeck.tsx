@@ -106,6 +106,8 @@ type CardDeckProps = {
   stageKey?: number | string
   /** 点卡片：slot=0 是中心（展开），±1 / 'S' 是相邻（翻页） */
   onCardClick?: (name: string, slot: Slot) => void
+  /** 右键（触控板双指）点中心卡：同 Ctrl/Cmd+C */
+  onCardContextMenu?: () => void
 }
 
 /**
@@ -121,6 +123,7 @@ export default function CardDeck({
   scale,
   stageKey,
   onCardClick,
+  onCardContextMenu,
 }: CardDeckProps) {
   const TOTAL = deck.length
 
@@ -193,6 +196,11 @@ export default function CardDeck({
               hovered={hoveredName === name}
               dots={revealCounts[name] || 0}
               onClick={() => onCardClick?.(name, slot)}
+              onContextMenu={
+                slot === 0 && onCardContextMenu
+                  ? () => onCardContextMenu()
+                  : undefined
+              }
             />
           )
         })}
@@ -210,6 +218,7 @@ type CardProps = {
   /** 短暂顶替词语显示的提示（仅中心卡） */
   notice?: string | null
   onClick?: () => void
+  onContextMenu?: () => void
 }
 
 function Card({
@@ -220,6 +229,7 @@ function Card({
   dots = 0,
   notice = null,
   onClick,
+  onContextMenu,
 }: CardProps) {
   const isCenter = slot === 0
   // 超出窗口的槽位不用具体 pos-N，而是落到右侧/左侧的隐身位（仍挂载，只隐起来）
@@ -246,6 +256,15 @@ function Card({
       }`}
       data-word={word.word}
       onClick={onClick}
+      onContextMenu={
+        onContextMenu
+          ? (e) => {
+              // 触控板双指 = 右键：接管为复制中心词，屏蔽原生菜单
+              e.preventDefault()
+              onContextMenu()
+            }
+          : undefined
+      }
     >
       {/* 双面卡：展开释义 = rotateY 翻到背面（Quiz 永远只显示正面） */}
       <div className={`card-flip${isCenter && revealed ? ' flipped' : ''}`}>

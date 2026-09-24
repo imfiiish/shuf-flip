@@ -192,7 +192,7 @@ export default function Study() {
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
 
-  // Ctrl/Cmd+C 复制当前词后，用「已复制」顶替词语 1s（只淡入，无淡出）
+  // Ctrl/Cmd+C 或右键中心卡复制当前词后，用「已复制」顶替词语 1s（只淡入，无淡出）
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
   const copyTimerRef = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(copyTimerRef.current), [])
@@ -361,7 +361,7 @@ export default function Study() {
     else reveal()
   }, [revealed, play, reveal, centerWord])
 
-  // 复制当前中心词到剪贴板（Ctrl/Cmd+C）
+  // 复制当前中心词到剪贴板（Ctrl/Cmd+C 或右键中心卡）
   const copyCurrent = useCallback(() => {
     if (!centerName) return
     void copyText(centerName).then((ok) => {
@@ -495,6 +495,7 @@ export default function Study() {
         scale={scale}
         stageKey={roundTick}
         onCardClick={onCardClick}
+        onCardContextMenu={copyCurrent}
       />
 
       <div className="hints" ref={hintsRef}>
@@ -503,6 +504,9 @@ export default function Study() {
         </span>
         <span>
           <kbd>Enter</kbd> 下一轮
+        </span>
+        <span>
+          <kbd>右键</kbd> 复制
         </span>
       </div>
     </div>
