@@ -495,6 +495,27 @@ body {
   padding: 0 76px;
 }
 
+/* 提示行里的按钮（? 帮助）：外观与同行提示文字一致 */
+.hint-btn {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hint-btn:hover {
+  color: var(--text);
+}
+
+.hint-btn:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 /* ---------- Quiz 页底部评级条 ---------- */
 .quiz-ratings {
   display: flex;
@@ -1048,6 +1069,73 @@ kbd {
 .book-modal {
   max-width: 900px;
   align-items: stretch;
+}
+
+/* ---------- 操作帮助弹窗（Study）---------- */
+.help-modal {
+  max-width: 680px;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.help-modal .modal-title {
+  text-align: center;
+}
+
+.help-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-self: stretch;
+}
+
+.help-group-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.help-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.help-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.help-plus {
+  margin: 0 2px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.help-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .help-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 标题栏：展示态（按钮）与编辑态（输入框）共用同一固定尺寸，

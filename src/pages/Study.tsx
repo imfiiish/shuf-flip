@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
+import StudyHelp from '../components/StudyHelp'
 import type { Word } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
 import { activeFilter, loadBooks, setActiveFilter } from '../lib/books'
@@ -192,6 +193,9 @@ export default function Study() {
 
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
+
+  // 操作帮助弹窗（底部提示行最左侧「? 帮助」或按 ? 键）
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Ctrl/Cmd+C 或右键中心卡复制当前词后，用「已复制」顶替词语 1s（只淡入，无淡出）
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
@@ -406,6 +410,15 @@ export default function Study() {
     function onKey(e: KeyboardEvent) {
       const k = e.key
 
+      // ?：打开 / 关闭帮助；打开时其它快捷键交给弹窗（Esc 由 Modal 关闭）
+      if (k === '?') {
+        e.preventDefault()
+        if (e.repeat) return
+        setHelpOpen((v) => !v)
+        return
+      }
+      if (helpOpen) return
+
       // Ctrl/Cmd+C：复制当前词（页面不可选中，接管原生复制）
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && k.toLowerCase() === 'c') {
         e.preventDefault()
@@ -436,7 +449,7 @@ export default function Study() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, toggleReveal, nextRound, copyCurrent])
+  }, [go, toggleReveal, nextRound, copyCurrent, helpOpen])
 
   // 双击右键（触控板双指点两次）= 下一轮；中心卡除外（那里单击=复制）
   useDoubleRightClick(nextRound, {
@@ -505,6 +518,16 @@ export default function Study() {
       />
 
       <div className="hints" ref={hintsRef}>
+        <button
+          type="button"
+          className="hint-btn"
+          onClick={(e) => {
+            e.currentTarget.blur()
+            setHelpOpen(true)
+          }}
+        >
+          <kbd>?</kbd> 帮助
+        </button>
         <span>
           <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
         </span>
@@ -512,6 +535,8 @@ export default function Study() {
           <kbd>Enter</kbd> 下一轮
         </span>
       </div>
+
+      {helpOpen && <StudyHelp onClose={() => setHelpOpen(false)} />}
     </div>
   )
 }
