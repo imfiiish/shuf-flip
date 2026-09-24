@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>username 输入框 · 方案对比</title>
+<style>
+  :root {
+    color-scheme: light;
+    --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'Noto Serif SC', serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --accent: #7a5f36;
+    --accent-ring: rgba(122, 95, 54, 0.35);
+    --bg: #efe6d3;
+    --card: #fdf8ec;
+    --card-active: #fffcf3;
+    --border: #ddcfb2;
+    --text: #2a2418;
+    --muted: #837458;
+    --on-accent: #fdf8ec;
+
+    /* Study 卡片的同款阴影（亮色） */
+    --card-shadow: 0 18px 40px -18px rgba(45, 32, 15, 0.5),
+      0 2px 6px -2px rgba(45, 32, 15, 0.28);
+    --card-shadow-hi: 0 24px 52px -20px rgba(45, 32, 15, 0.55),
+      0 3px 10px -3px rgba(45, 32, 15, 0.3);
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --accent: #c9bb8e;
+    --accent-ring: rgba(201, 187, 142, 0.4);
+    --bg: #223026;
+    --card: #2c3c30;
+    --card-active: #35463a;
+    --border: #485c4d;
+    --text: #e7f1ea;
+    --muted: #a0b0a3;
+    --on-accent: #221b10;
+
+    /* Study 卡片的同款阴影（暗色，绿黑） */
+    --card-shadow: 0 18px 40px -18px rgba(6, 10, 4, 0.6),
+      0 2px 6px -2px rgba(6, 10, 4, 0.5);
+    --card-shadow-hi: 0 24px 52px -20px rgba(6, 10, 4, 0.65),
+      0 3px 10px -3px rgba(6, 10, 4, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px;
+    background: var(--bg); color: var(--text);
+    font-family: var(--font-ui);
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 6px; }
+  p.note { color: var(--muted); font-size: .82rem; margin: 0 0 20px; line-height: 1.7; max-width: 940px; }
+  code { font-family: var(--font-mono); font-size: .86em; }
+
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; gap: 8px; align-items: center;
+    margin: -28px -28px 22px; padding: 12px 28px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .bar .sp { margin-left: auto; color: var(--muted); font-size: .76rem; }
+  .tbtn {
+    font: inherit; font-size: .8rem; cursor: pointer;
+    padding: 5px 13px; border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card); color: var(--text);
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+  }
+  .tbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .tbtn.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 18px;
+  }
+
+  .mock {
+    position: relative;
+    background: color-mix(in srgb, var(--card) 55%, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .mock.keep { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .label {
+    font-size: .74rem; color: var(--muted);
+    margin-bottom: 14px; font-weight: 600;
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  }
+  .badge {
+    background: var(--accent); color: var(--on-accent);
+    font-size: .62rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .badge.soft { background: color-mix(in srgb, var(--accent) 22%, var(--card)); color: var(--accent); }
+  .desc {
+    margin-top: 14px; padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    font-size: .74rem; color: var(--muted); line-height: 1.6;
+  }
+
+  /* 登录面板 mock */
+  .panel { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 0 2px; }
+  .brand {
+    font-family: var(--font-display);
+    font-size: 1.5rem; font-weight: 700; letter-spacing: .5px;
+    margin: 0 0 20px;
+  }
+  .ui {
+    width: 100%;
+    font: inherit; font-size: .95rem;
+    color: var(--text); text-align: center;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease,
+      background 160ms ease, transform 160ms ease;
+  }
+  .ui::placeholder { color: var(--muted); }
+
+  /* ===== 保留 ===== */
+
+  /* 04 浮卡：无框纸片，聚焦换成 Study 卡片同款小阴影 */
+  .o4 { padding: 10px 14px; border: 1px solid transparent; border-radius: 10px;
+        background: var(--card-active); box-shadow: var(--card-shadow); }
+  .o4:focus, .o4.is-focus { box-shadow: var(--card-shadow-hi); }
+
+  /* 06 内凹：刻进纸面，聚焦时内凹 + 外浮起（Study 阴影） */
+  .o6 { padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+        background: color-mix(in srgb, var(--text) 6%, var(--card));
+        box-shadow: inset 0 2px 4px color-mix(in srgb, var(--text) 14%, transparent); }
+  .o6:focus, .o6.is-focus {
+        border-color: var(--accent);
+        box-shadow: inset 0 2px 4px color-mix(in srgb, var(--text) 14%, transparent),
+          var(--card-shadow-hi); }
+
+  /* ===== 第二组 ===== */
+
+  /* 11 书脊：左侧一条强调色书脊 */
+  .n11wrap { display: flex; align-items: center; width: 100%;
+        border: 1px solid var(--border); border-left: 3px solid var(--accent);
+        border-radius: 8px; background: var(--card); box-shadow: var(--card-shadow);
+        transition: box-shadow 160ms ease, border-color 160ms ease; }
+  .n11wrap:focus-within, .n11wrap.is-focus { border-color: var(--accent); box-shadow: var(--card-shadow-hi); }
+  .n11 { border: 0; background: transparent; padding: 10px 14px; text-align: left; }
+
+  /* 12 硬投影：实色偏移，无模糊 */
+  .n12 { padding: 10px 14px; border: 1px solid var(--text); border-radius: 8px;
+        background: var(--card-active); box-shadow: 3px 3px 0 var(--text);
+        transition: box-shadow 160ms ease, transform 160ms ease; }
+  .n12:focus, .n12.is-focus { box-shadow: 4px 4px 0 var(--accent); transform: translate(-1px, -1px); }
+
+  /* 13 双线框：内外两条细线 */
+  .n13 { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+        background: var(--card);
+        box-shadow: inset 0 0 0 3px var(--card), inset 0 0 0 4px var(--border); }
+  .n13:focus, .n13.is-focus { border-color: var(--accent);
+        box-shadow: inset 0 0 0 3px var(--card), inset 0 0 0 4px var(--accent); }
+
+  /* 14 点阵纸 */
+  .n14 { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+        background-color: var(--card);
+        background-image: radial-gradient(color-mix(in srgb, var(--text) 22%, transparent) 1px, transparent 1.2px);
+        background-size: 9px 9px; background-position: center; }
+  .n14:focus, .n14.is-focus { border-color: var(--accent); box-shadow: var(--card-shadow-hi); }
+
+  /* 15 极简大字 */
+  .n15 { padding: 8px 2px; border: 0; border-bottom: 1.5px solid var(--border);
+        border-radius: 0; background: transparent; font-size: 1.3rem; font-weight: 600; }
+  .n15:focus, .n15.is-focus { border-bottom-color: var(--accent); }
+
+  /* 16 描边投影 */
+  .n16 { padding: 10px 14px; border: 1px solid var(--accent); border-radius: 8px;
+        background: var(--card-active); box-shadow: var(--card-shadow); }
+  .n16:focus, .n16.is-focus { box-shadow: var(--card-shadow-hi); }
+
+  /* 17 印章框 */
+  .n17 { padding: 10px 14px; border: 2px solid var(--text); border-radius: 5px; background: transparent; }
+  .n17:focus, .n17.is-focus { border-color: var(--accent); box-shadow: var(--card-shadow-hi); }
+
+  /* 18 荧光笔：聚焦时底线被高亮 */
+  .n18 { padding: 8px 8px; border: 0; border-radius: 6px; background: transparent; font-weight: 600; }
+  .n18:focus, .n18.is-focus {
+        background: linear-gradient(transparent 55%, color-mix(in srgb, var(--accent) 45%, transparent) 55%); }
+
+  /* 19 括号：左右两条竖线 */
+  .n19wrap { display: flex; align-items: center; width: 100%;
+        border-left: 2px solid var(--border); border-right: 2px solid var(--border);
+        transition: border-color 160ms ease; }
+  .n19wrap:focus-within, .n19wrap.is-focus { border-color: var(--accent); }
+  .n19 { border: 0; background: transparent; padding: 10px 14px; }
+
+  /* 20 信封：顶部一条强调色横带 */
+  .n20 { padding: 10px 14px; border: 1px solid var(--border); border-top: 3px solid var(--accent);
+        border-radius: 8px; background: var(--card-active); box-shadow: var(--card-shadow); }
+  .n20:focus, .n20.is-focus { box-shadow: var(--card-shadow-hi); }
+
+  .enter {
+    margin-top: 20px;
+    font: inherit; font-size: .95rem; font-weight: 600; cursor: pointer;
+    padding: 10px 38px; border-radius: 10px; border: 1px solid transparent;
+    background: var(--accent); color: var(--on-accent);
+    box-shadow: 0 6px 18px var(--accent-ring);
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <button class="tbtn on" data-t="light">亮</button>
+    <button class="tbtn" data-t="dark">暗</button>
+    <span class="sp">点输入框看聚焦态 · 04/06 的聚焦 = Study 卡片同款阴影</span>
+  </div>
+
+  <h1>username 输入框 · 方案对比</h1>
+  <p class="note">
+    保留上一轮你选的 <b>04 浮卡</b>、<b>06 内凹</b>；它们的<b>聚焦态已改为 Study 卡片的同款阴影</b>（亮色 <code>rgba(45,32,15,…)</code> / 暗色 <code>rgba(6,10,4,…)</code>）。<br />
+    下面再给一组 10 个新方向。报编号（可多选 / 说混搭），或「这组不行，再换」。
+  </p>
+
+  <h1 style="font-size:.95rem;margin-top:6px">保留</h1>
+  <div class="grid" id="keep"></div>
+
+  <h1 style="font-size:.95rem;margin-top:30px">第二组 · 10 个新方向</h1>
+  <div class="grid" id="news"></div>
+
+  <h1 style="margin-top:34px">聚焦态</h1>
+  <p class="note">把「聚焦以后长什么样」定格并排（真 <code>:focus</code> 同时只能一个），方便对比阴影。</p>
+  <div class="grid" id="focusGrid"></div>
+
+<script>
+  const KEEP = [
+    {
+      n: '04', name: '浮卡', keep: true,
+      desc: '无边框纸片。聚焦态现在就是 Study 卡片的那套阴影（比常态稍深一档），和词卡同一语言。',
+      field: `<input class="ui o4" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '06', name: '内凹', keep: true,
+      desc: '底压暗 + 内阴影，"刻进纸面"。聚焦时保留内凹，再叠 Study 的外阴影浮起，暗色尤其稳。',
+      field: `<input class="ui o6" placeholder="username" spellcheck="false" />`,
+    },
+  ];
+
+  const NEWS = [
+    {
+      n: '11', name: '书脊',
+      desc: '左侧一条强调色书脊，呼应首页词书的书脊。聚焦时阴影加深；比 04 多一条明显的边。',
+      field: `<div class="n11wrap"><input class="ui n11" placeholder="username" spellcheck="false" /></div>`,
+    },
+    {
+      n: '12', name: '硬投影',
+      desc: '实色偏移投影（无模糊），偏 zine/贴纸感，和全站柔阴影反差最大。聚焦偏移变强调色。',
+      field: `<input class="ui n12" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '13', name: '双线框',
+      desc: '外框 + 内框两条细线，像证件/印章格。聚焦内线变强调色；多一层线，面积感偏"正式"。',
+      field: `<input class="ui n13" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '14', name: '点阵纸',
+      desc: '底纹是小圆点（手账点阵纸）。聚焦加深阴影；点阵要压得很轻，否则看着花。',
+      field: `<input class="ui n14" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '15', name: '极简大字',
+      desc: '去掉所有框，只留底线，字号放大。最安静、最像"在纸上签名"；可点区域视觉最薄。',
+      field: `<input class="ui n15" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '16', name: '描边投影',
+      desc: '细强调色描边 + Study 小阴影，最直接的"卡片感"，聚焦只加深阴影。和 04 最接近，但有边。',
+      field: `<input class="ui n16" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '17', name: '印章框',
+      desc: '2px 墨色粗边、小圆角，透明底。像盖了个框；偏重，聚焦换强调色 + 阴影。',
+      field: `<input class="ui n17" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '18', name: '荧光笔',
+      desc: '平时几乎无痕，聚焦时底线被"荧光笔"扫过。最轻的聚焦反馈，但聚焦前几乎看不出是个输入框。',
+      field: `<input class="ui n18" placeholder="username" spellcheck="false" />`,
+    },
+    {
+      n: '19', name: '括号',
+      desc: '左右两条竖线夹住输入，像填空的括号。聚焦竖线变强调色；比 06 更开放、更少"盒感"。',
+      field: `<div class="n19wrap"><input class="ui n19" placeholder="username" spellcheck="false" /></div>`,
+    },
+    {
+      n: '20', name: '信封',
+      desc: '顶部一条强调色横带，像信封口/标签条。聚焦加深阴影；顶部色带和 11 的书脊正好一横一竖。',
+      field: `<input class="ui n20" placeholder="username" spellcheck="false" />`,
+    },
+  ];
+
+  function mock(o) {
+    return `
+      <div class="mock${o.keep ? ' keep' : ''}">
+        <div class="label">
+          <span>${o.n} · ${o.name}</span>
+          ${o.keep ? '<span class="badge">保留</span>' : '<span class="badge soft">新</span>'}
+        </div>
+        <div class="panel">
+          <h2 class="brand">洗牌 · 翻牌</h2>
+          ${o.field}
+          <button class="enter" type="button">登录</button>
+        </div>
+        <div class="desc">${o.desc}</div>
+      </div>`;
+  }
+
+  const ALL = KEEP.concat(NEWS);
+  document.getElementById('keep').innerHTML = KEEP.map(mock).join('');
+  document.getElementById('news').innerHTML = NEWS.map(mock).join('');
+  document.getElementById('focusGrid').innerHTML = ALL.map(mock).join('');
+
+  // 聚焦网格：静态定格"聚焦态"（用类模拟，避免同时只能聚焦一个）
+  document.querySelectorAll('#focusGrid .ui').forEach((el) => {
+    el.value = 'shufshuf';
+    el.classList.add('is-focus');
+  });
+  document.querySelectorAll('#focusGrid .n11wrap, #focusGrid .n19wrap').forEach((el) =>
+    el.classList.add('is-focus'),
+  );
+
+  // 主题切换
+  const root = document.documentElement;
+  document.querySelectorAll('.tbtn').forEach((b) => {
+    b.addEventListener('click', () => {
+      root.dataset.theme = b.dataset.t;
+      document.querySelectorAll('.tbtn').forEach((x) =>
+        x.classList.toggle('on', x === b),
+      );
+    });
+  });
+</script>
+</body>
+</html>
