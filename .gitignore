@@ -4,7 +4,6 @@ dist
 .DS_Store
 *.tsbuildinfo
 node_modules/.tmp
-logs
 
 # 词库音频（体积大，不入库）
 public/audio/

@@ -3,7 +3,7 @@
 //   终身总次数 = 各天之和，启动时汇总进内存（不再单独存）
 // - 每本词书的位置：center（按 filterKey，一条）
 import { logicalDay } from './day'
-import { loadStore, put, del } from './kv'
+import { loadStore, put, del, restoreMap } from './kv'
 
 // ---- 翻开次数 ----
 type DayCounts = Record<string, number>
@@ -64,14 +64,9 @@ export function revealDaySnapshot(): Record<string, DayCounts> {
 
 /** 用远端数据整体替换（同步用）；重算 totals、重置今天 */
 export function revealDayRestore(obj: unknown): void {
-  const next = new Map<string, DayCounts>()
-  if (obj && typeof obj === 'object') {
-    for (const [date, v] of Object.entries(obj)) {
-      if (v && typeof v === 'object') next.set(date, { ...(v as DayCounts) })
-    }
-  }
-  for (const date of allDays.keys()) if (!next.has(date)) del('revealDay', date)
-  allDays = next
+  allDays = restoreMap('revealDay', allDays, obj, (v) =>
+    v && typeof v === 'object' ? { ...(v as DayCounts) } : null,
+  )
 
   totals = new Map()
   for (const v of allDays.values()) {
@@ -79,7 +74,6 @@ export function revealDayRestore(obj: unknown): void {
       if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
     }
   }
-  for (const [date, v] of allDays) put('revealDay', date, v)
 
   const today = logicalDay()
   todayDay = today
@@ -133,15 +127,9 @@ export function centersSnapshot(): Record<string, CenterEntry> {
 
 /** 用远端数据整体替换本地位置（同步用） */
 export function centersRestore(obj: unknown): void {
-  const next = new Map<string, CenterEntry>()
-  if (obj && typeof obj === 'object') {
-    for (const [k, v] of Object.entries(obj)) {
-      if (isCenterEntry(v)) next.set(k, v)
-    }
-  }
-  for (const k of centers.keys()) if (!next.has(k)) del('centers', k)
-  centers = next
-  for (const [k, v] of next) put('centers', k, v)
+  centers = restoreMap('centers', centers, obj, (v) =>
+    isCenterEntry(v) ? v : null,
+  )
 }
 
 export async function hydrateProgress(): Promise<void> {

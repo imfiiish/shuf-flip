@@ -19,7 +19,7 @@ export async function createSession(userId: number): Promise<string> {
 }
 
 /** 校验会话并滚动续期；无效/过期返回 null */
-export async function getSession(token: string): Promise<number | null> {
+async function getSession(token: string): Promise<number | null> {
   const h = hashToken(token)
   const res = await pool.query(
     'select user_id, expires_at from sessions where token_hash = $1',

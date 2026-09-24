@@ -3,7 +3,7 @@
 // 每轮只从「活跃窗口」（最小池，WINDOW 个词）里均匀抽 ROUND_SIZE 个；
 // 活跃窗口每 WINDOW_ROUNDS 轮从上一级重抽一次，逐级 ×GROW 大小、周期 ×MULT，
 // 一直到整个词池。好处：短期锁住较高的重复率，长期又能覆盖全部词。
-import { loadStore, put, del } from './kv'
+import { loadStore, put, del, restoreMap } from './kv'
 import { pick } from './random'
 import { isStringArray } from './guard'
 
@@ -180,13 +180,5 @@ export function cascadeSnapshot(): Record<string, Cascade> {
 
 /** 用远端数据整体替换本地（同步用，IDB 同步增删） */
 export function cascadeRestore(obj: unknown): void {
-  const next = new Map<string, Cascade>()
-  if (obj && typeof obj === 'object') {
-    for (const [k, v] of Object.entries(obj)) {
-      if (isCascade(v)) next.set(k, v)
-    }
-  }
-  for (const k of cache.keys()) if (!next.has(k)) del('cascade', k)
-  cache = next
-  for (const [k, v] of next) put('cascade', k, v)
+  cache = restoreMap('cascade', cache, obj, (v) => (isCascade(v) ? v : null))
 }

@@ -122,18 +122,6 @@ export function loadStore(s: StoreName): Promise<Record<string, unknown>> {
   return Promise.resolve(fallbackRead(s))
 }
 
-/** 读取某 store 的所有 key（不取值） */
-export function loadKeys(s: StoreName): Promise<string[]> {
-  if (useIdb && db) {
-    return new Promise((resolve, reject) => {
-      const req = db!.transaction(s, 'readonly').objectStore(s).getAllKeys()
-      req.onsuccess = () => resolve(req.result.map(String))
-      req.onerror = () => reject(req.error)
-    })
-  }
-  return Promise.resolve(Object.keys(fallbackRead(s)))
-}
-
 /** 读取单个 key */
 export function getKV<T>(s: StoreName, key: string): Promise<T | undefined> {
   if (useIdb && db) {
@@ -168,6 +156,28 @@ export function put(store: StoreName, key: string, value: unknown): void {
 export function del(store: StoreName, key: string): void {
   pending.set(`${store}\u0000${key}`, { store, key, del: true })
   schedule()
+}
+
+/**
+ * 用远端数据整体替换一份「key → 值」内存缓存，并同步 IDB（新增/覆盖 put、缺失 del）。
+ * parse 返回 null 表示该条无效、丢弃。返回替换后的新 Map，供模块变量重新赋值。
+ */
+export function restoreMap<T>(
+  store: StoreName,
+  current: Map<string, T>,
+  obj: unknown,
+  parse: (v: unknown) => T | null,
+): Map<string, T> {
+  const next = new Map<string, T>()
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      const parsed = parse(v)
+      if (parsed !== null) next.set(k, parsed)
+    }
+  }
+  for (const k of current.keys()) if (!next.has(k)) del(store, k)
+  for (const [k, v] of next) put(store, k, v)
+  return next
 }
 
 const txDone = (t: IDBTransaction) =>

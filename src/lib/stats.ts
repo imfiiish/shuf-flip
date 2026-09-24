@@ -8,7 +8,7 @@
 //   lastCheckedRound 上次计入 checked 的回合序
 //   rating           最近一次 quiz 评分（0=还没评过），复习调度的「真值」
 //   ratingAt         最近一次 quiz 评分的时间戳 ms
-import { loadStore, put, del, getKV } from './kv'
+import { loadStore, put, getKV, restoreMap } from './kv'
 
 /** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
 export type Rating = 1 | 2 | 3
@@ -38,7 +38,7 @@ function zero(): WordStat {
   }
 }
 
-function isRating(v: unknown): v is Rating {
+export function isRating(v: unknown): v is Rating {
   return v === 1 || v === 2 || v === 3
 }
 
@@ -152,21 +152,11 @@ export function markChecked(word: string): void {
   }
 }
 
-/** 单条统计（无则 undefined） */
-export function getStat(word: string): WordStat | undefined {
-  return cache.get(word)
-}
-
 /** 某个词表里「碰到过」（met>0）的词数 */
 export function statsCoverage(words: readonly string[]): number {
   let n = 0
   for (const w of words) if ((cache.get(w)?.met ?? 0) > 0) n += 1
   return n
-}
-
-/** 当前全局回合序（调试用） */
-export function roundSeq(): number {
-  return seq
 }
 
 /** 全量快照（调试用 `__stats()`，同步也用） */
@@ -176,16 +166,7 @@ export function statsSnapshot(): Record<string, WordStat> {
 
 /** 用远端数据整体替换本地（同步用） */
 export function statsRestore(obj: unknown): void {
-  const next = new Map<string, WordStat>()
-  if (obj && typeof obj === 'object') {
-    for (const [w, v] of Object.entries(obj)) {
-      const s = parseStat(v)
-      if (s) next.set(w, s)
-    }
-  }
-  for (const w of cache.keys()) if (!next.has(w)) del('stats', w)
-  cache = next
-  for (const [w, s] of next) put('stats', w, s)
+  cache = restoreMap('stats', cache, obj, parseStat)
 }
 
 /** 全局回合序快照/还原（同步用；不含会让 lastRound 对不上） */

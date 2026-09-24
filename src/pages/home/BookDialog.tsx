@@ -6,8 +6,8 @@ import { copyText } from '../../lib/clipboard'
 import { filterKey, matchesFilter } from '../../lib/filter'
 import { ensureCascade, saveCascade } from '../../lib/cascade'
 import { getWord } from '../../lib/dict'
-import { preloadAudio, useAudioPlayer } from '../../lib/audio'
-import { useWordDetails } from '../../lib/session'
+import { useAudioPlayer } from '../../lib/audio'
+import { usePreloadWords, useWordDetails } from '../../lib/session'
 import { allWords } from '../../data/words'
 
 type Props = {
@@ -86,17 +86,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     if (w) play(w.audio)
   }
 
-  useEffect(() => {
-    if (!detailsReady) return
-    preloadAudio(
-      round.flatMap((name) => {
-        const w = getWord(name)
-        return w?.audio ? [w.audio] : []
-      }),
-    )
-  }, [round, detailsReady])
-
-  useEffect(() => () => window.clearTimeout(copyTimer.current), [])
+  usePreloadWords(round, detailsReady)
 
   const start = () => {
     if (round.length === 0) return

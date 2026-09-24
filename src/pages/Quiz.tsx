@@ -13,6 +13,7 @@ import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/sessio
 import {
   markRated,
   restoreRating,
+  type Rating,
   type RatingSnapshot,
 } from '../lib/stats'
 import { flushAll } from '../lib/sync'
@@ -21,7 +22,6 @@ import {
   loadQuiz,
   saveQuiz,
   UNDO_LIMIT,
-  type Rating,
   type QuizState,
 } from '../lib/quiz'
 
