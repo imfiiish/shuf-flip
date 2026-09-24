@@ -6,7 +6,12 @@
 //   lastAt           最后一次成为中心卡的时间戳 ms（复习调度按真实时间）
 //   lastRound        上次计入 met 的回合序（去重锁）
 //   lastCheckedRound 上次计入 checked 的回合序
+//   rating           最近一次 quiz 评分（0=还没评过），复习调度的「真值」
+//   ratingAt         最近一次 quiz 评分的时间戳 ms
 import { loadStore, put, getKV } from './kv'
+
+/** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
+export type Rating = 1 | 2 | 3
 
 export type WordStat = {
   met: number
@@ -14,25 +19,51 @@ export type WordStat = {
   lastAt: number
   lastRound: number
   lastCheckedRound: number
+  rating: 0 | Rating
+  ratingAt: number
 }
 
 /** 全局回合序 + 当前回合签名（幂等锁）存在 misc 里 */
 const SEQ_KEY = 'statsRound'
 
 function zero(): WordStat {
-  return { met: 0, checked: 0, lastAt: 0, lastRound: -1, lastCheckedRound: -1 }
+  return {
+    met: 0,
+    checked: 0,
+    lastAt: 0,
+    lastRound: -1,
+    lastCheckedRound: -1,
+    rating: 0,
+    ratingAt: 0,
+  }
 }
 
-function isWordStat(v: unknown): v is WordStat {
-  if (typeof v !== 'object' || v === null) return false
+function isRating(v: unknown): v is Rating {
+  return v === 1 || v === 2 || v === 3
+}
+
+/** 宽松解析：缺 rating/ratingAt 的旧记录补 0，不丢 met/checked */
+function parseStat(v: unknown): WordStat | null {
+  if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
-  return (
-    typeof o.met === 'number' &&
-    typeof o.checked === 'number' &&
-    typeof o.lastAt === 'number' &&
-    typeof o.lastRound === 'number' &&
-    typeof o.lastCheckedRound === 'number'
-  )
+  if (
+    typeof o.met !== 'number' ||
+    typeof o.checked !== 'number' ||
+    typeof o.lastAt !== 'number' ||
+    typeof o.lastRound !== 'number' ||
+    typeof o.lastCheckedRound !== 'number'
+  ) {
+    return null
+  }
+  return {
+    met: o.met,
+    checked: o.checked,
+    lastAt: o.lastAt,
+    lastRound: o.lastRound,
+    lastCheckedRound: o.lastCheckedRound,
+    rating: isRating(o.rating) ? o.rating : 0,
+    ratingAt: typeof o.ratingAt === 'number' ? o.ratingAt : 0,
+  }
 }
 
 let cache = new Map<string, WordStat>()
@@ -77,6 +108,17 @@ export function markCentered(word: string): void {
   saveStat(word, s)
 }
 
+/** 记一次 quiz 评分（最近一次覆盖旧的，复习调度的真值）。
+ *  顺带把 lastAt 归零——quiz 也是一次「复习」，间隔从这次算起。 */
+export function markRated(word: string, rating: Rating): void {
+  const s = statOf(word)
+  const now = Date.now()
+  s.rating = rating
+  s.ratingAt = now
+  s.lastAt = now
+  saveStat(word, s)
+}
+
 /** 翻开释义：本回合首次才 checked+1 */
 export function markChecked(word: string): void {
   const s = statOf(word)
@@ -113,7 +155,8 @@ export async function hydrateStats(): Promise<void> {
   const raw = await loadStore('stats')
   cache = new Map()
   for (const [w, v] of Object.entries(raw)) {
-    if (isWordStat(v)) cache.set(w, v)
+    const s = parseStat(v)
+    if (s) cache.set(w, s)
   }
 
   const rec = await getKV<{ seq?: number; sig?: string }>('misc', SEQ_KEY)

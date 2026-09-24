@@ -10,6 +10,7 @@ import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
+import { markRated } from '../lib/stats'
 import {
   clearQuiz,
   loadQuiz,
@@ -145,6 +146,7 @@ export default function Quiz() {
       setRatings(nextRatings)
       setUndo(nextUndo)
       setSkipArmed(false)
+      markRated(w, v)
       logEvent('quiz_rate', {
         word: w,
         rating: v,
