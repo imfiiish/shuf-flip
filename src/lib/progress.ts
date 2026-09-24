@@ -11,28 +11,24 @@ type DayCounts = Record<string, number>
 /** 当天（当前逻辑日）各词的翻开次数：圆点用 */
 let todayDay = ''
 let todayCounts: DayCounts = {}
-/** 最近一次记录的逻辑日（判断是否跨天，给 counts_reset 用） */
-let lastDay: string | null = null
 /** word → 终身总次数（由 revealDay 汇总） */
 let totals = new Map<string, number>()
 /** date → 当天各词翻开次数（全量，同步用） */
 let allDays = new Map<string, DayCounts>()
 
 /**
- * 读取翻开次数。若存储里是旧的一天，返回已清空的当天 store，
- * 并通过 previousDay 告知调用方「发生过清零」（用于记 counts_reset 事件）。
+ * 读取翻开次数。若存储里是旧的一天，返回已清空的当天 store。
  */
 export function loadRevealStore(now: number = Date.now()): {
-  store: { day: string; counts: DayCounts }
-  previousDay: string | null
+  day: string
+  counts: DayCounts
 } {
   const today = logicalDay(now)
-  const previousDay = lastDay && lastDay !== today ? lastDay : null
   if (todayDay !== today) {
     todayDay = today
     todayCounts = {}
   }
-  return { store: { day: today, counts: todayCounts }, previousDay }
+  return { day: today, counts: todayCounts }
 }
 
 /**
@@ -54,7 +50,6 @@ export function saveRevealStore(store: { day: string; counts: DayCounts }): void
   todayCounts = { ...store.counts }
   allDays.set(todayDay, todayCounts)
   put('revealDay', todayDay, todayCounts)
-  lastDay = todayDay
 }
 
 /** 导出全部天数的翻开次数（同步用） */
@@ -139,9 +134,7 @@ export async function hydrateProgress(): Promise<void> {
   const days = await loadStore('revealDay')
   totals = new Map()
   allDays = new Map()
-  let last: string | null = null
   for (const [date, v] of Object.entries(days)) {
-    if (last === null || date > last) last = date
     if (v && typeof v === 'object') {
       const counts = v as DayCounts
       allDays.set(date, { ...counts })
@@ -150,7 +143,6 @@ export async function hydrateProgress(): Promise<void> {
       }
     }
   }
-  lastDay = last
   const todayRec = days[today]
   todayDay = today
   todayCounts =

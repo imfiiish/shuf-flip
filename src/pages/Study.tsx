@@ -154,14 +154,14 @@ export default function Study() {
     }
   }, [centerName, quizArmed, fk])
 
-  // 展开次数：按逻辑日（本地 04:00 换日）分桶。加载时若已跨天，loadRevealStore 返回清空后的 store
+  // 展开次数：按逻辑日（本地 04:00 换日）分桶。加载时若已跨天，loadRevealStore 返回清空后的当天数据
   const initialReveal = useRef<ReturnType<typeof loadRevealStore> | null>(null)
   if (!initialReveal.current) initialReveal.current = loadRevealStore()
   const revealInit = initialReveal.current!
   const [revealCounts, setRevealCounts] = useState<Record<string, number>>(
-    revealInit.store.counts,
+    revealInit.counts,
   )
-  const dayRef = useRef(revealInit.store.day)
+  const dayRef = useRef(revealInit.day)
 
   useEffect(() => {
     saveRevealStore({ day: dayRef.current, counts: revealCounts })
