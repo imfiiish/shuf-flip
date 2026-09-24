@@ -15,6 +15,8 @@ let todayCounts: DayCounts = {}
 let lastDay: string | null = null
 /** word → 终身总次数（由 revealDay 汇总） */
 let totals = new Map<string, number>()
+/** date → 当天各词翻开次数（全量，同步用） */
+let allDays = new Map<string, DayCounts>()
 
 /**
  * 读取翻开次数。若存储里是旧的一天，返回已清空的当天 store，
@@ -50,8 +52,38 @@ export function saveRevealStore(store: { day: string; counts: DayCounts }): void
   }
 
   todayCounts = { ...store.counts }
+  allDays.set(todayDay, todayCounts)
   put('revealDay', todayDay, todayCounts)
   lastDay = todayDay
+}
+
+/** 导出全部天数的翻开次数（同步用） */
+export function revealDaySnapshot(): Record<string, DayCounts> {
+  return Object.fromEntries(allDays)
+}
+
+/** 用远端数据整体替换（同步用）；重算 totals、重置今天 */
+export function revealDayRestore(obj: unknown): void {
+  const next = new Map<string, DayCounts>()
+  if (obj && typeof obj === 'object') {
+    for (const [date, v] of Object.entries(obj)) {
+      if (v && typeof v === 'object') next.set(date, { ...(v as DayCounts) })
+    }
+  }
+  for (const date of allDays.keys()) if (!next.has(date)) del('revealDay', date)
+  allDays = next
+
+  totals = new Map()
+  for (const v of allDays.values()) {
+    for (const [w, n] of Object.entries(v)) {
+      if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
+    }
+  }
+  for (const [date, v] of allDays) put('revealDay', date, v)
+
+  const today = logicalDay()
+  todayDay = today
+  todayCounts = { ...(allDays.get(today) ?? {}) }
 }
 
 /** 某个词表里有多少词翻开过（终身总次数 > 0） */
@@ -118,11 +150,14 @@ export async function hydrateProgress(): Promise<void> {
   // 汇总所有天的翻开次数 → 终身总次数，并取最近一天 / 当天次数
   const days = await loadStore('revealDay')
   totals = new Map()
+  allDays = new Map()
   let last: string | null = null
   for (const [date, v] of Object.entries(days)) {
     if (last === null || date > last) last = date
     if (v && typeof v === 'object') {
-      for (const [w, n] of Object.entries(v as DayCounts)) {
+      const counts = v as DayCounts
+      allDays.set(date, { ...counts })
+      for (const [w, n] of Object.entries(counts)) {
         if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
       }
     }

@@ -6,7 +6,12 @@ import { api, ApiError } from './api'
 import { activeFilter, loadBooks, saveBooks, setActiveFilter } from './books'
 import { filterFromKey, filterKey } from './filter'
 import { cascadeRestore, cascadeSnapshot } from './cascade'
-import { centersRestore, centersSnapshot } from './progress'
+import {
+  centersRestore,
+  centersSnapshot,
+  revealDayRestore,
+  revealDaySnapshot,
+} from './progress'
 import {
   statsRestore,
   statsSeqRestore,
@@ -38,6 +43,7 @@ function dataBlob() {
   return {
     books: loadBooks(),
     stats: statsSnapshot(),
+    revealDay: revealDaySnapshot(),
     seq: statsSeqSnapshot(),
     quiz: loadQuiz(),
   }
@@ -45,9 +51,10 @@ function dataBlob() {
 
 function applyProgress(raw: unknown): void {
   const p = (raw ?? {}) as ReturnType<typeof progressBlob>
-  cascadeRestore(p.cascade)
-  centersRestore(p.centers)
-  pendingRestore(p.pending)
+  // 只在键存在时覆盖：服务器旧快照缺字段时不误清本地
+  if (p.cascade !== undefined) cascadeRestore(p.cascade)
+  if (p.centers !== undefined) centersRestore(p.centers)
+  if (p.pending !== undefined) pendingRestore(p.pending)
   if (typeof p.filterKey === 'string' && p.filterKey) {
     setActiveFilter(filterFromKey(p.filterKey))
   }
@@ -55,11 +62,15 @@ function applyProgress(raw: unknown): void {
 
 function applyData(raw: unknown): void {
   const d = (raw ?? {}) as ReturnType<typeof dataBlob>
+  // 只在键存在时覆盖：服务器旧快照缺字段时不误清本地
   if (Array.isArray(d.books)) saveBooks(d.books)
-  statsRestore(d.stats)
-  statsSeqRestore(d.seq)
-  if (d.quiz) saveQuiz(d.quiz)
-  else clearQuiz()
+  if (d.stats !== undefined) statsRestore(d.stats)
+  if (d.revealDay !== undefined) revealDayRestore(d.revealDay)
+  if (d.seq !== undefined) statsSeqRestore(d.seq)
+  if (d.quiz !== undefined) {
+    if (d.quiz) saveQuiz(d.quiz)
+    else clearQuiz()
+  }
 }
 
 async function flush(kind: 'progress' | 'data'): Promise<void> {
@@ -145,6 +156,7 @@ export function clearLocalState(): void {
   centersRestore({})
   pendingRestore({})
   statsRestore({})
+  revealDayRestore({})
   statsSeqRestore({})
   clearQuiz()
   saveBooks([])
