@@ -4,47 +4,82 @@ import { currentUserId } from '../session'
 
 export const state = new Hono()
 
-// 读取整包状态
+// 冲突时抛这个，由路由转成 409
+class ConflictError extends Error {}
+
+/** 读整包：progress（进度）+ data（统计），各自带 rev */
 state.get('/', async (c) => {
   const userId = await currentUserId(c)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
   const r = await pool.query(
-    'select data, rev from user_state where user_id = $1',
+    'select progress, progress_rev, data, data_rev from user_state where user_id = $1',
     [userId],
   )
   const row = r.rows[0]
-  return c.json(row ? { data: row.data, rev: Number(row.rev) } : { data: {}, rev: 0 })
+  return c.json({
+    progress: {
+      data: row?.progress ?? {},
+      rev: Number(row?.progress_rev ?? 0),
+    },
+    data: { data: row?.data ?? {}, rev: Number(row?.data_rev ?? 0) },
+  })
 })
 
-// 写入整包状态（乐观并发：只有 rev 匹配才更新，否则 409）
-state.put('/', async (c) => {
-  const userId = await currentUserId(c)
-  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+type Col = 'progress' | 'data'
 
-  const body = await c.req.json().catch(() => null)
-  const b = (body ?? {}) as { data?: unknown; rev?: unknown }
-  if (typeof b.data !== 'object' || b.data === null) {
-    return c.json({ error: 'invalid' }, 400)
-  }
-  const rev = Number.isInteger(b.rev) ? (b.rev as number) : 0
-
+/** 乐观并发写入：rev 匹配则 +1，否则冲突；没有行则首插 */
+async function writeBlob(
+  userId: number,
+  col: Col,
+  value: unknown,
+  rev: number,
+): Promise<number> {
+  const revCol = col === 'progress' ? 'progress_rev' : 'data_rev'
   const upd = await pool.query(
-    `update user_state set data = $1, rev = rev + 1, updated_at = now()
-      where user_id = $2 and rev = $3 returning rev`,
-    [b.data, userId, rev],
+    `update user_state set ${col} = $1, ${revCol} = ${revCol} + 1, updated_at = now()
+      where user_id = $2 and ${revCol} = $3 returning ${revCol}`,
+    [value, userId, rev],
   )
-  if (upd.rowCount) return c.json({ rev: Number(upd.rows[0].rev) })
+  if (upd.rowCount) return Number(upd.rows[0][revCol])
 
-  // 没有行被更新：要么还没有状态（首次写入），要么 rev 冲突
-  const exists = await pool.query('select rev from user_state where user_id = $1', [
+  const exists = await pool.query('select 1 from user_state where user_id = $1', [
     userId,
   ])
   if (!exists.rowCount) {
     const ins = await pool.query(
-      'insert into user_state (user_id, data, rev) values ($1, $2, 1) returning rev',
-      [userId, b.data],
+      `insert into user_state (user_id, ${col}, ${revCol}) values ($1, $2, 1) returning ${revCol}`,
+      [userId, value],
     )
-    return c.json({ rev: Number(ins.rows[0].rev) })
+    return Number(ins.rows[0][revCol])
   }
-  return c.json({ error: 'conflict', rev: Number(exists.rows[0].rev) }, 409)
-})
+  throw new ConflictError()
+}
+
+function readBlob(c: Parameters<typeof currentUserId>[0], col: Col) {
+  return async () => {
+    const userId = await currentUserId(c)
+    if (!userId) return c.json({ error: 'unauthorized' }, 401)
+    const body = await c.req.json().catch(() => null)
+    const b = (body ?? {}) as { data?: unknown; rev?: unknown }
+    if (typeof b.data !== 'object' || b.data === null) {
+      return c.json({ error: 'invalid' }, 400)
+    }
+    const rev = Number.isInteger(b.rev) ? (b.rev as number) : 0
+    try {
+      return c.json({ rev: await writeBlob(userId, col, b.data, rev) })
+    } catch (e) {
+      if (!(e instanceof ConflictError)) throw e
+      const revCol = col === 'progress' ? 'progress_rev' : 'data_rev'
+      const cur = await pool.query(
+        `select ${revCol} as rev from user_state where user_id = $1`,
+        [userId],
+      )
+      return c.json({ error: 'conflict', rev: Number(cur.rows[0]?.rev ?? 0) }, 409)
+    }
+  }
+}
+
+// 进度（小、推得勤）
+state.put('/progress', (c) => readBlob(c, 'progress')())
+// 统计（大、每轮推）
+state.put('/data', (c) => readBlob(c, 'data')())

@@ -117,6 +117,14 @@ auth.get('/me', async (c) => {
   return c.json({ user: { id: Number(row.id), username: row.username } })
 })
 
+// 用户名是否已注册（登录页 step1→step2 时调用，决定「登录」还是「注册」）
+auth.get('/exists', async (c) => {
+  const lower = (c.req.query('username') ?? '').trim().toLowerCase()
+  if (!USERNAME_RE.test(lower)) return c.json({ exists: false })
+  const r = await pool.query('select 1 from users where username = $1', [lower])
+  return c.json({ exists: (r.rowCount ?? 0) > 0 })
+})
+
 auth.post('/rename', async (c) => {
   const userId = await currentUserId(c)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
