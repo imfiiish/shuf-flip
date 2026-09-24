@@ -108,14 +108,37 @@ export function markCentered(word: string): void {
   saveStat(word, s)
 }
 
+/** 评分前需要保留的部分，供撤销还原 */
+export type RatingSnapshot = {
+  rating: 0 | Rating
+  ratingAt: number
+  lastAt: number
+}
+
 /** 记一次 quiz 评分（最近一次覆盖旧的，复习调度的真值）。
- *  顺带把 lastAt 归零——quiz 也是一次「复习」，间隔从这次算起。 */
-export function markRated(word: string, rating: Rating): void {
+ *  顺带把 lastAt 归零——quiz 也是一次「复习」，间隔从这次算起。
+ *  返回改动前的快照，供撤销还原。 */
+export function markRated(word: string, rating: Rating): RatingSnapshot {
   const s = statOf(word)
+  const prev: RatingSnapshot = {
+    rating: s.rating,
+    ratingAt: s.ratingAt,
+    lastAt: s.lastAt,
+  }
   const now = Date.now()
   s.rating = rating
   s.ratingAt = now
   s.lastAt = now
+  saveStat(word, s)
+  return prev
+}
+
+/** 撤销评分：还原 markRated 前的快照 */
+export function restoreRating(word: string, snap: RatingSnapshot): void {
+  const s = statOf(word)
+  s.rating = snap.rating
+  s.ratingAt = snap.ratingAt
+  s.lastAt = snap.lastAt
   saveStat(word, s)
 }
 

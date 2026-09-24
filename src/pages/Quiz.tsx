@@ -10,7 +10,11 @@ import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
-import { markRated } from '../lib/stats'
+import {
+  markRated,
+  restoreRating,
+  type RatingSnapshot,
+} from '../lib/stats'
 import {
   clearQuiz,
   loadQuiz,
@@ -57,6 +61,8 @@ export default function Quiz() {
   const doneRef = useRef(false)
   /** quiz_enter 只记一次（StrictMode 下 effect 会跑两遍） */
   const enteredRef = useRef(false)
+  /** 本 quiz 每个词评分前的 stats 快照（Ctrl+Z 撤销时还原） */
+  const prevRatingRef = useRef(new Map<string, RatingSnapshot>())
 
   // A1 等比缩放（舞台 1200×360）+ 底部评级条测量
   const { appRef, hintsRef, scale } = useStageScale()
@@ -146,7 +152,9 @@ export default function Quiz() {
       setRatings(nextRatings)
       setUndo(nextUndo)
       setSkipArmed(false)
-      markRated(w, v)
+      // 首次评该词时记下评分前快照（撤销用）；重评不覆盖
+      const snap = markRated(w, v)
+      if (!prevRatingRef.current.has(w)) prevRatingRef.current.set(w, snap)
       logEvent('quiz_rate', {
         word: w,
         rating: v,
@@ -179,6 +187,9 @@ export default function Quiz() {
     const nextRatings = { ...ratings }
     const rating = nextRatings[w]
     delete nextRatings[w]
+    // stats 里刚写的评分一并回滚
+    const snap = prevRatingRef.current.get(w)
+    if (snap) restoreRating(w, snap)
     logCardLeave(centerName)
     setUndo(nextUndo)
     setRatings(nextRatings)
