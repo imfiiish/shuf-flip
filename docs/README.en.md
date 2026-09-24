@@ -6,6 +6,12 @@ Vocabulary flashcards: shuffle a deck and flip to reveal.
 
 ![](images/study.png)
 
+## How to play
+
+- **Shuffle** — entering study shuffles a round of cards from the book (16 by default); the next round is shuffled after each one.
+- **Switch** — scroll, click the side cards, or press ← / → to move through the deck.
+- **Flip** — press Space or click the center card to reveal the definition; press again to replay the audio.
+
 ## Getting started
 
 ```bash
