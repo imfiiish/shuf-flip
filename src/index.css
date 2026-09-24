@@ -701,7 +701,8 @@ kbd {
   border-radius: 10px;
   box-shadow: var(--card-shadow);
   transition: max-height 320ms ease, margin-bottom 320ms ease,
-    box-shadow 160ms ease, opacity 240ms ease 40ms, transform 320ms ease;
+    background 240ms ease, box-shadow 160ms ease, opacity 240ms ease 40ms,
+    transform 320ms ease;
 }
 
 .login-field.open {
@@ -713,6 +714,38 @@ kbd {
 
 .login-field:focus-within {
   box-shadow: var(--card-shadow-hi);
+}
+
+/* pin 阶段：同一个位置、同样大小，盒子隐去，只留四个圆 */
+.login-field.pin-mode,
+.login-field.pin-mode:focus-within {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* username 与 pin 叠在同一格，保证同尺寸 */
+.login-face {
+  position: relative;
+  width: 100%;
+  height: 47px;
+}
+
+.login-input,
+.pin-dots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.login-field.pin-mode .login-input {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-field:not(.pin-mode) .pin-dots {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .login-input {
@@ -728,6 +761,7 @@ kbd {
   text-align: center;
   outline: none;
   caret-color: var(--accent);
+  transition: opacity 220ms ease;
 }
 
 .login-input::placeholder {
@@ -757,6 +791,138 @@ kbd {
   margin: 2px 0 10px;
   opacity: 1;
   transform: none;
+}
+
+/* 按钮行：单按钮时居中；进 pin 阶段时「确认」滑到右侧变「登录」，「返回」从左侧滑入 */
+.login-actions {
+  position: relative;
+  width: min(280px, 72vw);
+  height: 50px;
+}
+
+/* 两个按钮同尺寸、同字重，只差填充与描边 */
+.login-actions .btn {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: calc(50% - 5px);
+  padding: 12px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* 主按钮：居中 → 右侧 */
+.login-actions .btn-primary {
+  left: calc(25% + 2.5px);
+  transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms ease,
+    box-shadow 160ms ease, opacity 200ms ease;
+}
+
+.login-actions.two .btn-primary {
+  left: calc(50% + 5px);
+}
+
+.login-actions.two .btn-primary:not(:disabled) {
+  box-shadow: 0 4px 12px -6px var(--accent-ring);
+}
+
+/* 返回：柔和的次级按钮（色块，不描边），滑入 + hover 有反馈 */
+.login-actions .login-back {
+  left: 0;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border: 1px solid transparent;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateX(-12px);
+  pointer-events: none;
+  transition: opacity 220ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1), background 160ms ease,
+    color 160ms ease, box-shadow 160ms ease;
+}
+
+.login-actions.two .login-back {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.login-actions.two .login-back:hover,
+.login-actions.two .login-back:focus-visible {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: transparent;
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -12px var(--accent-ring);
+}
+
+.pin-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: text;
+  transition: opacity 220ms ease;
+}
+
+.pin-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.pin-dots:focus-within .pin-dot:not(.on) {
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+}
+
+.pin-dot.on {
+  background: var(--accent);
+  transform: scale(1.15);
+}
+
+/* 输了非数字时的提示 */
+.pin-hint {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--muted);
+  text-align: center;
+  transition: max-height 200ms ease, margin 200ms ease, opacity 160ms ease,
+    transform 200ms ease;
+}
+
+.pin-hint.show {
+  max-height: 32px;
+  margin: 6px 0 0;
+  opacity: 1;
+  transform: none;
+}
+
+/* 隐藏的真实输入：盖在圆点上，收数字、最多 4 位 */
+.pin-input {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  text-align: center;
+  outline: none;
+  opacity: 0;
+  cursor: text;
 }
 
 .btn {
