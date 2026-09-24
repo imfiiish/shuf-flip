@@ -170,10 +170,8 @@ export default function Study() {
   const ensureDay = useCallback((): boolean => {
     const today = logicalDay()
     if (dayRef.current === today) return false
-    const from = dayRef.current
     dayRef.current = today
     setRevealCounts({})
-    logEvent('counts_reset', { from, to: today })
     return true
   }, [])
 
@@ -237,12 +235,6 @@ export default function Study() {
     if (quizArmed) return // 已被重定向到 quiz，不算一次学习
     if (enteredRef.current) return
     enteredRef.current = true
-    if (revealInit.previousDay) {
-      logEvent('counts_reset', {
-        from: revealInit.previousDay,
-        to: revealInit.store.day,
-      })
-    }
     ensureSession()
     logEvent('study_enter', { filterKey: fk })
     logEvent('study_round', { index: roundIndexRef.current, words: deck })
@@ -331,12 +323,11 @@ export default function Study() {
     if (!centerName) return
     void copyText(centerName).then((ok) => {
       if (!ok) return
-      logEvent('study_copy', { word: centerName, revealed })
       window.clearTimeout(copyTimerRef.current)
       setCopyNotice('已复制')
       copyTimerRef.current = window.setTimeout(() => setCopyNotice(null), 1000)
     })
-  }, [centerName, revealed])
+  }, [centerName])
 
   // 下一轮：到 quiz 边界先插 quiz；否则级联前进一轮（必要时按周期刷新各级）
   const nextRound = useCallback(() => {
