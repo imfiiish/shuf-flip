@@ -8,15 +8,12 @@ const hashToken = (t: string) => createHash('sha256').update(t).digest('hex')
 const ttlMs = () => env.sessionTtlDays * 86400 * 1000
 
 /** 新建会话，返回明文 token（只发这一次，库里只存哈希） */
-export async function createSession(
-  userId: number,
-  deviceLabel: string | null,
-): Promise<string> {
+export async function createSession(userId: number): Promise<string> {
   const token = randomBytes(32).toString('base64url')
   await pool.query(
-    `insert into sessions (token_hash, user_id, expires_at, device_label)
-     values ($1, $2, $3, $4)`,
-    [hashToken(token), userId, new Date(Date.now() + ttlMs()), deviceLabel],
+    `insert into sessions (token_hash, user_id, expires_at)
+     values ($1, $2, $3)`,
+    [hashToken(token), userId, new Date(Date.now() + ttlMs())],
   )
   return token
 }
@@ -34,10 +31,10 @@ export async function getSession(token: string): Promise<number | null> {
     await pool.query('delete from sessions where token_hash = $1', [h])
     return null
   }
-  await pool.query(
-    'update sessions set last_seen_at = now(), expires_at = $2 where token_hash = $1',
-    [h, new Date(Date.now() + ttlMs())],
-  )
+  await pool.query('update sessions set expires_at = $2 where token_hash = $1', [
+    h,
+    new Date(Date.now() + ttlMs()),
+  ])
   return Number(row.user_id)
 }
 

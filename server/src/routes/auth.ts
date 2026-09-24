@@ -35,11 +35,10 @@ function clientIp(c: Context): string {
   }
 }
 
-function readCreds(body: unknown): { lower: string; raw: string; password: string } {
+function readCreds(body: unknown): { lower: string; password: string } {
   const b = (body ?? {}) as Record<string, unknown>
   const raw = typeof b.username === 'string' ? b.username.trim() : ''
   return {
-    raw,
     lower: raw.toLowerCase(),
     password: typeof b.password === 'string' ? b.password : '',
   }
@@ -47,7 +46,7 @@ function readCreds(body: unknown): { lower: string; raw: string; password: strin
 
 auth.post('/register', async (c) => {
   const body = await c.req.json().catch(() => null)
-  const { lower, raw, password } = readCreds(body)
+  const { lower, password } = readCreds(body)
   if (!USERNAME_RE.test(lower)) return c.json({ error: 'invalid_username' }, 400)
   if (!PASSWORD_RE.test(password))
     return c.json({ error: 'invalid_password' }, 400)
@@ -59,14 +58,14 @@ auth.post('/register', async (c) => {
   const consent = (body as { consent?: unknown } | null)?.consent === true
   const hash = await hashPassword(password)
   const res = await pool.query(
-    `insert into users (username, display, password_hash, consent_at)
-     values ($1, $2, $3, $4) returning id`,
-    [lower, raw || lower, hash, consent ? new Date() : null],
+    `insert into users (username, password_hash, consent_at)
+     values ($1, $2, $3) returning id`,
+    [lower, hash, consent ? new Date() : null],
   )
   const userId = Number(res.rows[0].id)
-  const token = await createSession(userId, c.req.header('user-agent') ?? null)
+  const token = await createSession(userId)
   setCookie(c, env.cookieName, token, cookieOpts())
-  return c.json({ user: { id: userId, username: lower, display: raw || lower } })
+  return c.json({ user: { id: userId, username: lower } })
 })
 
 auth.post('/login', async (c) => {
@@ -83,7 +82,7 @@ auth.post('/login', async (c) => {
   }
 
   const res = await pool.query(
-    'select id, display, password_hash from users where username = $1',
+    'select id, password_hash from users where username = $1',
     [lower],
   )
   const row = res.rows[0]
@@ -95,9 +94,9 @@ auth.post('/login', async (c) => {
 
   await clearFail(lower)
   const userId = Number(row.id)
-  const token = await createSession(userId, c.req.header('user-agent') ?? null)
+  const token = await createSession(userId)
   setCookie(c, env.cookieName, token, cookieOpts())
-  return c.json({ user: { id: userId, username: lower, display: row.display } })
+  return c.json({ user: { id: userId, username: lower } })
 })
 
 auth.post('/logout', async (c) => {
@@ -110,15 +109,12 @@ auth.post('/logout', async (c) => {
 auth.get('/me', async (c) => {
   const userId = await currentUserId(c)
   if (!userId) return c.json({ user: null })
-  const r = await pool.query(
-    'select id, username, display from users where id = $1',
-    [userId],
-  )
+  const r = await pool.query('select id, username from users where id = $1', [
+    userId,
+  ])
   const row = r.rows[0]
   if (!row) return c.json({ user: null })
-  return c.json({
-    user: { id: Number(row.id), username: row.username, display: row.display },
-  })
+  return c.json({ user: { id: Number(row.id), username: row.username } })
 })
 
 auth.post('/rename', async (c) => {
@@ -126,7 +122,7 @@ auth.post('/rename', async (c) => {
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
 
   const body = await c.req.json().catch(() => null)
-  const { lower, raw } = readCreds(body)
+  const { lower } = readCreds(body)
   if (!USERNAME_RE.test(lower)) return c.json({ error: 'invalid_username' }, 400)
   if (isBanned(lower)) return c.json({ error: 'username_unavailable' }, 400)
 
@@ -136,10 +132,10 @@ auth.post('/rename', async (c) => {
   )
   if (dup.rowCount) return c.json({ error: 'username_taken' }, 409)
 
-  const r = await pool.query(
-    'update users set username = $1, display = $2, renamed_at = now() where id = $3',
-    [lower, raw || lower, userId],
-  )
+  const r = await pool.query('update users set username = $1 where id = $2', [
+    lower,
+    userId,
+  ])
   if (!r.rowCount) return c.json({ error: 'unauthorized' }, 401)
-  return c.json({ user: { id: userId, username: lower, display: raw || lower } })
+  return c.json({ user: { id: userId, username: lower } })
 })

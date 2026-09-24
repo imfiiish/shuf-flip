@@ -1,24 +1,20 @@
 -- Up Migration
 
--- 用户：登录名 username 存小写（唯一），display 保留原始大小写用于展示
+-- 用户：登录名 username 唯一（前端限定小写字母/数字，故即显示名）；可改名
 CREATE TABLE users (
-  id          bigserial PRIMARY KEY,
-  username    text        NOT NULL UNIQUE,
-  display     text        NOT NULL,
-  password_hash text      NOT NULL,
-  consent_at  timestamptz,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  renamed_at  timestamptz
+  id            bigserial   PRIMARY KEY,
+  username      text        NOT NULL UNIQUE,
+  password_hash text        NOT NULL,
+  consent_at    timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 -- 会话：只存 token 的 sha256，不存明文 token
 CREATE TABLE sessions (
-  token_hash   text        PRIMARY KEY,
-  user_id      bigint      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  last_seen_at timestamptz NOT NULL DEFAULT now(),
-  expires_at   timestamptz NOT NULL,
-  device_label text
+  token_hash text        PRIMARY KEY,
+  user_id    bigint      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
 );
 CREATE INDEX sessions_user_idx ON sessions (user_id);
 
@@ -40,11 +36,10 @@ CREATE TABLE user_state (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 事件流（校准/分析用）：只追加。anon_id 预留给「游客采集」以后用
+-- 事件流（校准/分析用）：只追加
 CREATE TABLE events (
   id      bigserial   PRIMARY KEY,
   user_id bigint      REFERENCES users(id) ON DELETE CASCADE,
-  anon_id text,
   ts      timestamptz NOT NULL,
   type    text        NOT NULL,
   data    jsonb       NOT NULL DEFAULT '{}'::jsonb
