@@ -14,7 +14,12 @@ export default function Login() {
   // false=只有标题+「进入」；true=中间撑开 username，按钮变「登录」
   const [open, setOpen] = useState(false)
   const [username, setUsername] = useState('')
+  // 校验提示：停笔一下才显示，避免每敲一个字就弹
+  const [showHint, setShowHint] = useState(false)
+  // 刚变合法时给按钮一个「就绪」小反馈
+  const [readyPulse, setReadyPulse] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const wasValid = useRef(false)
 
   const valid = USERNAME_RE.test(username)
 
@@ -29,6 +34,26 @@ export default function Login() {
   useEffect(() => {
     if (open) inputRef.current?.focus()
   }, [open])
+
+  // 不合法提示：停笔 450ms 再显示；一旦合法/清空立即收起
+  useEffect(() => {
+    if (!open || username === '' || valid) {
+      setShowHint(false)
+      return
+    }
+    const id = window.setTimeout(() => setShowHint(true), 450)
+    return () => window.clearTimeout(id)
+  }, [open, username, valid])
+
+  // disabled → enabled 的瞬间，给按钮一个就绪小弹
+  useEffect(() => {
+    const became = open && valid && !wasValid.current
+    wasValid.current = valid
+    if (!became) return
+    setReadyPulse(true)
+    const id = window.setTimeout(() => setReadyPulse(false), 300)
+    return () => window.clearTimeout(id)
+  }, [open, valid])
 
   const enter = () => {
     if (!valid) return
@@ -66,13 +91,16 @@ export default function Login() {
               if (e.key === 'Enter') enter()
             }}
           />
-          {open && username !== '' && !valid && (
-            <p className="login-hint">3–20 位，字母开头，仅小写字母与数字</p>
-          )}
+          <p
+            className={`login-hint${showHint ? ' show' : ''}`}
+            aria-hidden={!showHint}
+          >
+            3–20 位，字母开头，仅小写字母与数字
+          </p>
         </div>
 
         <button
-          className="btn btn-primary"
+          className={`btn btn-primary${readyPulse ? ' ready' : ''}`}
           disabled={open && !valid}
           onClick={() => {
             if (!open) {
