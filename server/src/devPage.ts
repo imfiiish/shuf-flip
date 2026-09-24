@@ -28,7 +28,7 @@ export const devPage = /* html */ `<!doctype html>
 <fieldset>
   <legend>账号</legend>
   <input id="u" placeholder="username" value="alice" size="14">
-  <input id="p" placeholder="pin" value="1234" size="6" maxlength="4">
+  <input id="p" placeholder="password" value="1234" size="6" maxlength="4">
   <button onclick="reg()">注册</button>
   <button onclick="login()">登录</button>
   <button onclick="me()">我是谁</button>
@@ -78,8 +78,8 @@ async function call(label, method, url, body) {
     log(label + '  失败', String(err));
   }
 }
-const reg = () => call('注册', 'POST', '/api/auth/register', { username: g('u'), pin: g('p'), consent: true });
-const login = () => call('登录', 'POST', '/api/auth/login', { username: g('u'), pin: g('p') });
+const reg = () => call('注册', 'POST', '/api/auth/register', { username: g('u'), password: g('p'), consent: true });
+const login = () => call('登录', 'POST', '/api/auth/login', { username: g('u'), password: g('p') });
 const me = () => call('我是谁', 'GET', '/api/auth/me');
 const logout = () => call('登出', 'POST', '/api/auth/logout');
 const rename = () => call('改名', 'POST', '/api/auth/rename', { username: g('nu') });

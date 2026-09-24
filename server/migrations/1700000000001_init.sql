@@ -5,7 +5,7 @@ CREATE TABLE users (
   id          bigserial PRIMARY KEY,
   username    text        NOT NULL UNIQUE,
   display     text        NOT NULL,
-  pin_hash    text        NOT NULL,
+  password_hash text      NOT NULL,
   consent_at  timestamptz,
   created_at  timestamptz NOT NULL DEFAULT now(),
   renamed_at  timestamptz
