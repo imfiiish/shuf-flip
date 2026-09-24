@@ -28,12 +28,16 @@ CREATE TABLE login_fail (
 CREATE INDEX login_fail_user_idx ON login_fail (username, ts);
 CREATE INDEX login_fail_ip_idx ON login_fail (ip, ts);
 
--- 每用户一份当前状态（同步用）：整包 JSON + 版本号（乐观并发）
+-- 每用户一份当前状态（同步用），拆成两块、各自一个版本号（乐观并发）：
+--   progress  进度（在哪本书/哪一轮/哪张卡），推得勤但很小
+--   data      统计（每词 met/checked/lastAt/rating 等），每轮推一次
 CREATE TABLE user_state (
-  user_id    bigint      PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  data       jsonb       NOT NULL DEFAULT '{}'::jsonb,
-  rev        bigint      NOT NULL DEFAULT 0,
-  updated_at timestamptz NOT NULL DEFAULT now()
+  user_id      bigint      PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  progress     jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  progress_rev bigint      NOT NULL DEFAULT 0,
+  data         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  data_rev     bigint      NOT NULL DEFAULT 0,
+  updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
 -- 事件流（校准/分析用）：只追加
