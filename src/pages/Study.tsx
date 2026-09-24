@@ -25,6 +25,7 @@ import { getWord } from '../lib/dict'
 import { markSeen } from '../lib/coverage'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
+import { useDoubleRightClick } from '../lib/rightclick'
 import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { armQuiz, loadQuiz } from '../lib/quiz'
@@ -437,6 +438,11 @@ export default function Study() {
     return () => window.removeEventListener('keydown', onKey)
   }, [go, toggleReveal, nextRound, copyCurrent])
 
+  // 双击右键（触控板双指点两次）= 下一轮；中心卡除外（那里单击=复制）
+  useDoubleRightClick(nextRound, {
+    ignore: (target) => !!target?.closest('.card.active'),
+  })
+
   // 已到 quiz 边界（Study 已 arm）：一律去 /quiz
   if (quizArmed) return <Navigate to="/quiz" replace />
 
@@ -504,9 +510,6 @@ export default function Study() {
         </span>
         <span>
           <kbd>Enter</kbd> 下一轮
-        </span>
-        <span>
-          <kbd>右键</kbd> 复制
         </span>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { useAudioPlayer } from '../lib/audio'
 import { advance, loadCascade, saveCascade } from '../lib/cascade'
 import { filterFromKey, poolOf } from '../lib/filter'
 import { useWheelFlip } from '../lib/wheel'
+import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
 import {
@@ -220,6 +221,13 @@ export default function Quiz() {
     finish('skip')
   }, [centerName, logCardLeave, finish])
 
+  // 下一轮（跳过）的一步：第一次进入待确认，第二次确认
+  // Enter / 双击右键 共用
+  const skipStep = useCallback(() => {
+    if (skipArmed) skip()
+    else setSkipArmed(true)
+  }, [skipArmed, skip])
+
   // 键盘：Space 发音 / H L 翻卡 / 1 2 3 评分 / Ctrl+Z 撤销 / Enter×2 跳过
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -239,8 +247,7 @@ export default function Quiz() {
       if (k === 'Enter') {
         e.preventDefault()
         if (e.repeat) return
-        if (skipArmed) skip()
-        else setSkipArmed(true)
+        skipStep()
         return
       }
       setSkipArmed(false)
@@ -260,7 +267,10 @@ export default function Quiz() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [go, playWord, rate, undoLast, skip, skipArmed])
+  }, [go, playWord, rate, undoLast, skipStep])
+
+  // 双击右键（触控板双指点两次）= 按一次 Enter（第一次待确认，第二次跳过）
+  useDoubleRightClick(skipStep)
 
   // 「跳过」按钮待确认 2.5s 后自动取消
   useEffect(() => {
