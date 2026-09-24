@@ -964,6 +964,30 @@ kbd {
   transform: scale(1.15);
 }
 
+/* 密码步的常驻提示（如「再输入密码」） */
+.pin-label {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--muted);
+  text-align: center;
+  transition: max-height 200ms ease, margin 200ms ease, opacity 160ms ease,
+    transform 200ms ease;
+}
+
+.pin-label.show {
+  max-height: 32px;
+  margin: 4px 0 0;
+  opacity: 1;
+  transform: none;
+}
+
 /* 输了非数字时的提示 */
 .pin-hint {
   box-sizing: border-box;

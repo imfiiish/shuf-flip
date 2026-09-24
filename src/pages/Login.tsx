@@ -12,16 +12,20 @@ const PIN_LEN = 4
 export default function Login() {
   const navigate = useNavigate()
   const [idx, setIdx] = useState(0)
-  // 0=只有标题+「进入」；1=输入 username（按钮「确认」）；2=输入 pin（按钮「进入」）
-  const [stage, setStage] = useState<0 | 1 | 2>(0)
+  // 0=进入；1=username（确认）；2=密码（进入）；3=再输一次密码确认（注册）
+  const [stage, setStage] = useState<0 | 1 | 2 | 3>(0)
   const [username, setUsername] = useState('')
   const [pin, setPin] = useState('')
+  // 第一次输入的密码，注册确认时比对
+  const [pass1, setPass1] = useState('')
+  // 密码步的常驻提示（如「再输入密码」）
+  const [pinLabel, setPinLabel] = useState('')
   // 中文/组合输入中：暂时用原生文字显示（逐字淡入层会让开）
   const [composing, setComposing] = useState(false)
   // username 校验提示：停笔一下才显示
   const [showHint, setShowHint] = useState(false)
-  // 输了非数字时的提示
-  const [pinHint, setPinHint] = useState(false)
+  // 密码步临时提示（请输入数字 / 两次不一致）
+  const [pinHint, setPinHint] = useState('')
   // 刚变可点（disabled → enabled）时给按钮一个「就绪」小反馈
   const [readyPulse, setReadyPulse] = useState(false)
   const usernameRef = useRef<HTMLInputElement>(null)
@@ -45,7 +49,7 @@ export default function Login() {
   // 每步自动聚焦
   useEffect(() => {
     if (stage === 1) usernameRef.current?.focus()
-    else if (stage === 2) pinRef.current?.focus()
+    else if (stage >= 2) pinRef.current?.focus()
   }, [stage])
 
   // kitty 式光标：canvas 画弹簧光标 + 按时间衰减的余晖（仅 username 步）
@@ -168,6 +172,8 @@ export default function Login() {
     if (stage !== 0 && !valid) {
       setStage(1)
       setPin('')
+      setPass1('')
+      setPinLabel('')
     }
   }, [stage, valid])
 
@@ -217,24 +223,24 @@ export default function Login() {
   // 卸载时清掉提示定时器
   useEffect(() => () => window.clearTimeout(pinHintTimer.current), [])
 
-  // 输了非数字：提示「请输入数字」，1.4s 后自动收
-  const warnNonDigit = () => {
-    setPinHint(true)
+  // 密码步临时提示：显示一会再自动收
+  const showPinNote = (text: string, ms = 1500) => {
+    setPinHint(text)
     window.clearTimeout(pinHintTimer.current)
-    pinHintTimer.current = window.setTimeout(() => setPinHint(false), 1400)
+    pinHintTimer.current = window.setTimeout(() => setPinHint(''), ms)
   }
 
   const onPinChange = (raw: string) => {
     if (/[^\d]/.test(raw)) {
-      warnNonDigit()
+      showPinNote('请输入数字')
     } else {
-      setPinHint(false)
+      setPinHint('')
       window.clearTimeout(pinHintTimer.current)
     }
     setPin(raw.replace(/\D/g, '').slice(0, PIN_LEN))
   }
 
-  // 按钮/回车统一走这里：进入 → 确认(username) → 进入(pin)
+  // 按钮/回车统一走这里：进入 → 确认(username) → 进入(pin) → 注册(再输一次)
   const advance = () => {
     if (stage === 0) {
       setStage(1)
@@ -244,15 +250,28 @@ export default function Login() {
       if (valid) setStage(2)
       return
     }
-    if (pin.length === PIN_LEN) {
+    if (pin.length !== PIN_LEN) return
+    if (stage === 2) {
+      // 假设后台验证：没这个账号 → 转入注册，清空重输一次
+      setPass1(pin)
+      setPin('')
+      setPinLabel('再输入密码')
+      setStage(3)
+      return
+    }
+    // stage 3：两次一致才注册成功
+    if (pin === pass1) {
       login(username)
       navigate('/', { replace: true })
+    } else {
+      showPinNote('两次不一致，请重输')
+      setPin('')
     }
   }
 
   return (
     <div className="page">
-      <div className={`panel login-panel${stage === 2 ? ' stage-2' : ''}`}>
+      <div className={`panel login-panel${stage >= 2 ? ' stage-2' : ''}`}>
         <h1 className="brand">
           {BRANDS.map((name, i) => (
             <span key={name} className={i === idx ? 'on' : ''} aria-hidden={i !== idx}>
@@ -263,7 +282,7 @@ export default function Login() {
 
         {/* 点「进入」后撑开；进 pin 阶段后 username 与 pin 在同一格交接 */}
         <div
-          className={`login-field${stage !== 0 ? ' open' : ''}${stage === 2 ? ' pin-mode' : ''}`}
+          className={`login-field${stage !== 0 ? ' open' : ''}${stage >= 2 ? ' pin-mode' : ''}`}
           aria-hidden={stage === 0}
         >
           <div className="login-face">
@@ -280,7 +299,7 @@ export default function Login() {
               placeholder="username"
               value={username}
               disabled={stage === 0}
-              readOnly={stage === 2}
+              readOnly={stage >= 2}
               tabIndex={stage === 1 ? 0 : -1}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
               onCompositionStart={() => setComposing(true)}
@@ -322,8 +341,8 @@ export default function Login() {
                 spellCheck={false}
                 maxLength={PIN_LEN}
                 value={pin}
-                disabled={stage !== 2}
-                tabIndex={stage === 2 ? 0 : -1}
+                disabled={stage < 2}
+                tabIndex={stage >= 2 ? 0 : -1}
                 aria-label="pin"
                 onChange={(e) => onPinChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -336,19 +355,24 @@ export default function Login() {
           <p className={`login-hint${showHint ? ' show' : ''}`} aria-hidden={!showHint}>
             3–20 位，字母开头，仅小写字母与数字
           </p>
+          <p className={`pin-label${pinLabel ? ' show' : ''}`} aria-hidden={!pinLabel}>
+            {pinLabel}
+          </p>
           <p className={`pin-hint${pinHint ? ' show' : ''}`} aria-hidden={!pinHint}>
-            请输入数字
+            {pinHint}
           </p>
         </div>
 
-        <div className={`login-actions${stage === 2 ? ' two' : ''}`}>
+        <div className={`login-actions${stage >= 2 ? ' two' : ''}`}>
           <button
             className="btn btn-ghost login-back"
-            aria-hidden={stage !== 2}
-            tabIndex={stage === 2 ? 0 : -1}
+            aria-hidden={stage < 2}
+            tabIndex={stage >= 2 ? 0 : -1}
             onClick={() => {
               setStage(1)
               setPin('')
+              setPass1('')
+              setPinLabel('')
             }}
           >
             返回
@@ -358,7 +382,7 @@ export default function Login() {
             disabled={!canPress}
             onClick={advance}
           >
-            {stage === 1 ? '确认' : '进入'}
+            {stage === 1 ? '确认' : stage === 3 ? '注册' : '进入'}
           </button>
         </div>
       </div>
