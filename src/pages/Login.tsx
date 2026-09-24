@@ -16,6 +16,8 @@ export default function Login() {
   const [stage, setStage] = useState<0 | 1 | 2>(0)
   const [username, setUsername] = useState('')
   const [pin, setPin] = useState('')
+  // 中文/组合输入中：暂时用原生文字显示（逐字淡入层会让开）
+  const [composing, setComposing] = useState(false)
   // username 校验提示：停笔一下才显示
   const [showHint, setShowHint] = useState(false)
   // 输了非数字时的提示
@@ -281,10 +283,27 @@ export default function Login() {
               readOnly={stage === 2}
               tabIndex={stage === 1 ? 0 : -1}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              onCompositionStart={() => setComposing(true)}
+              onCompositionEnd={(e) => {
+                setComposing(false)
+                setUsername(e.currentTarget.value.toLowerCase())
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && stage === 1) advance()
               }}
             />
+
+            {/* 逐字淡入的文字层（原生文字透明，只留这层可见） */}
+            <span
+              className={`login-value${composing ? ' composing' : ''}`}
+              aria-hidden="true"
+            >
+              {username.split('').map((ch, i) => (
+                <span key={i} className="login-char">
+                  {ch}
+                </span>
+              ))}
+            </span>
 
             {/* 隐藏量尺：量文字宽度，用来算光标位置 */}
             <span ref={measureRef} className="login-measure" aria-hidden="true" />

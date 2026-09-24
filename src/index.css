@@ -767,7 +767,7 @@ kbd {
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: var(--text);
+  color: transparent;
   font: inherit;
   font-size: 1.05rem;
   text-align: center;
@@ -776,8 +776,45 @@ kbd {
   transition: opacity 220ms ease;
 }
 
+/* 组合输入中：先用原生文字顶上（并显示原生光标）*/
+.login-input.composing {
+  color: var(--text);
+  caret-color: var(--accent);
+}
+
 .login-input::placeholder {
   color: var(--muted);
+}
+
+/* 逐字淡入的文字层 */
+.login-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: pre;
+  pointer-events: none;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--text);
+  transition: opacity 200ms ease;
+}
+
+.login-field.pin-mode .login-value,
+.login-value.composing {
+  opacity: 0;
+}
+
+.login-char {
+  display: inline-block;
+  animation: char-fade 220ms ease;
+}
+
+@keyframes char-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 /* kitty 式光标层：在文字下面画光标与余晖 */
