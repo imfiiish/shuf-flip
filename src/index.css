@@ -724,18 +724,18 @@ kbd {
   transform: none;
 }
 
-.login-field.pin-mode,
-.login-field.pin-mode:focus-within {
+.login-field.password-mode,
+.login-field.password-mode:focus-within {
   background: transparent;
   box-shadow: none;
 }
 
 /* username 卡片 hover：底部阴影再加一档（比 Study hover 更重） */
-.login-field.open:not(.pin-mode):hover {
+.login-field.open:not(.password-mode):hover {
   box-shadow: var(--card-shadow-hover);
 }
 
-/* username 与 pin 叠在同一格，保证同尺寸 */
+/* username 与 password 叠在同一格，保证同尺寸 */
 .login-face {
   position: relative;
   width: 100%;
@@ -743,19 +743,19 @@ kbd {
 }
 
 .login-input,
-.pin-dots {
+.password-dots {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.login-field.pin-mode .login-input {
+.login-field.password-mode .login-input {
   opacity: 0;
   pointer-events: none;
 }
 
-.login-field:not(.pin-mode) .pin-dots {
+.login-field:not(.password-mode) .password-dots {
   opacity: 0;
   pointer-events: none;
 }
@@ -801,7 +801,7 @@ kbd {
   transition: opacity 200ms ease;
 }
 
-.login-field.pin-mode .login-value,
+.login-field.password-mode .login-value,
 .login-value.composing {
   opacity: 0;
 }
@@ -828,7 +828,7 @@ kbd {
   transition: opacity 200ms ease;
 }
 
-.login-field.open:not(.pin-mode) .login-trail {
+.login-field.open:not(.password-mode) .login-trail {
   opacity: 1;
 }
 
@@ -869,7 +869,7 @@ kbd {
   transform: none;
 }
 
-/* 按钮行：单按钮时居中；进 pin 阶段时「确认」滑到右侧变「登录」，「返回」从左侧滑入 */
+/* 按钮行：单按钮时居中；进 password 阶段时「确认」滑到右侧变「登录」，「返回」从左侧滑入 */
 .login-actions {
   position: relative;
   width: min(280px, 72vw);
@@ -931,7 +931,7 @@ kbd {
   box-shadow: 0 8px 20px -12px var(--accent-ring);
 }
 
-.pin-dots {
+.password-dots {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -942,12 +942,12 @@ kbd {
   transition: opacity 220ms ease;
 }
 
-.pin-dots:hover .pin-dot:not(.on) {
+.password-dots:hover .password-dot:not(.on) {
   background: color-mix(in srgb, var(--text) 30%, transparent);
   transform: scale(1.08);
 }
 
-.pin-dot {
+.password-dot {
   width: 11px;
   height: 11px;
   border-radius: 50%;
@@ -955,17 +955,17 @@ kbd {
   transition: background 180ms ease, transform 180ms ease;
 }
 
-.pin-dots:focus-within .pin-dot:not(.on) {
+.password-dots:focus-within .password-dot:not(.on) {
   background: color-mix(in srgb, var(--text) 30%, transparent);
 }
 
-.pin-dot.on {
+.password-dot.on {
   background: var(--accent);
   transform: scale(1.15);
 }
 
 /* 密码步的常驻提示（如「再输入密码」） */
-.pin-label {
+.password-label {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
@@ -981,7 +981,7 @@ kbd {
     transform 200ms ease;
 }
 
-.pin-label.show {
+.password-label.show {
   max-height: 32px;
   margin: 4px 0 0;
   opacity: 1;
@@ -989,7 +989,7 @@ kbd {
 }
 
 /* 输了非数字时的提示 */
-.pin-hint {
+.password-hint {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
@@ -1005,7 +1005,7 @@ kbd {
     transform 200ms ease;
 }
 
-.pin-hint.show {
+.password-hint.show {
   max-height: 32px;
   margin: 6px 0 0;
   opacity: 1;
@@ -1013,7 +1013,7 @@ kbd {
 }
 
 /* 隐藏的真实输入：盖在圆点上，收数字、最多 4 位 */
-.pin-input {
+.password-input {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
