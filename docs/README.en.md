@@ -6,6 +6,12 @@ Vocabulary flashcards: shuffle a deck and flip to reveal.
 
 ![](images/study.png)
 
+## Shuffle
+
+## Replace
+
+## Flip
+
 ## Getting started
 
 ```bash

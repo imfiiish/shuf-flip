@@ -6,6 +6,12 @@
 
 ![](docs/images/study.png)
 
+## 洗牌
+
+## 换牌
+
+## 翻牌
+
 ## 快速开始
 
 ```bash
