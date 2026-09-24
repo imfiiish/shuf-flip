@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
-import { logout } from '../lib/auth'
+import { useSession } from '../lib/auth'
+import { markDataDirty } from '../lib/sync'
 import { allWords } from '../data/words'
 import { filterKey, matchesFilter } from '../lib/filter'
 import { removeCascade } from '../lib/cascade'
@@ -16,6 +17,7 @@ import TagPicker from './home/TagPicker'
 export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { logout } = useSession()
   const [activeBook, setActiveBook] = useState<Book | null>(null)
   // 旧数据里的自动名「词书1/2…」规整为「词书」；自定义名保留
   const [books, setBooks] = useState<Book[]>(() =>
@@ -44,6 +46,7 @@ export default function Home() {
 
   useEffect(() => {
     saveBooks(books)
+    markDataDirty() // 书本列表变了 → 推统计那包
   }, [books])
 
   return (
@@ -154,7 +157,7 @@ export default function Home() {
         type="button"
         className="icon-btn logout-btn"
         onClick={() => {
-          logout()
+          void logout()
           navigate('/login', { replace: true })
         }}
         aria-label="退出登录"

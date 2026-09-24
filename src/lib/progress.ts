@@ -94,6 +94,24 @@ export function saveCenter(key: string, deck: string, center: number): void {
   }
 }
 
+/** 导出各书位置（同步用） */
+export function centersSnapshot(): Record<string, CenterEntry> {
+  return Object.fromEntries(centers)
+}
+
+/** 用远端数据整体替换本地位置（同步用） */
+export function centersRestore(obj: unknown): void {
+  const next = new Map<string, CenterEntry>()
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      if (isCenterEntry(v)) next.set(k, v)
+    }
+  }
+  for (const k of centers.keys()) if (!next.has(k)) del('centers', k)
+  centers = next
+  for (const [k, v] of next) put('centers', k, v)
+}
+
 export async function hydrateProgress(): Promise<void> {
   const today = logicalDay()
 

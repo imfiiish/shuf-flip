@@ -25,6 +25,7 @@ import {
 import { getWord } from '../lib/dict'
 import { enterRound, markCentered, markChecked } from '../lib/stats'
 import { addPending, takePending } from '../lib/pending'
+import { flushAll, markProgressDirty } from '../lib/sync'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
@@ -150,6 +151,7 @@ export default function Study() {
     if (centerName) {
       markCentered(centerName)
       addPending(fk, centerName)
+      markProgressDirty()
     }
   }, [centerName, quizArmed, fk])
 
@@ -269,6 +271,7 @@ export default function Study() {
   useExitLifecycle({
     onPageHide: () => {
       leaveFnRef.current() // 补最后一张卡（card 在离卡时才写）
+      void flushAll() // 把进度/统计推上去（尽量）
       emitExit('unload')
     },
     onUnmount: () => {
@@ -340,6 +343,7 @@ export default function Study() {
         emitCardLeave()
         armQuiz(fk, cands, c.r)
         logEvent('study_to_quiz', { batch: c.r })
+        void flushAll()
         emitExit('quiz')
         navigate('/quiz')
         return
@@ -351,6 +355,7 @@ export default function Study() {
     saveCascade(fk, next)
     enterRound(`${fk}#${next.r}`)
     emitCardLeave()
+    void flushAll() // 每轮结束：推进度 + 统计
     roundIndexRef.current += 1
     logEvent('study_round', { index: roundIndexRef.current, words: next.round })
     if (next.round[0]) beginCard('init')

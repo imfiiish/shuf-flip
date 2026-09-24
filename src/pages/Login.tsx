@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../lib/auth'
+import { api, ApiError } from '../lib/api'
+import { useSession } from '../lib/auth'
+import { pullState } from '../lib/sync'
 
 // 登录页品牌名：中英交替显示
 const BRANDS = ['Shuf & Flip', '洗牌 · 翻牌'] as const
@@ -11,6 +13,7 @@ const PASSWORD_LEN = 4
 
 export default function Login() {
   const navigate = useNavigate()
+  const { setUser } = useSession()
   const [idx, setIdx] = useState(0)
   // 0=进入；1=username（确认）；2=密码（进入）；3=再输一次密码确认（注册）
   const [stage, setStage] = useState<0 | 1 | 2 | 3>(0)
@@ -28,6 +31,10 @@ export default function Login() {
   const [passwordHint, setPasswordHint] = useState('')
   // 刚变可点（disabled → enabled）时给按钮一个「就绪」小反馈
   const [readyPulse, setReadyPulse] = useState(false)
+  // 该用户名是否已注册（stage1 确认时查一次）：决定 stage2 是「登录」还是「注册」
+  const [isNew, setIsNew] = useState(false)
+  // 请求进行中（防重复提交）
+  const [busy, setBusy] = useState(false)
   const usernameRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const trailRef = useRef<HTMLCanvasElement>(null)
@@ -37,7 +44,9 @@ export default function Login() {
 
   const valid = USERNAME_RE.test(username)
   // 按钮是否可点：未展开时可（进入）；username 步要合法；password 步要满 4 位
-  const canPress = stage === 0 || (stage === 1 ? valid : password.length === PASSWORD_LEN)
+  const canPress =
+    !busy &&
+    (stage === 0 || (stage === 1 ? valid : password.length === PASSWORD_LEN))
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -240,32 +249,94 @@ export default function Login() {
     setPassword(raw.replace(/\D/g, '').slice(0, PASSWORD_LEN))
   }
 
+  // 把 ApiError 转成一句人话提示
+  const errText = (e: unknown): string => {
+    if (e instanceof ApiError) {
+      if (e.status === 429)
+        return `尝试太频繁，请 ${e.retryAfter ?? '稍后'} 秒后再试`
+      if (e.code === 'invalid_credentials') return '账号或密码错误'
+      if (e.code === 'username_taken') return '这个用户名已被注册'
+      if (e.code === 'username_unavailable') return '这个用户名不可用'
+      if (e.code === 'invalid_password') return '请输入 4 位数字密码'
+      if (e.code === 'network') return '网络异常，请重试'
+    }
+    return '出错了，请重试'
+  }
+
   // 按钮/回车统一走这里：进入 → 确认(username) → 进入(password) → 注册(再输一次)
-  const advance = () => {
+  const advance = async () => {
+    if (busy) return
     if (stage === 0) {
       setStage(1)
       return
     }
     if (stage === 1) {
-      if (valid) setStage(2)
+      if (!valid) return
+      // 先问后端这个用户名存不存在，决定下一步是登录还是注册
+      setBusy(true)
+      try {
+        const { exists } = await api.exists(username)
+        setIsNew(!exists)
+        setStage(2)
+      } catch (e) {
+        showPasswordNote(errText(e))
+      } finally {
+        setBusy(false)
+      }
       return
     }
     if (password.length !== PASSWORD_LEN) return
-    if (stage === 2) {
-      // 假设后台验证：没这个账号 → 转入注册，清空重输一次
+
+    if (stage === 2 && isNew) {
+      // 新账号：先记下密码，再输一次确认
       setPass1(password)
       setPassword('')
       setPasswordLabel('再输入密码')
       setStage(3)
       return
     }
-    // stage 3：两次一致才注册成功
-    if (password === pass1) {
-      login(username)
-      navigate('/', { replace: true })
-    } else {
+
+    if (stage === 2) {
+      // 已有账号：直接登录
+      setBusy(true)
+      try {
+        const { user } = await api.login(username, password)
+        try {
+          await pullState()
+        } catch {
+          /* 同步失败不阻塞 */
+        }
+        setUser(user)
+        navigate('/', { replace: true })
+      } catch (e) {
+        showPasswordNote(errText(e))
+        setPassword('')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
+    // stage 3：注册（两次一致才提交）
+    if (password !== pass1) {
       showPasswordNote('两次不一致，请重输')
       setPassword('')
+      return
+    }
+    setBusy(true)
+    try {
+      const { user } = await api.register(username, password, true)
+      try {
+        await pullState()
+      } catch {
+        /* 同步失败不阻塞 */
+      }
+      setUser(user)
+      navigate('/', { replace: true })
+    } catch (e) {
+      showPasswordNote(errText(e))
+    } finally {
+      setBusy(false)
     }
   }
 

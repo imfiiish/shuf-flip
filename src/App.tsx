@@ -1,19 +1,22 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isLoggedIn } from './lib/auth'
+import { SessionProvider, useSession } from './lib/auth'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Study from './pages/Study'
 import Quiz from './pages/Quiz'
 
-// 未登录访问受保护页面时，重定向回 /login
+// 未登录访问受保护页面时，重定向回 /login（会话校验期间先不渲染）
 function RequireAuth({ children }: { children: ReactNode }) {
-  if (!isLoggedIn()) return <Navigate to="/login" replace />
+  const { user, loading } = useSession()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
 export default function App() {
   return (
+    <SessionProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -45,5 +48,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </SessionProvider>
   )
 }

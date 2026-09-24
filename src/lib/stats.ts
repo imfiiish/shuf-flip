@@ -8,7 +8,7 @@
 //   lastCheckedRound 上次计入 checked 的回合序
 //   rating           最近一次 quiz 评分（0=还没评过），复习调度的「真值」
 //   ratingAt         最近一次 quiz 评分的时间戳 ms
-import { loadStore, put, getKV } from './kv'
+import { loadStore, put, del, getKV } from './kv'
 
 /** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
 export type Rating = 1 | 2 | 3
@@ -169,9 +169,34 @@ export function roundSeq(): number {
   return seq
 }
 
-/** 全量快照（调试用，控制台 `__stats()`） */
+/** 全量快照（调试用 `__stats()`，同步也用） */
 export function statsSnapshot(): Record<string, WordStat> {
   return Object.fromEntries(cache)
+}
+
+/** 用远端数据整体替换本地（同步用） */
+export function statsRestore(obj: unknown): void {
+  const next = new Map<string, WordStat>()
+  if (obj && typeof obj === 'object') {
+    for (const [w, v] of Object.entries(obj)) {
+      const s = parseStat(v)
+      if (s) next.set(w, s)
+    }
+  }
+  for (const w of cache.keys()) if (!next.has(w)) del('stats', w)
+  cache = next
+  for (const [w, s] of next) put('stats', w, s)
+}
+
+/** 全局回合序快照/还原（同步用；不含会让 lastRound 对不上） */
+export function statsSeqSnapshot(): { seq: number; sig: string } {
+  return { seq, sig: seqSig }
+}
+export function statsSeqRestore(o: unknown): void {
+  const r = (o ?? {}) as { seq?: unknown; sig?: unknown }
+  seq = typeof r.seq === 'number' ? r.seq : 0
+  seqSig = typeof r.sig === 'string' ? r.sig : ''
+  put('misc', SEQ_KEY, { seq, sig: seqSig })
 }
 
 export async function hydrateStats(): Promise<void> {

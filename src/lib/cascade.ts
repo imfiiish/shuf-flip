@@ -172,3 +172,21 @@ export async function hydrateCascade(): Promise<void> {
     if (isCascade(v)) cache.set(k, v)
   }
 }
+
+/** 导出全部级联（同步用） */
+export function cascadeSnapshot(): Record<string, Cascade> {
+  return Object.fromEntries(cache)
+}
+
+/** 用远端数据整体替换本地（同步用，IDB 同步增删） */
+export function cascadeRestore(obj: unknown): void {
+  const next = new Map<string, Cascade>()
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      if (isCascade(v)) next.set(k, v)
+    }
+  }
+  for (const k of cache.keys()) if (!next.has(k)) del('cascade', k)
+  cache = next
+  for (const [k, v] of next) put('cascade', k, v)
+}

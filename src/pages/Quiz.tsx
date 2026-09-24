@@ -15,6 +15,7 @@ import {
   restoreRating,
   type RatingSnapshot,
 } from '../lib/stats'
+import { flushAll } from '../lib/sync'
 import {
   clearQuiz,
   loadQuiz,
@@ -130,6 +131,7 @@ export default function Quiz() {
         }
         clearQuiz()
       }
+      void flushAll() // 评分改了统计、级联前进 → 推上去
       emitExit(reason)
       navigate('/study', { replace: true })
     },

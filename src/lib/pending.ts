@@ -37,3 +37,21 @@ export async function hydratePending(): Promise<void> {
     if (isStringArray(v)) cache.set(k, v)
   }
 }
+
+/** 导出待考池（同步用） */
+export function pendingSnapshot(): Record<string, string[]> {
+  return Object.fromEntries(cache)
+}
+
+/** 用远端数据整体替换本地（同步用） */
+export function pendingRestore(obj: unknown): void {
+  const next = new Map<string, string[]>()
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      if (isStringArray(v)) next.set(k, v)
+    }
+  }
+  for (const k of cache.keys()) if (!next.has(k)) del('pendingQuiz', k)
+  cache = next
+  for (const [k, v] of next) put('pendingQuiz', k, v)
+}
