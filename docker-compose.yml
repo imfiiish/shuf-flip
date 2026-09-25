@@ -1,7 +1,7 @@
 # 本地开发用 Postgres。生产用你托管环境的 Postgres（改 DATABASE_URL 即可）。
 services:
   db:
-    image: postgres:16
+    image: postgres:18
     container_name: shuf-flip-db
     environment:
       POSTGRES_USER: shuf
@@ -10,7 +10,8 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PG18+ 官方镜像的挂载点：数据存在 /var/lib/postgresql/<major>/docker
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U shuf -d shuf']
       interval: 5s
