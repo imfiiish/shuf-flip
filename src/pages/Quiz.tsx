@@ -72,7 +72,7 @@ export default function Quiz() {
 
   // 音频：按需播放 + 预加载本次 quiz，首次不延迟
   const play = useAudioPlayer()
-  const detailsReady = useWordDetails()
+  const detailsReady = useWordDetails(order)
   usePreloadWords(order, detailsReady)
 
   // —— 埋点：quiz_enter / quiz_card / quiz_rate / quiz_undo / quiz_exit ——

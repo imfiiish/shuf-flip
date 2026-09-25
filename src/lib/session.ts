@@ -2,17 +2,30 @@
 import { useEffect, useRef, useState } from 'react'
 import { preloadAudio } from './audio'
 import { flushBeacon } from './analytics'
-import { detailsReady, findWord, loadDetails } from '../data/words'
+import { findWord, loadDetails } from '../data/words'
 
-/** 详情（音标/释义/音频）是否就绪；未就绪时触发加载并等其完成 */
-export function useWordDetails(): boolean {
-  const [ready, setReady] = useState(detailsReady)
+/**
+ * 拉取这组词的详情（音标/释义/音频），返回是否就绪。
+ * 词变化时重新拉；失败也放行（只是没有释义/音频）。
+ */
+export function useWordDetails(names: readonly string[]): boolean {
+  // 用拼接 key 做依赖，避免数组每次渲染换引用导致重复请求
+  const key = names.join('\u0000')
+  const namesRef = useRef(names)
+  namesRef.current = names
+
+  const [ready, setReady] = useState(false)
   useEffect(() => {
-    void loadDetails().then(
-      () => setReady(true),
-      () => setReady(true), // 失败也放行，只是没有释义/音频
+    let alive = true
+    setReady(false)
+    void loadDetails(namesRef.current).then(
+      () => alive && setReady(true),
+      () => alive && setReady(true), // 失败也放行
     )
-  }, [])
+    return () => {
+      alive = false
+    }
+  }, [key])
   return ready
 }
 

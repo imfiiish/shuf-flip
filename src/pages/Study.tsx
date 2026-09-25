@@ -298,7 +298,7 @@ export default function Study() {
   useWheelFlip(go)
 
   // 音频：按需播放（同一时刻只播一个），并预加载这一轮，首次不延迟
-  const detailsReady = useWordDetails()
+  const detailsReady = useWordDetails(deck)
   const play = useAudioPlayer()
 
   usePreloadWords(deck, detailsReady)

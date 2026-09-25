@@ -78,7 +78,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
-  const detailsReady = useWordDetails()
+  const detailsReady = useWordDetails(round)
   const play = useAudioPlayer()
   const playWord = (name: string) => {
     const w = findWord(name)
