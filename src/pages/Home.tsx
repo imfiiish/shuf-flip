@@ -3,12 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { CheckIcon, CloseIcon } from '../components/icons'
 import { useSession } from '../lib/auth'
-import { markDataDirty } from '../lib/sync'
-import { allWords } from '../data/words'
-import { filterKey, matchesFilter } from '../lib/filter'
-import { removeCascade } from '../lib/cascade'
-import { statsCoverage } from '../lib/stats'
-import { revealedCount } from '../lib/progress'
+import { filterKey } from '../lib/filter'
+import { fetchSummary } from '../lib/study'
+import type { StudySummary } from '../lib/api'
 import type { Book } from '../lib/books'
 import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
 import BookDialog from './home/BookDialog'
@@ -46,7 +43,25 @@ export default function Home() {
 
   useEffect(() => {
     saveBooks(books)
-    markDataDirty() // 书本列表变了 → 推统计那包
+  }, [books])
+
+  // 每本书的 total/seen/revealed 由服务器汇总
+  const [summaries, setSummaries] = useState<Record<number, StudySummary>>({})
+  useEffect(() => {
+    let alive = true
+    void Promise.all(
+      books.map((b) =>
+        fetchSummary(filterKey(b.filter)).then(
+          (s) => [b.id, s] as const,
+          () => [b.id, { total: 0, seen: 0, revealed: 0 }] as const,
+        ),
+      ),
+    ).then((entries) => {
+      if (alive) setSummaries(Object.fromEntries(entries))
+    })
+    return () => {
+      alive = false
+    }
   }, [books])
 
   return (
@@ -55,12 +70,10 @@ export default function Home() {
       <div className="bookshelf">
         <div className="bookshelf-inner">
           {books.map((book) => {
-            const bookWords = allWords()
-              .filter((w) => matchesFilter(w, book.filter))
-              .map((w) => w.word)
-            const total = bookWords.length
-            const seen = statsCoverage(bookWords)
-            const revealed = revealedCount(bookWords)
+            const s = summaries[book.id]
+            const total = s?.total ?? 0
+            const seen = s?.seen ?? 0
+            const revealed = s?.revealed ?? 0
             const seenPct = total ? (seen / total) * 100 : 0
             const revPct = total ? (revealed / total) * 100 : 0
             return (
@@ -99,7 +112,6 @@ export default function Home() {
                 onClick={() => {
                   if (confirmId === book.id) {
                     setBooks((b) => b.filter((x) => x.id !== book.id))
-                    removeCascade(filterKey(book.filter))
                     setActiveBook((a) => (a?.id === book.id ? null : a))
                     setConfirmId(null)
                   } else {

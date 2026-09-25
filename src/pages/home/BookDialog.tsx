@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
 import { setActiveFilter, type Book } from '../../lib/books'
 import { copyText } from '../../lib/clipboard'
-import { filterKey, matchesFilter } from '../../lib/filter'
-import { ensureCascade, saveCascade } from '../../lib/cascade'
+import { filterKey } from '../../lib/filter'
+import { api } from '../../lib/api'
 import { useAudioPlayer } from '../../lib/audio'
 import { usePreloadWords, useWordDetails } from '../../lib/session'
-import { allWords, findWord } from '../../data/words'
+import { findWord } from '../../data/words'
 
 type Props = {
   book: Book
@@ -40,23 +40,23 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   const key = useMemo(() => filterKey(book.filter), [book])
-  const all = useMemo(
-    () =>
-      allWords()
-        .filter((w) => matchesFilter(w, book.filter))
-        .map((w) => w.word),
-    [book],
-  )
 
-  // 本轮来自级联窗口（没有存档则新建并画第一轮）
-  const [cascade] = useState(() => ensureCascade(key, all))
-
-  // 落盘
+  // 本轮由服务器发牌（与 /study 拿到的同一轮）
+  const [round, setRound] = useState<string[]>([])
   useEffect(() => {
-    saveCascade(key, cascade)
-  }, [key, cascade])
-
-  const round = cascade.round
+    let alive = true
+    void api.studyRound(key, false).then(
+      (res) => {
+        if (alive) setRound(res.round)
+      },
+      () => {
+        if (alive) setRound([])
+      },
+    )
+    return () => {
+      alive = false
+    }
+  }, [key])
 
   // 点词 → 复制到剪贴板 + 播放发音
   const [copied, setCopied] = useState<string | null>(null)

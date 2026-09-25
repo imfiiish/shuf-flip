@@ -2,6 +2,29 @@
 // 约定：成功返回解析后的 JSON；失败抛 ApiError（带 HTTP 状态与后端 error code）。
 export type User = { id: number; username: string }
 
+/** 一轮（服务器发牌） */
+export type StudyRound = {
+  roundId: number
+  r: number
+  fk: string
+  round: string[]
+  center: number
+}
+
+/** 一张卡的动作（study 上报用） */
+export type ActionSlot = {
+  slot: number
+  met: boolean
+  reveals: number
+}
+
+/** Home 汇总 */
+export type StudySummary = {
+  total: number
+  seen: number
+  revealed: number
+}
+
 export class ApiError extends Error {
   status: number
   code: string
@@ -94,22 +117,31 @@ export const api = {
       `/auth/exists?username=${encodeURIComponent(username)}`,
     ),
 
-  // —— 状态同步（progress=进度，data=统计，各自一版）——
-  getState: () =>
-    request<{
-      progress: { data: unknown; rev: number }
-      data: { data: unknown; rev: number }
-    }>('/state'),
-  putProgress: (data: unknown, rev: number) =>
-    request<{ rev: number }>('/state/progress', {
-      method: 'PUT',
-      body: { data, rev },
+  // —— Model B：服务器发牌 / 收动作 ——
+  studyRound: (fk: string, advance: boolean) =>
+    request<StudyRound>('/study/round', {
+      method: 'POST',
+      body: { fk, advance },
     }),
-  putData: (data: unknown, rev: number) =>
-    request<{ rev: number }>('/state/data', {
-      method: 'PUT',
-      body: { data, rev },
+  studyActions: (roundId: number, slots: ActionSlot[]) =>
+    request<{ ok: true; applied: number }>('/study/actions', {
+      method: 'POST',
+      body: { roundId, slots },
     }),
+  studyProgress: (fk: string, center: number) =>
+    request<{ ok: true }>('/study/progress', {
+      method: 'PUT',
+      body: { fk, center },
+    }),
+  studyRatings: (ratings: { word: string; rating: number }[]) =>
+    request<{ ok: true; applied: number }>('/study/ratings', {
+      method: 'POST',
+      body: { ratings },
+    }),
+  studySummary: (fk: string) =>
+    request<StudySummary>(
+      `/study/summary?fk=${encodeURIComponent(fk)}`,
+    ),
 
   // —— 事件 ——
   sendEvents: (events: unknown[]) =>

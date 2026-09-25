@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import { api, type User } from './api'
-import { clearLocalState, flushAll, pullState } from './sync'
+import { clearLocalState } from './sync'
 
 type SessionValue = {
   user: User | null
@@ -31,15 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       try {
         const { user } = await api.me()
         if (!alive) return
-        if (user) {
-          // 已登录 → 先拉服务端状态再放行，保证看到的是最新的进度
-          try {
-            await pullState()
-          } catch {
-            /* 同步失败不阻塞进入 */
-          }
-          if (!alive) return
-        }
+        if (!alive) return
         setUser(user)
       } catch {
         if (alive) setUser(null)
@@ -54,16 +46,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await flushAll() // 先把未推的推上去
-    } catch {
-      /* 忽略 */
-    }
-    try {
       await api.logout()
     } catch {
       /* 网络异常也照常本地登出 */
     }
-    clearLocalState() // 服务器才是权威；下次登录再拉回
+    clearLocalState() // 服务器才是权威；下次登录重新开始
     setUser(null)
   }, [])
 

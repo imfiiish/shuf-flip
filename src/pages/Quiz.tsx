@@ -4,19 +4,13 @@ import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import { findWord } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
-import { advance, loadCascade, saveCascade } from '../lib/cascade'
-import { filterFromKey, poolOf } from '../lib/filter'
+import { api } from '../lib/api'
+import { reportRatings } from '../lib/study'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
-import {
-  markRated,
-  restoreRating,
-  type Rating,
-  type RatingSnapshot,
-} from '../lib/stats'
-import { flushAll } from '../lib/sync'
+import type { Rating } from '../lib/stats'
 import {
   clearQuiz,
   loadQuiz,
@@ -62,8 +56,6 @@ export default function Quiz() {
   const doneRef = useRef(false)
   /** quiz_enter 只记一次（StrictMode 下 effect 会跑两遍） */
   const enteredRef = useRef(false)
-  /** 本 quiz 每个词评分前的 stats 快照（Ctrl+Z 撤销时还原） */
-  const prevRatingRef = useRef(new Map<string, RatingSnapshot>())
 
   // A1 等比缩放（舞台 1200×360）+ 底部评级条测量
   const { appRef, hintsRef, scale } = useStageScale()
@@ -118,24 +110,26 @@ export default function Quiz() {
     [],
   )
 
-  // 结束（评完或跳过）：推进级联一轮 + 清 quiz + 回 /study
+  // 结束（评完或跳过）：上报评分 + 服务器推进一轮 + 清 quiz + 回 /study
   const finish = useCallback(
     (reason: 'done' | 'skip') => {
       if (doneRef.current) return
       doneRef.current = true
-      if (quiz) {
-        const c = loadCascade(quiz.fk)
-        // 只在批次一致时推进，避免重复/错位 advance
-        if (c && c.r === quiz.batch) {
-          saveCascade(quiz.fk, advance(c, poolOf(filterFromKey(quiz.fk))))
-        }
-        clearQuiz()
-      }
-      void flushAll() // 评分改了统计、级联前进 → 推上去
+      const q = quiz
       emitExit(reason)
-      navigate('/study', { replace: true })
+      if (q) {
+        reportRatings(
+          Object.entries(ratings).map(([word, rating]) => ({ word, rating })),
+        )
+        clearQuiz()
+        // 等服务器推进到下一轮再跳，否则 /study 可能取到推进前的旧轮；失败也跳
+        const toStudy = () => navigate('/study', { replace: true })
+        void api.studyRound(q.fk, true).then(toStudy, toStudy)
+      } else {
+        navigate('/study', { replace: true })
+      }
     },
-    [quiz, emitExit, navigate],
+    [quiz, ratings, emitExit, navigate],
   )
 
   // 空格：只发音，不显示释义
@@ -154,9 +148,6 @@ export default function Quiz() {
       setRatings(nextRatings)
       setUndo(nextUndo)
       setSkipArmed(false)
-      // 首次评该词时记下评分前快照（撤销用）；重评不覆盖
-      const snap = markRated(w, v)
-      if (!prevRatingRef.current.has(w)) prevRatingRef.current.set(w, snap)
       logEvent('quiz_rate', {
         word: w,
         rating: v,
@@ -189,9 +180,6 @@ export default function Quiz() {
     const nextRatings = { ...ratings }
     const rating = nextRatings[w]
     delete nextRatings[w]
-    // stats 里刚写的评分一并回滚
-    const snap = prevRatingRef.current.get(w)
-    if (snap) restoreRating(w, snap)
     logCardLeave(centerName)
     setUndo(nextUndo)
     setRatings(nextRatings)
@@ -303,9 +291,6 @@ export default function Quiz() {
 
   // 没有待做 quiz → 回 /study（互斥重定向）
   if (!quiz) return <Navigate to="/study" replace />
-
-  // 详情（音标/释义/音频）就绪前不渲染卡片
-  if (!detailsReady) return null
 
   const onCardClick = (_name: string, slot: Slot) => {
     if (slot === 0) playWord()
