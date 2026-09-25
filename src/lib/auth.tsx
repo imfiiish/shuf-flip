@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import { api, type User } from './api'
+import { pullBooks } from './books'
 import { clearLocalState } from './sync'
 
 type SessionValue = {
@@ -31,7 +32,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       try {
         const { user } = await api.me()
         if (!alive) return
-        if (!alive) return
+        if (user) {
+          try {
+            await pullBooks() // 拉到词书，Home 才能同步读到
+          } catch {
+            /* 拉词书失败不阻塞进入 */
+          }
+          if (!alive) return
+        }
         setUser(user)
       } catch {
         if (alive) setUser(null)

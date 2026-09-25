@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
+import { pullBooks } from '../lib/books'
 import { useSession } from '../lib/auth'
 
 // 登录页品牌名：中英交替显示
@@ -300,6 +301,11 @@ export default function Login() {
       setBusy(true)
       try {
         const { user } = await api.login(username, password)
+        try {
+          await pullBooks()
+        } catch {
+          /* 拉词书失败不阻塞登录 */
+        }
         setUser(user)
         navigate('/', { replace: true })
       } catch (e) {
@@ -320,6 +326,11 @@ export default function Login() {
     setBusy(true)
     try {
       const { user } = await api.register(username, password, true)
+      try {
+        await pullBooks()
+      } catch {
+        /* 拉词书失败不阻塞注册 */
+      }
       setUser(user)
       navigate('/', { replace: true })
     } catch (e) {

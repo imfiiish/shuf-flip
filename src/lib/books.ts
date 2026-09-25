@@ -2,6 +2,7 @@ import type { TagFilter } from './filter'
 import { sameFilter } from './filter'
 import { isStringArray } from './guard'
 import { readJSON, writeJSON } from './storage'
+import { api } from './api'
 
 /** 一本词书 */
 export type Book = {
@@ -33,8 +34,37 @@ export function loadBooks(): Book[] {
   )
 }
 
+let pushTimer: ReturnType<typeof setTimeout> | undefined
+let pendingPush: Book[] | null = null
+
+/** 写本地（保持同步读取），并 debounce 推服务器 */
 export function saveBooks(books: Book[]): void {
   writeJSON(KEY, books)
+  pendingPush = books
+  if (pushTimer) return
+  pushTimer = setTimeout(() => {
+    pushTimer = undefined
+    const b = pendingPush
+    pendingPush = null
+    if (b) void api.putBooks(b).catch(() => {})
+  }, 500)
+}
+
+/** 登录后从服务器拉词书写入本地；服务器为空而本地有时，反推上去（首次迁移） */
+export async function pullBooks(): Promise<void> {
+  const res = await api.getBooks()
+  const remote = Array.isArray(res.books) ? (res.books as Book[]) : []
+  const local = loadBooks()
+  if (remote.length === 0 && local.length > 0) {
+    void api.putBooks(local).catch(() => {})
+    return
+  }
+  writeJSON(KEY, remote)
+}
+
+/** 只清本地（登出用），不推服务器 */
+export function clearBooksLocal(): void {
+  writeJSON(KEY, [])
 }
 
 /** 当前在学那本的筛选（没有 active 则 null） */

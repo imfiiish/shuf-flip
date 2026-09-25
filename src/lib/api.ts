@@ -151,4 +151,9 @@ export const api = {
       `/study/summary?fk=${encodeURIComponent(fk)}`,
     ),
 
+  // —— 词书（用户配置，整体读/写）——
+  getBooks: () => request<{ books: unknown[] }>('/books'),
+  putBooks: (books: unknown[]) =>
+    request<{ ok: true }>('/books', { method: 'PUT', body: { books } }),
+
 }
