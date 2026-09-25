@@ -27,7 +27,8 @@ export type Word = {
 
 let words: Word[] = []
 let currentLang: ContentLang = 'en'
-/** zh 音频目录：DB 只存文件名，路径按「语言+发音」拼（cn/hk 同名；当前只接普通话） */
+/** 音频目录：DB 只存文件名，路径按「语言+发音」拼（en / zh/cn；cn≠hk 同名） */
+const EN_AUDIO_DIR = 'en'
 const ZH_AUDIO_DIR = 'zh/cn'
 const byName = new Map<string, Word>()
 /** 已拉过详情的词（含「确认没有详情」的），避免重复请求 */
@@ -106,8 +107,9 @@ export async function loadDetails(names: readonly string[]): Promise<void> {
           .map(([pos, defs]) => ({ pos, defs }))
       }
       if (typeof d.audio === 'string')
-        w.audio =
-          currentLang === 'zh' ? `${ZH_AUDIO_DIR}/${d.audio}` : d.audio
+        w.audio = `${
+          currentLang === 'zh' ? ZH_AUDIO_DIR : EN_AUDIO_DIR
+        }/${d.audio}`
       if (typeof d.kind === 'string') w.kind = d.kind
     }
     for (const n of need) detailed.add(n)
