@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
+import SettingsDialog from '../components/SettingsDialog'
 import { CheckIcon, CloseIcon, GithubIcon, SettingsIcon } from '../components/icons'
 import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/auth'
@@ -32,6 +33,7 @@ export default function Home() {
     return !!st?.openPicker || shown.length === 0
   })
   const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   // 清掉「要求弹选词书」的路由 state，避免刷新时重复弹
   useEffect(() => {
@@ -179,10 +181,11 @@ export default function Home() {
 
       <ThemeToggle />
 
-      {/* 设置入口：占位，暂不做功能 */}
+      {/* 设置入口：语言切换 */}
       <button
         type="button"
         className="icon-btn settings-btn"
+        onClick={() => setSettingsOpen(true)}
         aria-label={t('home.settings')}
         title={t('home.settings')}
       >
@@ -263,6 +266,8 @@ export default function Home() {
           }}
         />
       )}
+
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

@@ -66,6 +66,12 @@ const ZH: Dict = {
   'home.bookWords': '{total} 词',
   'home.defaultBook': '词书',
 
+  // —— 设置 ——
+  'settings.title': '设置',
+  'settings.language': '语言',
+  'settings.note':
+    '切换语言会同时切换学习方向：中文界面学英文，English 界面学中文。',
+
   // —— Tag 选择 ——
   'picker.aria': '选择要学的 tag',
   'picker.title': '选择要学的 tag',
@@ -171,6 +177,12 @@ const EN: Dict = {
   'home.confirmDelete': 'Click again to confirm delete',
   'home.bookWords': '{total} words',
   'home.defaultBook': 'Book',
+
+  // —— settings ——
+  'settings.title': 'Settings',
+  'settings.language': 'Language',
+  'settings.note':
+    'Switching the language also switches the study direction: a Chinese UI studies English, an English UI studies Chinese.',
 
   // —— tag picker ——
   'picker.aria': 'Choose tags to study',
