@@ -1,8 +1,7 @@
 -- Up Migration
 
 -- 词表：word 本身即主键（稳定、可读、可 pg_dump、可直接重建）。
--- 来源是版本控制里的 public/data/<lang>/*.json，用 npm run import:words 装载：
--- 按 word upsert，幂等，不做删除（词只增/更新，历史引用永不失效）。
+-- 来源是版本控制里的 public/data/<lang>/*.json 或 server/seed，用 npm run seed 装载。
 CREATE TABLE words (
   word       text        PRIMARY KEY,
   tags       text[]      NOT NULL DEFAULT '{}',

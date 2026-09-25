@@ -1,45 +1,60 @@
-// Model B 客户端辅助：上报动作 / 进度 / 评分。
-// 全部 best-effort：网络失败忽略，服务端靠 PK 幂等，下次可重传。
-import { api, type ActionSlot, type StudySummary } from './api'
+// Model B 客户端辅助：上报当前轮进度（失焦推、聚焦拉）。
+// 进度用位图：metMask / checkedMask（16 张卡各一位）。
+import { api, type StudySummary } from './api'
 
-/** 上报一轮动作 */
-export function reportActions(roundId: number, slots: ActionSlot[]): void {
-  if (roundId <= 0 || slots.length === 0) return
-  void api.studyActions(roundId, slots).catch(() => {})
+export type RoundState = {
+  roundId: number
+  center: number
+  metMask: number
+  checkedMask: number
 }
 
-/** 关页时用 keepalive 尽量把动作送出去 */
-export function reportActionsBeacon(
-  roundId: number,
-  slots: ActionSlot[],
-): void {
-  if (roundId <= 0 || slots.length === 0) return
+function send(s: RoundState): void {
+  if (s.roundId <= 0) return
+  void api
+    .studyState(s.roundId, s.center, s.metMask, s.checkedMask)
+    .catch(() => {})
+}
+
+let timer: ReturnType<typeof setTimeout> | undefined
+let pending: RoundState | null = null
+
+/** 合并抖动后发送（换卡很频繁） */
+export function queueState(s: RoundState): void {
+  pending = s
+  if (timer) return
+  timer = setTimeout(() => {
+    timer = undefined
+    const p = pending
+    pending = null
+    if (p) send(p)
+  }, 800)
+}
+
+/** 立即发送（失焦 / 轮结束） */
+export function sendStateNow(s: RoundState): void {
+  if (timer) {
+    clearTimeout(timer)
+    timer = undefined
+  }
+  pending = null
+  send(s)
+}
+
+/** 关页保底（keepalive） */
+export function sendStateBeacon(s: RoundState): void {
+  if (s.roundId <= 0) return
   try {
-    void fetch('/api/study/actions', {
-      method: 'POST',
+    void fetch('/api/study/state', {
+      method: 'PUT',
       credentials: 'include',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ roundId, slots }),
+      body: JSON.stringify(s),
       keepalive: true,
     }).catch(() => {})
   } catch {
     /* 忽略 */
   }
-}
-
-let progressTimer: ReturnType<typeof setTimeout> | undefined
-let progressPending: { fk: string; center: number } | null = null
-
-/** 上报当前卡片下标（debounce 合并，很小） */
-export function reportProgress(fk: string, center: number): void {
-  progressPending = { fk, center }
-  if (progressTimer) return
-  progressTimer = setTimeout(() => {
-    progressTimer = undefined
-    const p = progressPending
-    progressPending = null
-    if (p) void api.studyProgress(p.fk, p.center).catch(() => {})
-  }, 1000)
 }
 
 /** Home 汇总 */

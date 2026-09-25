@@ -9,11 +9,12 @@ import type { TagFilter } from '../lib/filter'
 import { filterKey, poolOf } from '../lib/filter'
 import { loadRevealStore, saveRevealStore } from '../lib/progress'
 import { findWord, type Word } from '../data/words'
-import { api, ApiError, type ActionSlot } from '../lib/api'
+import { api, ApiError, type StudyRound } from '../lib/api'
 import {
-  reportActions,
-  reportActionsBeacon,
-  reportProgress,
+  queueState,
+  sendStateBeacon,
+  sendStateNow,
+  type RoundState,
 } from '../lib/study'
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
@@ -58,7 +59,6 @@ export default function Study() {
   const quizArmed = useMemo(() => loadQuiz() !== null, [])
 
   const [phase, setPhase] = useState<Phase>('loading')
-  const [fk, setFk] = useState('')
   const [deck, setDeck] = useState<string[]>([])
   const [center, setCenter] = useState(0)
   const [roundTick, setRoundTick] = useState(0)
@@ -67,39 +67,34 @@ export default function Study() {
   const fkRef = useRef('')
   const roundIdRef = useRef(0)
   const roundRRef = useRef(0)
+  const centerRef = useRef(0)
   const deckRef = useRef<string[]>([])
-  const metRef = useRef<boolean[]>([])
-  const revealsRef = useRef<number[]>([])
+  const metMaskRef = useRef(0)
+  const checkedMaskRef = useRef(0)
+  centerRef.current = center
 
-  const buildSlots = useCallback((): ActionSlot[] => {
-    return deckRef.current.map((_, i) => ({
-      slot: i,
-      met: metRef.current[i] ?? false,
-      reveals: revealsRef.current[i] ?? 0,
-    }))
-  }, [])
-
-  const applyRound = useCallback(
-    (res: {
-      roundId: number
-      r: number
-      fk: string
-      round: string[]
-      center: number
-    }) => {
-      fkRef.current = res.fk
-      roundIdRef.current = res.roundId
-      roundRRef.current = res.r
-      deckRef.current = res.round
-      metRef.current = new Array(res.round.length).fill(false) as boolean[]
-      revealsRef.current = new Array(res.round.length).fill(0) as number[]
-      setFk(res.fk)
-      setDeck(res.round)
-      setCenter(res.round.length ? Math.min(res.center, res.round.length - 1) : 0)
-      setRoundTick((t) => t + 1)
-    },
+  /** 组装当前进度（位图） */
+  const buildState = useCallback(
+    (): RoundState => ({
+      roundId: roundIdRef.current,
+      center: centerRef.current,
+      metMask: metMaskRef.current,
+      checkedMask: checkedMaskRef.current,
+    }),
     [],
   )
+
+  const applyRound = useCallback((res: StudyRound) => {
+    fkRef.current = res.fk
+    roundIdRef.current = res.roundId
+    roundRRef.current = res.r
+    deckRef.current = res.round
+    metMaskRef.current = res.metMask ?? 0
+    checkedMaskRef.current = res.checkedMask ?? 0
+    setDeck(res.round)
+    setCenter(res.round.length ? Math.min(res.center, res.round.length - 1) : 0)
+    setRoundTick((t) => t + 1)
+  }, [])
 
   // A1 等比缩放（舞台 1200×360）+ 底部提示行测量
   const { appRef, hintsRef, scale } = useStageScale()
@@ -159,7 +154,6 @@ export default function Study() {
         else setPhase('error')
       },
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizArmed, applyRound])
 
   const deckKey = useMemo(() => deck.join('.'), [deck])
@@ -169,21 +163,59 @@ export default function Study() {
     ? (findWord(centerName) ?? null)
     : null
 
-  // 中心卡变化 → 记 met + 待考池 + 上报进度
+  // 中心卡变化 → 记「碰到」+ 上报进度
   useEffect(() => {
     if (phase !== 'ready' || !centerName) return
-    metRef.current[center] = true
-    reportProgress(fk, center)
-  }, [phase, center, centerName, fk, deckKey])
+    metMaskRef.current |= 1 << centerRef.current
+    queueState(buildState())
+  }, [phase, center, centerName, deckKey, buildState])
 
-  // 关页/卸载时尽量把本轮动作送出去
+  // 聚焦拉、失焦推（多浏览器共用同一账号时同步）
+  const pullAndApply = useCallback(async () => {
+    const f = fkRef.current
+    if (!f || roundIdRef.current <= 0) return
+    try {
+      const res = await api.studyRound(f, false)
+      if (res.roundId !== roundIdRef.current) {
+        // 另一浏览器推进过：跟着跳到新轮
+        applyRound(res)
+        setRevealed(false)
+        clearCopy()
+      } else {
+        // 同一轮：合并远端位图，位置以后写为准
+        metMaskRef.current |= res.metMask
+        checkedMaskRef.current |= res.checkedMask
+        setCenter(
+          res.round.length ? Math.min(res.center, res.round.length - 1) : 0,
+        )
+      }
+    } catch {
+      /* 拉取失败忽略 */
+    }
+  }, [applyRound, clearCopy])
+
+  useEffect(() => {
+    if (phase !== 'ready') return
+    const push = () => sendStateNow(buildState())
+    const pull = () => void pullAndApply()
+    const onVis = () => {
+      if (document.hidden) push()
+      else pull()
+    }
+    window.addEventListener('blur', push)
+    window.addEventListener('focus', pull)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('blur', push)
+      window.removeEventListener('focus', pull)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [phase, buildState, pullAndApply])
+
+  // 关页/卸载保底
   useExitLifecycle({
-    onPageHide: () => {
-      reportActionsBeacon(roundIdRef.current, buildSlots())
-    },
-    onUnmount: () => {
-      reportActions(roundIdRef.current, buildSlots())
-    },
+    onPageHide: () => sendStateBeacon(buildState()),
+    onUnmount: () => sendStateNow(buildState()),
   })
 
   // 翻页
@@ -207,13 +239,14 @@ export default function Study() {
   const reveal = useCallback(() => {
     ensureDay()
     setRevealed(true)
-    const name = deckRef.current[center]
+    const name = deckRef.current[centerRef.current]
     if (name) {
       setRevealCounts((c) => ({ ...c, [name]: (c[name] || 0) + 1 }))
-      revealsRef.current[center] = (revealsRef.current[center] || 0) + 1
+      checkedMaskRef.current |= 1 << centerRef.current
+      queueState(buildState())
     }
     play(centerWord?.audio)
-  }, [play, centerWord, center, ensureDay])
+  }, [play, centerWord, ensureDay, buildState])
 
   const toggleReveal = useCallback(() => {
     if (revealed) play(centerWord?.audio)
@@ -232,13 +265,13 @@ export default function Study() {
 
   // 下一轮：到 quiz 边界先插 quiz；否则向服务器要下一轮
   const nextRound = useCallback(() => {
-    if (!fkRef.current) return
-    const fk = fkRef.current
+    const f = fkRef.current
+    if (!f) return
     const r = roundRRef.current
 
     const doAdvance = () => {
-      reportActions(roundIdRef.current, buildSlots())
-      void api.studyRound(fk, true).then(
+      sendStateNow(buildState())
+      void api.studyRound(f, true).then(
         (res) => {
           applyRound(res)
           setRevealed(false)
@@ -252,11 +285,11 @@ export default function Study() {
 
     // 到 quiz 边界：向服务器要题（待考池在服务器算）
     if (r > 0 && r % QUIZ_EVERY === 0) {
-      void api.studyQuiz(fk, r).then(
+      void api.studyQuiz(f, r).then(
         (res) => {
           if (res.quizId != null && res.words.length > 0) {
-            startQuiz(fk, r, res.quizId, res.words)
-            reportActions(roundIdRef.current, buildSlots())
+            startQuiz(f, r, res.quizId, res.words)
+            sendStateNow(buildState())
             navigate('/quiz')
           } else {
             doAdvance() // 没待考词：正常下一轮
@@ -267,7 +300,7 @@ export default function Study() {
       return
     }
     doAdvance()
-  }, [buildSlots, clearCopy, navigate])
+  }, [applyRound, buildState, clearCopy, navigate])
 
   // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {

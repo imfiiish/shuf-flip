@@ -9,13 +9,10 @@ export type StudyRound = {
   fk: string
   round: string[]
   center: number
-}
-
-/** 一张卡的动作（study 上报用） */
-export type ActionSlot = {
-  slot: number
-  met: boolean
-  reveals: number
+  /** 碰过的卡（16 位位图） */
+  metMask: number
+  /** 翻开过的卡（16 位位图） */
+  checkedMask: number
 }
 
 /** Home 汇总 */
@@ -123,16 +120,16 @@ export const api = {
       method: 'POST',
       body: { fk, advance },
     }),
-  studyActions: (roundId: number, slots: ActionSlot[]) =>
-    request<{ ok: true; applied: number }>('/study/actions', {
-      method: 'POST',
-      body: { roundId, slots },
-    }),
-  studyProgress: (fk: string, center: number) =>
-    request<{ ok: true }>('/study/progress', {
-      method: 'PUT',
-      body: { fk, center },
-    }),
+  studyState: (
+    roundId: number,
+    center: number,
+    metMask: number,
+    checkedMask: number,
+  ) =>
+    request<{ ok: true; metMask: number; checkedMask: number }>(
+      '/study/state',
+      { method: 'PUT', body: { roundId, center, metMask, checkedMask } },
+    ),
   studyQuiz: (fk: string, batch: number) =>
     request<{ quizId: number | null; words: string[] }>('/study/quiz', {
       method: 'POST',
