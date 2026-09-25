@@ -1,15 +1,14 @@
-// Quiz（每 WINDOW_ROUNDS 轮一次的自测）
+// Quiz（每 8 轮一次的自测）
 //
-// 学完 8 轮、活跃窗口即将换新前，从「这 8 轮里 center 过的词」（待考池）随机抽
-// 至多 16 个，逐个打 1/2/3（陌生/模糊/熟悉）。不足 16 时有几张考几张。
-// 状态持久化，刷新可续；结束/跳过后推进级联。
+// 学完 8 轮、活跃窗口即将换新前，服务器从「这 8 轮里 met 过的词」（待考池）
+// 随机抽至多 16 个（见 server /api/study/quiz），客户端逐个打 1/2/3。
+// 本地只存 UI 状态（题目、评分、撤销栈、位置），刷新可续。
 //
 // 「是否待做 quiz」以本模块存的 QuizState 是否存在为准：
-//  - Study 到达 quiz 边界时先 armQuiz（抽词落盘）再跳 /quiz
+//  - Study 到达边界时先向服务器要题（startQuiz 落盘）再跳 /quiz
 //  - /study 挂载时若存在 QuizState → 重定向到 /quiz
 //  - /quiz 挂载时若不存在 QuizState → 重定向到 /study
 import { getKV, put, del } from './kv'
-import { pick } from './random'
 import { isStringArray } from './guard'
 
 /** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
@@ -19,13 +18,12 @@ export function isRating(v: unknown): v is Rating {
   return v === 1 || v === 2 || v === 3
 }
 
-/** 每份 quiz 抽取的词数 */
-const QUIZ_SIZE = 16
-
 /** Ctrl+Z 撤销栈深度：最多连续撤 3 次 */
 export const UNDO_LIMIT = 3
 
 export type QuizState = {
+  /** 服务器签发的 quiz id（0 = 旧数据，缺失） */
+  quizId: number
   /** 目标词书（filterKey） */
   fk: string
   /** 触发时的 cascade.r（批次：8/16/24…） */
@@ -55,6 +53,7 @@ function parseQuiz(v: unknown): QuizState | null {
       ? o.center
       : 0
   return {
+    quizId: Number.isInteger(o.quizId) ? (o.quizId as number) : 0,
     fk: o.fk,
     batch: o.batch,
     words: o.words,
@@ -88,20 +87,22 @@ export async function hydrateQuiz(): Promise<void> {
 }
 
 /**
- * 从候选词（Study 传该书「待考池」：自上次 quiz 以来 center 过的词）抽词并落盘。
- * 候选不足 QUIZ_SIZE 时有几张考几张；已存在则不覆盖。
+ * 用服务器发来的题目建立本地 quiz 状态（题目由服务器从待考池抽）。
+ * 已存在则不覆盖（续做）。
  */
-export function armQuiz(
+export function startQuiz(
   fk: string,
-  candidates: readonly string[],
   batch: number,
+  quizId: number,
+  words: string[],
 ): QuizState {
   const existing = loadQuiz()
   if (existing) return existing
   const state: QuizState = {
+    quizId,
     fk,
     batch,
-    words: pick(candidates, QUIZ_SIZE),
+    words,
     ratings: {},
     undo: [],
     center: 0,

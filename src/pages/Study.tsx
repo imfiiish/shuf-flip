@@ -9,7 +9,6 @@ import type { TagFilter } from '../lib/filter'
 import { filterKey, poolOf } from '../lib/filter'
 import { loadRevealStore, saveRevealStore } from '../lib/progress'
 import { findWord, type Word } from '../data/words'
-import { addPending, takePending } from '../lib/pending'
 import { api, ApiError, type ActionSlot } from '../lib/api'
 import {
   reportActions,
@@ -21,7 +20,7 @@ import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
-import { armQuiz, loadQuiz } from '../lib/quiz'
+import { loadQuiz, startQuiz } from '../lib/quiz'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
 
 /** 每学完这么多轮，活跃窗口换新前插入一次 Quiz */
@@ -196,7 +195,6 @@ export default function Study() {
   useEffect(() => {
     if (phase !== 'ready' || !centerName) return
     metRef.current[center] = true
-    addPending(fk, centerName)
     reportProgress(fk, center)
   }, [phase, center, centerName, fk, deckKey])
 
@@ -306,44 +304,51 @@ export default function Study() {
   // 下一轮：到 quiz 边界先插 quiz；否则向服务器要下一轮
   const nextRound = useCallback(() => {
     if (!fkRef.current) return
+    const fk = fkRef.current
     const r = roundRRef.current
-    if (r > 0 && r % QUIZ_EVERY === 0) {
-      const cands = takePending(fkRef.current)
-      if (cands.length > 0) {
-        leaveFnRef.current()
-        armQuiz(fkRef.current, cands, r)
-        logEvent('study_to_quiz', { batch: r })
-        reportActions(roundIdRef.current, buildSlots())
-        emitExit('quiz')
-        navigate('/quiz')
-        return
-      }
+
+    const doAdvance = () => {
+      leaveFnRef.current()
+      reportActions(roundIdRef.current, buildSlots())
+      roundIndexRef.current += 1
+      void api.studyRound(fk, true).then(
+        (res) => {
+          applyRound(res)
+          logEvent('study_round', {
+            index: roundIndexRef.current,
+            words: res.round,
+          })
+          beginCard('init')
+          setRevealed(false)
+          clearCopy()
+        },
+        () => {
+          /* 失败：保留当前轮，等用户再按 */
+        },
+      )
     }
-    leaveFnRef.current()
-    reportActions(roundIdRef.current, buildSlots())
-    roundIndexRef.current += 1
-    void api.studyRound(fkRef.current, true).then(
-      (res) => {
-        applyRound(res)
-        logEvent('study_round', {
-          index: roundIndexRef.current,
-          words: res.round,
-        })
-        beginCard('init')
-        setRevealed(false)
-        clearCopy()
-      },
-      () => {
-        /* 失败：保留当前轮，等用户再按 */
-      },
-    )
-  }, [
-    buildSlots,
-    beginCard,
-    clearCopy,
-    emitExit,
-    navigate,
-  ])
+
+    // 到 quiz 边界：向服务器要题（待考池在服务器算）
+    if (r > 0 && r % QUIZ_EVERY === 0) {
+      void api.studyQuiz(fk, r).then(
+        (res) => {
+          if (res.quizId != null && res.words.length > 0) {
+            leaveFnRef.current()
+            startQuiz(fk, r, res.quizId, res.words)
+            logEvent('study_to_quiz', { batch: r })
+            reportActions(roundIdRef.current, buildSlots())
+            emitExit('quiz')
+            navigate('/quiz')
+          } else {
+            doAdvance() // 没待考词：正常下一轮
+          }
+        },
+        () => doAdvance(),
+      )
+      return
+    }
+    doAdvance()
+  }, [buildSlots, beginCard, clearCopy, emitExit, navigate])
 
   // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {

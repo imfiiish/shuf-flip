@@ -5,7 +5,6 @@ import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import { findWord } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
 import { api } from '../lib/api'
-import { reportRatings } from '../lib/study'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
@@ -118,13 +117,20 @@ export default function Quiz() {
       const q = quiz
       emitExit(reason)
       if (q) {
-        reportRatings(
-          Object.entries(ratings).map(([word, rating]) => ({ word, rating })),
-        )
+        const list = Object.entries(ratings).map(([word, rating]) => ({
+          word,
+          rating,
+        }))
         clearQuiz()
-        // 等服务器推进到下一轮再跳，否则 /study 可能取到推进前的旧轮；失败也跳
+        // 等服务器记录评分并推进下一轮再跳；失败也跳
         const toStudy = () => navigate('/study', { replace: true })
-        void api.studyRound(q.fk, true).then(toStudy, toStudy)
+        const advance = () =>
+          void api.studyRound(q.fk, true).then(toStudy, toStudy)
+        if (q.quizId > 0 && list.length > 0) {
+          void api.studyQuizRatings(q.quizId, list).then(advance, advance)
+        } else {
+          advance()
+        }
       } else {
         navigate('/study', { replace: true })
       }

@@ -225,16 +225,83 @@ study.post('/actions', async (c) => {
   return c.json({ ok: true, applied })
 })
 
-/** quiz 评分：更新词级 rating（quiz 词不属于某个 round，单独上报） */
-study.post('/ratings', async (c) => {
+/**
+ * 发 quiz：待考池 = last_quiz_r 之后 met 过的词，随机至多 16 个。
+ * 同批次已有 quiz 则直接返回（续做）；没有待考词则 quizId=null。
+ */
+study.post('/quiz', async (c) => {
   const userId = await currentUserId(c)
   if (!userId) return c.json({ error: 'unauthorized' }, 401)
 
   const body = (await c.req.json().catch(() => null)) as {
+    fk?: unknown
+    batch?: unknown
+  } | null
+  const fk = typeof body?.fk === 'string' ? body.fk : null
+  const batch = Number(body?.batch)
+  if (!fk || !Number.isInteger(batch)) return c.json({ error: 'invalid' }, 400)
+
+  const existing = await pool.query<{ id: number; word_list: string[] }>(
+    'select id, word_list from quizzes where user_id = $1 and fk = $2 and batch = $3',
+    [userId, fk, batch],
+  )
+  if (existing.rows[0]) {
+    return c.json({ quizId: existing.rows[0].id, words: existing.rows[0].word_list })
+  }
+
+  const lq = await pool.query<{ last_quiz_r: number }>(
+    'select last_quiz_r from cascades where user_id = $1 and fk = $2',
+    [userId, fk],
+  )
+  const lastR = lq.rows[0]?.last_quiz_r ?? 0
+
+  // actions.slot 是 0 起，数组下标 1 起
+  const words = await pool.query<{ word: string }>(
+    `select word from (
+       select distinct rd.word_list[a.slot + 1] as word
+         from actions a
+         join rounds rd on rd.id = a.round_id
+        where rd.user_id = $1 and rd.fk = $2 and a.met and rd.r > $3
+     ) t
+     order by random()
+     limit 16`,
+    [userId, fk, lastR],
+  )
+  const list = words.rows.map((r) => r.word)
+  if (list.length === 0) return c.json({ quizId: null, words: [] })
+
+  const ins = await pool.query<{ id: number }>(
+    `insert into quizzes (user_id, fk, batch, word_list)
+     values ($1, $2, $3, $4)
+     on conflict (user_id, fk, batch) do update set word_list = excluded.word_list
+     returning id`,
+    [userId, fk, batch, list],
+  )
+  return c.json({ quizId: ins.rows[0].id, words: list })
+})
+
+/** 交 quiz 评分：写评分 + 更新词级 rating + 标记完成 + 推进 last_quiz_r */
+study.post('/quiz/ratings', async (c) => {
+  const userId = await currentUserId(c)
+  if (!userId) return c.json({ error: 'unauthorized' }, 401)
+
+  const body = (await c.req.json().catch(() => null)) as {
+    quizId?: unknown
     ratings?: unknown
   } | null
+  const quizId = Number(body?.quizId)
+  if (!Number.isInteger(quizId) || quizId <= 0) {
+    return c.json({ error: 'invalid' }, 400)
+  }
   const list = Array.isArray(body?.ratings) ? body.ratings : null
   if (!list) return c.json({ error: 'invalid' }, 400)
+
+  const q = await pool.query<{ fk: string; batch: number }>(
+    'select fk, batch from quizzes where id = $1 and user_id = $2',
+    [quizId, userId],
+  )
+  const quiz = q.rows[0]
+  if (!quiz) return c.json({ error: 'not_found' }, 404)
 
   const client = await pool.connect()
   let applied = 0
@@ -245,6 +312,13 @@ study.post('/ratings', async (c) => {
       const rating = raw?.rating
       if (!word || (rating !== 1 && rating !== 2 && rating !== 3)) continue
       await client.query(
+        `insert into quiz_ratings (quiz_id, word, rating, updated_at)
+         values ($1, $2, $3, now())
+         on conflict (quiz_id, word) do update set
+           rating = excluded.rating, updated_at = now()`,
+        [quizId, word, rating],
+      )
+      await client.query(
         `insert into user_word_stats (user_id, word, rating, last_at)
          values ($1, $2, $3, now())
          on conflict (user_id, word) do update set
@@ -253,6 +327,14 @@ study.post('/ratings', async (c) => {
       )
       applied++
     }
+    await client.query('update quizzes set finished_at = now() where id = $1', [
+      quizId,
+    ])
+    await client.query(
+      `update cascades set last_quiz_r = $3, updated_at = now()
+        where user_id = $1 and fk = $2`,
+      [userId, quiz.fk, quiz.batch],
+    )
     await client.query('commit')
   } catch (e) {
     await client.query('rollback')

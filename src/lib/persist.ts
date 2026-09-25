@@ -2,7 +2,6 @@
 import { initKV, flush } from './kv'
 import { hydrateProgress } from './progress'
 import { hydrateQuiz } from './quiz'
-import { hydratePending } from './pending'
 
 export async function hydrate(): Promise<void> {
   // 持久层是「加分项」：任何异常都不应阻止应用渲染
@@ -12,7 +11,7 @@ export async function hydrate(): Promise<void> {
     console.warn('[kv] init failed', e)
   }
   try {
-    await Promise.all([hydrateProgress(), hydrateQuiz(), hydratePending()])
+    await Promise.all([hydrateProgress(), hydrateQuiz()])
   } catch (e) {
     console.warn('[kv] hydrate failed', e)
   }

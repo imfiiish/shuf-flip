@@ -133,10 +133,18 @@ export const api = {
       method: 'PUT',
       body: { fk, center },
     }),
-  studyRatings: (ratings: { word: string; rating: number }[]) =>
-    request<{ ok: true; applied: number }>('/study/ratings', {
+  studyQuiz: (fk: string, batch: number) =>
+    request<{ quizId: number | null; words: string[] }>('/study/quiz', {
       method: 'POST',
-      body: { ratings },
+      body: { fk, batch },
+    }),
+  studyQuizRatings: (
+    quizId: number,
+    ratings: { word: string; rating: number }[],
+  ) =>
+    request<{ ok: true; applied: number }>('/study/quiz/ratings', {
+      method: 'POST',
+      body: { quizId, ratings },
     }),
   studySummary: (fk: string) =>
     request<StudySummary>(

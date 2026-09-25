@@ -42,14 +42,6 @@ export function reportProgress(fk: string, center: number): void {
   }, 1000)
 }
 
-/** quiz 评分上报 */
-export function reportRatings(
-  ratings: { word: string; rating: number }[],
-): void {
-  if (ratings.length === 0) return
-  void api.studyRatings(ratings).catch(() => {})
-}
-
 /** Home 汇总 */
 export function fetchSummary(fk: string): Promise<StudySummary> {
   return api.studySummary(fk)
