@@ -1,24 +1,17 @@
-// 学习相关的持久化（IndexedDB）
-// - 翻开次数：每天一条 revealDay 记录（当天圆点用，4:00 换日归零），历史永久保留；
-//   终身总次数 = 各天之和，启动时汇总进内存（不再单独存）
-// - 每本词书的位置：center（按 filterKey，一条）
+// 学习相关的本地持久化（IndexedDB）
+// - 翻开次数：每天一条 revealDay 记录（当天圆点用，4:00 换日归零），历史保留。
 import { logicalDay } from './day'
-import { loadStore, put, del, restoreMap } from './kv'
+import { loadStore, put, restoreMap } from './kv'
 
-// ---- 翻开次数 ----
 type DayCounts = Record<string, number>
 
 /** 当天（当前逻辑日）各词的翻开次数：圆点用 */
 let todayDay = ''
 let todayCounts: DayCounts = {}
-/** word → 终身总次数（由 revealDay 汇总） */
-let totals = new Map<string, number>()
-/** date → 当天各词翻开次数（全量，同步用） */
+/** date → 当天各词翻开次数 */
 let allDays = new Map<string, DayCounts>()
 
-/**
- * 读取翻开次数。若存储里是旧的一天，返回已清空的当天 store。
- */
+/** 读取翻开次数。若存储里是旧的一天，返回已清空的当天 store。 */
 export function loadRevealStore(now: number = Date.now()): {
   day: string
   counts: DayCounts
@@ -31,117 +24,33 @@ export function loadRevealStore(now: number = Date.now()): {
   return { day: today, counts: todayCounts }
 }
 
-/**
- * 落盘当天次数（只写今天这条）。终身总次数由内存增量维护，不落盘。
- * counts 是「当天全量」，传入即可，内部对比上一次做增量。
- */
+/** 落盘当天次数（只写今天这条）。 */
 export function saveRevealStore(store: { day: string; counts: DayCounts }): void {
-  // 跨天：昨天那条 revealDay 已在库里，无需搬动；这里切到新的一天
   if (store.day !== todayDay) {
     todayDay = store.day
     todayCounts = {}
   }
-
-  for (const [w, n] of Object.entries(store.counts)) {
-    const prev = todayCounts[w] ?? 0
-    if (n > prev) totals.set(w, (totals.get(w) ?? 0) + (n - prev))
-  }
-
   todayCounts = { ...store.counts }
   allDays.set(todayDay, todayCounts)
   put('revealDay', todayDay, todayCounts)
 }
 
-/** 导出全部天数的翻开次数（同步用） */
-export function revealDaySnapshot(): Record<string, DayCounts> {
-  return Object.fromEntries(allDays)
-}
-
-/** 用远端数据整体替换（同步用）；重算 totals、重置今天 */
+/** 用远端数据整体替换（登出清理用）。 */
 export function revealDayRestore(obj: unknown): void {
   allDays = restoreMap('revealDay', allDays, obj, (v) =>
     v && typeof v === 'object' ? { ...(v as DayCounts) } : null,
   )
-
-  totals = new Map()
-  for (const v of allDays.values()) {
-    for (const [w, n] of Object.entries(v)) {
-      if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
-    }
-  }
-
   const today = logicalDay()
   todayDay = today
   todayCounts = { ...(allDays.get(today) ?? {}) }
 }
 
-/** 某个词表里有多少词翻开过（终身总次数 > 0） */
-export function revealedCount(words: readonly string[]): number {
-  let n = 0
-  for (const w of words) if ((totals.get(w) ?? 0) > 0) n += 1
-  return n
-}
-
-// ---- 位置（按 filterKey）----
-// 值里带本轮 deck 的签名：只有 deck 一致才恢复 center
-type CenterEntry = { deck: string; center: number }
-
-function isCenterEntry(v: unknown): v is CenterEntry {
-  if (typeof v !== 'object' || v === null) return false
-  const o = v as { deck?: unknown; center?: unknown }
-  return (
-    typeof o.deck === 'string' &&
-    Number.isInteger(o.center) &&
-    (o.center as number) >= 0
-  )
-}
-
-let centers = new Map<string, CenterEntry>()
-
-/** 读本轮位置；存的 deck 与当前不一致则视为 0 */
-export function loadCenter(key: string, deck: string): number {
-  const e = centers.get(key)
-  return e && e.deck === deck ? e.center : 0
-}
-
-export function saveCenter(key: string, deck: string, center: number): void {
-  if (center > 0) {
-    centers.set(key, { deck, center })
-    put('centers', key, { deck, center })
-  } else {
-    if (!centers.has(key)) return
-    centers.delete(key)
-    del('centers', key)
-  }
-}
-
-/** 导出各书位置（同步用） */
-export function centersSnapshot(): Record<string, CenterEntry> {
-  return Object.fromEntries(centers)
-}
-
-/** 用远端数据整体替换本地位置（同步用） */
-export function centersRestore(obj: unknown): void {
-  centers = restoreMap('centers', centers, obj, (v) =>
-    isCenterEntry(v) ? v : null,
-  )
-}
-
 export async function hydrateProgress(): Promise<void> {
   const today = logicalDay()
-
-  // 汇总所有天的翻开次数 → 终身总次数，并取最近一天 / 当天次数
   const days = await loadStore('revealDay')
-  totals = new Map()
   allDays = new Map()
   for (const [date, v] of Object.entries(days)) {
-    if (v && typeof v === 'object') {
-      const counts = v as DayCounts
-      allDays.set(date, { ...counts })
-      for (const [w, n] of Object.entries(counts)) {
-        if (typeof n === 'number') totals.set(w, (totals.get(w) ?? 0) + n)
-      }
-    }
+    if (v && typeof v === 'object') allDays.set(date, { ...(v as DayCounts) })
   }
   const todayRec = days[today]
   todayDay = today
@@ -149,10 +58,4 @@ export async function hydrateProgress(): Promise<void> {
     todayRec && typeof todayRec === 'object'
       ? { ...(todayRec as DayCounts) }
       : {}
-
-  const rawCenters = await loadStore('centers')
-  centers = new Map()
-  for (const [k, v] of Object.entries(rawCenters)) {
-    if (isCenterEntry(v)) centers.set(k, v)
-  }
 }

@@ -3,20 +3,10 @@
 // 设计：所有状态模块把自己的缓存 hydrate 进内存，读同步走内存；
 // 写走 put/del 进入队列、抖动合并后异步落盘（结构化克隆，不 JSON 序列化）。
 // 按「更新粒度」分 store，改一条不碰其它：
-//   cascade      key=filterKey  一本词书一条
-//   centers      key=filterKey  一本词书一条
-//   stats        key=word       词级学习统计（碰到/翻开回合数、上次时间）
 //   pendingQuiz  key=filterKey  自上次 quiz 以来 center 过的词
-//   revealDay    key=date       当天 {word: n}（每天分开、永久保留；总次数由各天汇总）
-//   misc         key            quiz / 回合序等零散
-const STORES = [
-  'cascade',
-  'centers',
-  'stats',
-  'pendingQuiz',
-  'revealDay',
-  'misc',
-] as const
+//   revealDay    key=date       当天 {word: n}（圆点用，每天分开）
+//   misc         key            quiz 状态等零散
+const STORES = ['pendingQuiz', 'revealDay', 'misc'] as const
 type StoreName = (typeof STORES)[number]
 
 let useIdb = true

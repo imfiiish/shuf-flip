@@ -11,7 +11,13 @@
 import { getKV, put, del } from './kv'
 import { pick } from './random'
 import { isStringArray } from './guard'
-import { isRating, type Rating } from './stats'
+
+/** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
+export type Rating = 1 | 2 | 3
+
+export function isRating(v: unknown): v is Rating {
+  return v === 1 || v === 2 || v === 3
+}
 
 /** 每份 quiz 抽取的词数 */
 const QUIZ_SIZE = 16

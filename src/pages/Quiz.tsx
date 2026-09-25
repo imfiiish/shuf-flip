@@ -10,13 +10,13 @@ import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logEvent } from '../lib/analytics'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
-import type { Rating } from '../lib/stats'
 import {
   clearQuiz,
   loadQuiz,
   saveQuiz,
   UNDO_LIMIT,
   type QuizState,
+  type Rating,
 } from '../lib/quiz'
 
 /**

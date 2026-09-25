@@ -1,9 +1,7 @@
 // 启动时把持久层读进各模块的内存缓存；卸载前 flush 未落盘的写。
 import { initKV, flush } from './kv'
-import { hydrateCascade } from './cascade'
 import { hydrateProgress } from './progress'
 import { hydrateQuiz } from './quiz'
-import { hydrateStats, statsSnapshot } from './stats'
 import { hydratePending } from './pending'
 
 export async function hydrate(): Promise<void> {
@@ -14,20 +12,9 @@ export async function hydrate(): Promise<void> {
     console.warn('[kv] init failed', e)
   }
   try {
-    await Promise.all([
-      hydrateCascade(),
-      hydrateProgress(),
-      hydrateQuiz(),
-      hydrateStats(),
-      hydratePending(),
-    ])
+    await Promise.all([hydrateProgress(), hydrateQuiz(), hydratePending()])
   } catch (e) {
     console.warn('[kv] hydrate failed', e)
-  }
-
-  // 调试出口：dev 下控制台 `__stats()` 看词级统计快照
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
-    ;(window as unknown as { __stats?: unknown }).__stats = statsSnapshot
   }
 
   if (typeof window !== 'undefined') {
