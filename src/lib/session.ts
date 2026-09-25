@@ -1,7 +1,6 @@
 // Study / Quiz 共用的卡片会话逻辑
 import { useEffect, useRef, useState } from 'react'
 import { preloadAudio } from './audio'
-import { flushBeacon } from './analytics'
 import { findWord, loadDetails } from '../data/words'
 
 /**
@@ -57,7 +56,6 @@ export function useExitLifecycle(opts: {
   useEffect(() => {
     const onPageHide = () => {
       optsRef.current.onPageHide?.()
-      flushBeacon()
     }
     window.addEventListener('pagehide', onPageHide)
     return () => window.removeEventListener('pagehide', onPageHide)

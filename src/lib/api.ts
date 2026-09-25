@@ -151,10 +151,4 @@ export const api = {
       `/study/summary?fk=${encodeURIComponent(fk)}`,
     ),
 
-  // —— 事件 ——
-  sendEvents: (events: unknown[]) =>
-    request<{ ok: true; stored: number }>('/events', {
-      method: 'POST',
-      body: events,
-    }),
 }

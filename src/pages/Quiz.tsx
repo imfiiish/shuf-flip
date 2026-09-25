@@ -7,8 +7,7 @@ import { useAudioPlayer } from '../lib/audio'
 import { api } from '../lib/api'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
-import { logEvent } from '../lib/analytics'
-import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
+import { usePreloadWords, useWordDetails } from '../lib/session'
 import {
   clearQuiz,
   loadQuiz,
@@ -53,8 +52,6 @@ export default function Quiz() {
 
   // 结束只收尾一次；期间不再回写存储
   const doneRef = useRef(false)
-  /** quiz_enter 只记一次（StrictMode 下 effect 会跑两遍） */
-  const enteredRef = useRef(false)
 
   // A1 等比缩放（舞台 1200×360）+ 底部评级条测量
   const { appRef, hintsRef, scale } = useStageScale()
@@ -66,65 +63,17 @@ export default function Quiz() {
   const detailsReady = useWordDetails(order)
   usePreloadWords(order, detailsReady)
 
-  // —— 埋点：quiz_enter / quiz_card / quiz_rate / quiz_undo / quiz_exit ——
-  const dirRef = useRef<'init' | 'left' | 'right'>('init')
-
-  const beginCard = useCallback((dir: 'init' | 'left' | 'right') => {
-    dirRef.current = dir
-  }, [])
-
-  const logCardLeave = useCallback(
-    (name: string | null | undefined) => {
-      if (!name) return
-      // 词由服务器 quizzes.word_list 给出，这里只记位置
-      logEvent('quiz_card', {
-        quizId: quiz?.quizId ?? 0,
-        slot: order.indexOf(name),
-        dir: dirRef.current,
-      })
-    },
-    [quiz, order],
-  )
-
-  useEffect(() => {
-    if (!quiz) return
-    if (enteredRef.current) return // StrictMode 下只记一次
-    enteredRef.current = true
-    logEvent('quiz_enter', {
-      quizId: quiz.quizId,
-      fk: quiz.fk,
-      batch: quiz.batch,
-      total: quiz.words.length,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // 持久化：评分 / 撤销栈 / center 变化即落盘（刷新或返回后重进可续）
   useEffect(() => {
     if (doneRef.current || !quiz) return
     saveQuiz({ ...quiz, ratings, undo, center })
   }, [quiz, ratings, undo, center])
 
-  // 结束/离开：一次只发一条 quiz_exit（补上「返回主页」「关页」的情况）
-  const exitSentRef = useRef(false)
-  const statsRef = useRef({ rated: 0, total: 0 })
-  statsRef.current = { rated: Object.keys(ratings).length, total: order.length }
-  const emitExit = useCallback(
-    (reason: 'done' | 'skip' | 'back' | 'unload') => {
-      if (exitSentRef.current) return
-      exitSentRef.current = true
-      logEvent('quiz_exit', { reason, ...statsRef.current })
-    },
-    [],
-  )
-
   // 结束（评完或跳过）：上报评分 + 服务器推进一轮 + 清 quiz + 回 /study
-  const finish = useCallback(
-    (reason: 'done' | 'skip') => {
+  const finish = useCallback(() => {
       if (doneRef.current) return
       doneRef.current = true
       const q = quiz
-      emitExit(reason)
       if (q) {
         const list = Object.entries(ratings).map(([word, rating]) => ({
           word,
@@ -144,7 +93,7 @@ export default function Quiz() {
         navigate('/study', { replace: true })
       }
     },
-    [quiz, ratings, emitExit, navigate],
+    [quiz, ratings, navigate],
   )
 
   // 空格：只发音，不显示释义
@@ -157,37 +106,19 @@ export default function Quiz() {
     (v: Rating) => {
       const w = remaining[safeCenter]
       if (!w) return
-      logCardLeave(w)
       const nextRatings = { ...ratings, [w]: v }
       const nextUndo = [...undo, w].slice(-UNDO_LIMIT)
       setRatings(nextRatings)
       setUndo(nextUndo)
       setSkipArmed(false)
-      logEvent('quiz_rate', {
-        quizId: quiz?.quizId ?? 0,
-        slot: order.indexOf(w),
-        rating: v,
-        left: remaining.length - 1,
-      })
       const newLen = remaining.length - 1
       if (newLen <= 0) {
-        finish('done')
+        finish()
         return
       }
       setCenter((c) => (c >= newLen ? 0 : c))
-      beginCard('right')
     },
-    [
-      remaining,
-      safeCenter,
-      ratings,
-      undo,
-      quiz,
-      order,
-      logCardLeave,
-      finish,
-      beginCard,
-    ],
+    [remaining, safeCenter, ratings, undo, finish],
   )
 
   // Ctrl+Z：撤回最近一次评分该词，还原并居中（最多连续 3 次）
@@ -196,34 +127,23 @@ export default function Quiz() {
     const w = undo[undo.length - 1]
     const nextUndo = undo.slice(0, -1)
     const nextRatings = { ...ratings }
-    const rating = nextRatings[w]
     delete nextRatings[w]
-    logCardLeave(centerName)
     setUndo(nextUndo)
     setRatings(nextRatings)
     setSkipArmed(false)
     const newRemaining = order.filter((x) => !(x in nextRatings))
     const idx = newRemaining.indexOf(w)
     setCenter(idx >= 0 ? idx : 0)
-    beginCard('left')
-    logEvent('quiz_undo', {
-      quizId: quiz?.quizId ?? 0,
-      slot: order.indexOf(w),
-      rating,
-      undoLeft: nextUndo.length,
-    })
-  }, [undo, ratings, quiz, order, centerName, logCardLeave, beginCard])
+  }, [undo, ratings, order])
 
   // 翻卡：只在未评的词之间移动
   const go = useCallback(
     (delta: number) => {
       if (remaining.length === 0) return
-      logCardLeave(centerName)
       setSkipArmed(false)
       setCenter((c) => (c + delta + remaining.length) % remaining.length)
-      beginCard(delta > 0 ? 'right' : 'left')
     },
-    [remaining.length, centerName, logCardLeave, beginCard],
+    [remaining.length],
   )
 
   // 滚轮翻卡
@@ -231,9 +151,8 @@ export default function Quiz() {
 
   // 跳过 = 结束（Enter 或右下角按钮，均两次确认）
   const skip = useCallback(() => {
-    logCardLeave(centerName)
-    finish('skip')
-  }, [centerName, logCardLeave, finish])
+    finish()
+  }, [finish])
 
   // 下一轮（跳过）的一步：第一次进入待确认，第二次确认
   // Enter / 双击右键 共用
@@ -293,22 +212,12 @@ export default function Quiz() {
     return () => clearTimeout(t)
   }, [skipArmed])
 
-  // 关页补 exit；真正卸载（比如返回主页）补一条 back（共用 useExitLifecycle）
-  useExitLifecycle({
-    onPageHide: () => emitExit('unload'),
-    onUnmount: () => {
-      if (!quiz) return // 没有真正进入 quiz（重定向中），不能发孤立的 exit
-      if (doneRef.current) return // 正常结束已经记过
-      emitExit('back')
-    },
-  })
-
   // 意外情况：进来时已经全部评完（比如上一步完成后刷新），直接推进收尾
   const finishRef = useRef(finish)
   finishRef.current = finish
   useEffect(() => {
     if (quiz && remaining.length === 0 && !doneRef.current) {
-      finishRef.current('done')
+      finishRef.current()
     }
   }, [quiz, remaining.length])
 

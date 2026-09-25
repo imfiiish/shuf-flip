@@ -3,7 +3,6 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { env } from './env'
 import { auth } from './routes/auth'
-import { events } from './routes/events'
 import { words } from './routes/words'
 import { study } from './routes/study'
 
@@ -12,7 +11,6 @@ const app = new Hono()
 app.use('*', logger())
 app.get('/api/health', (c) => c.json({ ok: true }))
 app.route('/api/auth', auth)
-app.route('/api/events', events)
 app.route('/api/words', words)
 app.route('/api/study', study)
 

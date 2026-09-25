@@ -18,7 +18,6 @@ import {
 import { copyText } from '../lib/clipboard'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
-import { ensureSession, logEvent } from '../lib/analytics'
 import { logicalDay } from '../lib/day'
 import { loadQuiz, startQuiz } from '../lib/quiz'
 import { useExitLifecycle, usePreloadWords, useWordDetails } from '../lib/session'
@@ -105,14 +104,6 @@ export default function Study() {
   // A1 等比缩放（舞台 1200×360）+ 底部提示行测量
   const { appRef, hintsRef, scale } = useStageScale()
 
-  // —— 埋点 / 收尾 ——
-  const cardActiveRef = useRef(false)
-  const dirRef = useRef<'init' | 'left' | 'right'>('init')
-  const visitRevealsRef = useRef(0)
-  const roundIndexRef = useRef(1)
-  const leaveFnRef = useRef<() => void>(() => {})
-  const exitSentRef = useRef(false)
-
   // 中间卡片是否展示音标 + 释义
   const [revealed, setRevealed] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -147,12 +138,6 @@ export default function Study() {
     return true
   }, [])
 
-  const beginCard = useCallback((dir: 'init' | 'left' | 'right') => {
-    cardActiveRef.current = true
-    dirRef.current = dir
-    visitRevealsRef.current = 0
-  }, [])
-
   // 进入学习：取当前轮（服务器发牌）
   const initRef = useRef(false)
   useEffect(() => {
@@ -168,13 +153,6 @@ export default function Study() {
         if (choice.filter) setActiveFilter(choice.filter)
         applyRound(res)
         setPhase('ready')
-        ensureSession()
-        logEvent('study_enter', { filterKey: choice.fk })
-        logEvent('study_round', {
-          roundId: res.roundId,
-          index: roundIndexRef.current,
-        })
-        beginCard('init')
       },
       (e) => {
         if (e instanceof ApiError && e.code === 'empty') setPhase('needPick')
@@ -198,61 +176,13 @@ export default function Study() {
     reportProgress(fk, center)
   }, [phase, center, centerName, fk, deckKey])
 
-  // 离开当前中心卡：记一条 card 事件
-  const emitCardLeaveReal = useCallback(() => {
-    if (!centerName || !cardActiveRef.current) return
-    // 词由服务器 rounds.word_list 给出，这里只记位置
-    logEvent('study_card', {
-      roundId: roundIdRef.current,
-      slot: center,
-      dir: dirRef.current,
-      reveals: visitRevealsRef.current,
-    })
-    cardActiveRef.current = false
-    visitRevealsRef.current = 0
-  }, [centerName, center])
-  leaveFnRef.current = emitCardLeaveReal
-
-  const emitExit = useCallback((reason: 'back' | 'unload' | 'quiz') => {
-    if (exitSentRef.current) return
-    exitSentRef.current = true
-    logEvent('study_exit', { reason })
-  }, [])
-
-  // 切窗口/切标签
-  useEffect(() => {
-    let wasAway = !document.hasFocus() || document.hidden
-    const syncAway = (by: 'visibility' | 'focus') => {
-      const awayNow = !document.hasFocus() || document.hidden
-      if (awayNow !== wasAway) {
-        wasAway = awayNow
-        logEvent('study_away', { away: awayNow, by })
-      }
-    }
-    const onVis = () => syncAway('visibility')
-    const onFocus = () => syncAway('focus')
-    const onBlur = () => syncAway('focus')
-    document.addEventListener('visibilitychange', onVis)
-    window.addEventListener('focus', onFocus)
-    window.addEventListener('blur', onBlur)
-    return () => {
-      document.removeEventListener('visibilitychange', onVis)
-      window.removeEventListener('focus', onFocus)
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [])
-
-  // 关页补最后一张卡 + 动作；卸载补 back
+  // 关页/卸载时尽量把本轮动作送出去
   useExitLifecycle({
     onPageHide: () => {
-      leaveFnRef.current()
       reportActionsBeacon(roundIdRef.current, buildSlots())
-      emitExit('unload')
     },
     onUnmount: () => {
-      leaveFnRef.current()
       reportActions(roundIdRef.current, buildSlots())
-      emitExit('back')
     },
   })
 
@@ -260,14 +190,12 @@ export default function Study() {
   const go = useCallback(
     (delta: number) => {
       if (TOTAL === 0) return
-      leaveFnRef.current()
       const next = (center + delta + TOTAL) % TOTAL
-      beginCard(delta > 0 ? 'right' : 'left')
       setRevealed(false)
       clearCopy()
       setCenter(next)
     },
-    [TOTAL, center, beginCard, clearCopy],
+    [TOTAL, center, clearCopy],
   )
 
   useWheelFlip(go)
@@ -282,7 +210,6 @@ export default function Study() {
     const name = deckRef.current[center]
     if (name) {
       setRevealCounts((c) => ({ ...c, [name]: (c[name] || 0) + 1 }))
-      visitRevealsRef.current += 1
       revealsRef.current[center] = (revealsRef.current[center] || 0) + 1
     }
     play(centerWord?.audio)
@@ -310,17 +237,10 @@ export default function Study() {
     const r = roundRRef.current
 
     const doAdvance = () => {
-      leaveFnRef.current()
       reportActions(roundIdRef.current, buildSlots())
-      roundIndexRef.current += 1
       void api.studyRound(fk, true).then(
         (res) => {
           applyRound(res)
-          logEvent('study_round', {
-            roundId: res.roundId,
-            index: roundIndexRef.current,
-          })
-          beginCard('init')
           setRevealed(false)
           clearCopy()
         },
@@ -335,11 +255,8 @@ export default function Study() {
       void api.studyQuiz(fk, r).then(
         (res) => {
           if (res.quizId != null && res.words.length > 0) {
-            leaveFnRef.current()
             startQuiz(fk, r, res.quizId, res.words)
-            logEvent('study_to_quiz', { batch: r })
             reportActions(roundIdRef.current, buildSlots())
-            emitExit('quiz')
             navigate('/quiz')
           } else {
             doAdvance() // 没待考词：正常下一轮
@@ -350,7 +267,7 @@ export default function Study() {
       return
     }
     doAdvance()
-  }, [buildSlots, beginCard, clearCopy, emitExit, navigate])
+  }, [buildSlots, clearCopy, navigate])
 
   // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {
