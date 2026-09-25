@@ -171,8 +171,8 @@ export default function Study() {
         ensureSession()
         logEvent('study_enter', { filterKey: choice.fk })
         logEvent('study_round', {
+          roundId: res.roundId,
           index: roundIndexRef.current,
-          words: res.round,
         })
         beginCard('init')
       },
@@ -201,14 +201,16 @@ export default function Study() {
   // 离开当前中心卡：记一条 card 事件
   const emitCardLeaveReal = useCallback(() => {
     if (!centerName || !cardActiveRef.current) return
+    // 词由服务器 rounds.word_list 给出，这里只记位置
     logEvent('study_card', {
-      word: centerName,
+      roundId: roundIdRef.current,
+      slot: center,
       dir: dirRef.current,
       reveals: visitRevealsRef.current,
     })
     cardActiveRef.current = false
     visitRevealsRef.current = 0
-  }, [centerName])
+  }, [centerName, center])
   leaveFnRef.current = emitCardLeaveReal
 
   const emitExit = useCallback((reason: 'back' | 'unload' | 'quiz') => {
@@ -315,8 +317,8 @@ export default function Study() {
         (res) => {
           applyRound(res)
           logEvent('study_round', {
+            roundId: res.roundId,
             index: roundIndexRef.current,
-            words: res.round,
           })
           beginCard('init')
           setRevealed(false)

@@ -73,16 +73,25 @@ export default function Quiz() {
     dirRef.current = dir
   }, [])
 
-  const logCardLeave = useCallback((name: string | null | undefined) => {
-    if (!name) return
-    logEvent('quiz_card', { word: name, dir: dirRef.current })
-  }, [])
+  const logCardLeave = useCallback(
+    (name: string | null | undefined) => {
+      if (!name) return
+      // 词由服务器 quizzes.word_list 给出，这里只记位置
+      logEvent('quiz_card', {
+        quizId: quiz?.quizId ?? 0,
+        slot: order.indexOf(name),
+        dir: dirRef.current,
+      })
+    },
+    [quiz, order],
+  )
 
   useEffect(() => {
     if (!quiz) return
     if (enteredRef.current) return // StrictMode 下只记一次
     enteredRef.current = true
     logEvent('quiz_enter', {
+      quizId: quiz.quizId,
       fk: quiz.fk,
       batch: quiz.batch,
       total: quiz.words.length,
@@ -155,7 +164,8 @@ export default function Quiz() {
       setUndo(nextUndo)
       setSkipArmed(false)
       logEvent('quiz_rate', {
-        word: w,
+        quizId: quiz?.quizId ?? 0,
+        slot: order.indexOf(w),
         rating: v,
         left: remaining.length - 1,
       })
@@ -172,6 +182,8 @@ export default function Quiz() {
       safeCenter,
       ratings,
       undo,
+      quiz,
+      order,
       logCardLeave,
       finish,
       beginCard,
@@ -194,8 +206,13 @@ export default function Quiz() {
     const idx = newRemaining.indexOf(w)
     setCenter(idx >= 0 ? idx : 0)
     beginCard('left')
-    logEvent('quiz_undo', { word: w, rating, undoLeft: nextUndo.length })
-  }, [undo, ratings, order, centerName, logCardLeave, beginCard])
+    logEvent('quiz_undo', {
+      quizId: quiz?.quizId ?? 0,
+      slot: order.indexOf(w),
+      rating,
+      undoLeft: nextUndo.length,
+    })
+  }, [undo, ratings, quiz, order, centerName, logCardLeave, beginCard])
 
   // 翻卡：只在未评的词之间移动
   const go = useCallback(
