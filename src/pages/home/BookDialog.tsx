@@ -6,6 +6,7 @@ import { copyText } from '../../lib/clipboard'
 import { filterKey } from '../../lib/filter'
 import { api } from '../../lib/api'
 import { useAudioPlayer } from '../../lib/audio'
+import { useI18n } from '../../lib/i18n'
 import { usePreloadWords, useWordDetails } from '../../lib/session'
 import { findWord } from '../../data/words'
 
@@ -22,6 +23,7 @@ type Props = {
  */
 export default function BookDialog({ book, onClose, onRename }: Props) {
   const navigate = useNavigate()
+  const { t, contentLang } = useI18n()
 
   // 顶部标题改名：点击进入编辑，Enter / 失焦提交，Esc 取消
   const [editing, setEditing] = useState(false)
@@ -39,7 +41,10 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
     setEditing(false)
   }
 
-  const key = useMemo(() => filterKey(book.filter), [book])
+  const key = useMemo(
+    () => filterKey(book.filter, contentLang),
+    [book, contentLang],
+  )
 
   // 本轮由服务器发牌（与 /study 拿到的同一轮）
   const [words, setWords] = useState<string[]>([])
@@ -107,8 +112,8 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
             value={draft}
             autoFocus
             maxLength={24}
-            aria-label="词书名称"
-            placeholder="词书"
+            aria-label={t('book.nameAria')}
+            placeholder={t('book.namePlaceholder')}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -129,8 +134,8 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
               setDraft(book.name)
               setEditing(true)
             }}
-            aria-label={`词书名称：${book.name}，点击修改`}
-            title="点击修改名称"
+            aria-label={t('book.nameEditAria', { name: book.name })}
+            title={t('book.nameEditTitle')}
           >
             <span className="title-text">{book.name}</span>
             <svg
@@ -154,12 +159,12 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
       <div className="book-body">
         {/* 左栏顶部：说明 */}
-        <div className="book-list-head">本轮</div>
+        <div className="book-list-head">{t('book.thisRound')}</div>
 
         {/* 左栏：本轮词表 */}
         <div className="book-list">
           {words.length === 0 ? (
-            <p className="book-empty">这本词书还没有词</p>
+            <p className="book-empty">{t('book.empty')}</p>
           ) : (
             words.map((name) => {
               const w = findWord(name)
@@ -173,11 +178,11 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
                     copy(w.word)
                     playWord(name)
                   }}
-                  title="点击复制并发音"
+                  title={t('book.copyPlay')}
                 >
                   <span className="word-text">{w.word}</span>
                   {copied === w.word && (
-                    <span className="copied-tag">已复制</span>
+                    <span className="copied-tag">{t('common.copied')}</span>
                   )}
                 </button>
               )
@@ -194,7 +199,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
               onClick={start}
               disabled={words.length === 0}
             >
-              开始学习
+              {t('book.start')}
             </button>
           </div>
         </aside>

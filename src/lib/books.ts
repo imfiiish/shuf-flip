@@ -1,5 +1,6 @@
 import type { TagFilter } from './filter'
 import { sameFilter } from './filter'
+import type { ContentLang } from './i18n'
 import { isStringArray } from './guard'
 import { readJSON, writeJSON } from './storage'
 import { api } from './api'
@@ -9,8 +10,15 @@ export type Book = {
   id: number
   name: string
   filter: TagFilter
+  /** 学习内容语言；旧数据没有，视为 'en' */
+  lang?: ContentLang
   /** 是否是「当前在学」的那本（当前筛选的来路） */
   active?: boolean
+}
+
+/** 词书的语言（兼容旧数据） */
+export function bookLang(b: Book): ContentLang {
+  return b.lang === 'zh' ? 'zh' : 'en'
 }
 
 const KEY = 'vocab-books'
@@ -23,7 +31,8 @@ function isBook(v: unknown): v is Book {
   const b = v as Record<string, unknown>
   if (typeof b.id !== 'number' || typeof b.name !== 'string') return false
   const f = b.filter as Record<string, unknown> | undefined
-  return !!f && isStringArray(f.include) && isStringArray(f.exclude)
+  if (!f || !isStringArray(f.include) || !isStringArray(f.exclude)) return false
+  return b.lang === undefined || b.lang === 'en' || b.lang === 'zh'
 }
 
 export function loadBooks(): Book[] {

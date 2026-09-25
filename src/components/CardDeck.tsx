@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { findWord, type Word } from '../data/words'
 import { tagRank } from '../lib/tags'
+import { useI18n } from '../lib/i18n'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
@@ -230,6 +231,7 @@ function Card({
   onClick,
   onContextMenu,
 }: CardProps) {
+  const { contentLang } = useI18n()
   const isCenter = slot === 0
   // 超出窗口的槽位不用具体 pos-N，而是落到右侧/左侧的隐身位（仍挂载，只隐起来）
   const off = typeof slot === 'number' && Math.abs(slot) > SIDE
@@ -286,12 +288,17 @@ function Card({
             {/* 展开时才显示音标和释义（Quiz 不展开，永远不显示） */}
             {isCenter && revealed && (
               <div className="detail">
-                <div className="phonetic">{word.phonetic}</div>
+                <div className="phonetic">{word.pinyin ?? word.phonetic}</div>
                 <div className="definition">
-                  {(word.senses ?? []).map((s) => (
-                    <div className="sense" key={s.pos}>
-                      <span className="sense-pos">{s.pos}</span>
-                      <span className="sense-defs">{s.defs.join('；')}</span>
+                  {(word.senses ?? []).map((s, i) => (
+                    <div className="sense" key={i}>
+                      {/* zh 不显示词性（动/名…），只留释义 */}
+                      {contentLang !== 'zh' && s.pos && (
+                        <span className="sense-pos">{s.pos}</span>
+                      )}
+                      <span className="sense-defs">
+                        {s.defs.join(contentLang === 'zh' ? '; ' : '；')}
+                      </span>
                     </div>
                   ))}
                 </div>

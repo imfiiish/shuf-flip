@@ -1,63 +1,66 @@
 // Study 页操作帮助：按鼠标 / 键盘 / 触控板分组列出全部手势。
 // 触发入口在底部提示行最左侧（? 帮助），按 ? 键也可开关。
 import Modal from './Modal'
+import { useI18n } from '../lib/i18n'
 
-/** 一组操作：标题 + 若干「操作 → 说明」 */
+/** 一行操作：plain=整句描述（不可拆键位）；keys=真实键位，用 + 连接 */
+type Row =
+  | { kind: 'plain'; labelKey: string; descKey: string }
+  | { kind: 'keys'; keys: string[]; descKey: string }
+
+/** 一组操作：标题 key + 若干行 */
 type Group = {
-  title: string
-  rows: { keys: string[]; desc: string; plain?: boolean }[]
+  titleKey: string
+  rows: Row[]
 }
 
 const GROUPS: Group[] = [
   {
-    title: '鼠标',
+    titleKey: 'help.mouse',
     rows: [
-      { keys: ['单击中心卡'], desc: '显示释义 / 重播发音', plain: true },
-      { keys: ['单击两侧卡'], desc: '上一张 / 下一张', plain: true },
-      { keys: ['右键单击中心卡'], desc: '复制当前词', plain: true },
-      { keys: ['双击右键（中心卡外）'], desc: '下一轮', plain: true },
-      { keys: ['滚轮'], desc: '上一张 / 下一张', plain: true },
+      { kind: 'plain', labelKey: 'help.clickCenter', descKey: 'help.showOrReplay' },
+      { kind: 'plain', labelKey: 'help.clickSides', descKey: 'help.prevNext' },
+      { kind: 'plain', labelKey: 'help.rightClickCenter', descKey: 'help.copyWord' },
+      { kind: 'plain', labelKey: 'help.doubleRight', descKey: 'help.next' },
+      { kind: 'plain', labelKey: 'help.wheel', descKey: 'help.prevNext' },
     ],
   },
   {
-    title: '键盘',
+    titleKey: 'help.keyboard',
     rows: [
-      { keys: ['Space'], desc: '显示释义 / 重播发音' },
-      { keys: ['Enter'], desc: '下一轮' },
-      { keys: ['H', '←'], desc: '上一张' },
-      { keys: ['L', '→'], desc: '下一张' },
-      { keys: ['Ctrl/Cmd', 'C'], desc: '复制当前词' },
-      { keys: ['?'], desc: '打开 / 关闭帮助' },
+      { kind: 'keys', keys: ['Space'], descKey: 'help.space' },
+      { kind: 'keys', keys: ['Enter'], descKey: 'help.next' },
+      { kind: 'keys', keys: ['H', '←'], descKey: 'help.prev' },
+      { kind: 'keys', keys: ['L', '→'], descKey: 'help.nextCard' },
+      { kind: 'keys', keys: ['Ctrl/Cmd', 'C'], descKey: 'help.copyWord' },
+      { kind: 'keys', keys: ['?'], descKey: 'help.toggleHelp' },
     ],
   },
   {
-    title: '触控板',
+    titleKey: 'help.trackpad',
     rows: [
-      { keys: ['双指滑动'], desc: '上一张 / 下一张', plain: true },
-      { keys: ['双指点按中心卡'], desc: '复制当前词', plain: true },
-      {
-        keys: ['双指点按两次（中心卡外）'],
-        desc: '下一轮',
-        plain: true,
-      },
+      { kind: 'plain', labelKey: 'help.twoFinger', descKey: 'help.prevNext' },
+      { kind: 'plain', labelKey: 'help.twoFingerCenter', descKey: 'help.copyWord' },
+      { kind: 'plain', labelKey: 'help.twoFingerDouble', descKey: 'help.next' },
     ],
   },
 ]
 
 export default function StudyHelp({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n()
   return (
-    <Modal onClose={onClose} ariaLabel="操作帮助" className="help-modal">
-      <h2 className="modal-title">操作帮助</h2>
+    <Modal onClose={onClose} ariaLabel={t('help.aria')} className="help-modal">
+      <h2 className="modal-title">{t('help.title')}</h2>
       <div className="help-groups">
         {GROUPS.map((g) => (
-          <section className="help-group" key={g.title}>
-            <h3 className="help-group-title">{g.title}</h3>
+          <section className="help-group" key={g.titleKey}>
+            <h3 className="help-group-title">{t(g.titleKey)}</h3>
             <dl className="help-list">
-              {g.rows.map((r) => (
-                <div className="help-row" key={r.desc + r.keys.join('')}>
+              {g.rows.map((r, i) => (
+                <div className="help-row" key={i}>
                   <dt className="help-keys">
-                    {r.plain
-                      ? r.keys.join(' / ')
+                    {r.kind === 'plain'
+                      ? t(r.labelKey)
                       : r.keys.map((k, i) => (
                           <span key={k}>
                             {i > 0 && <span className="help-plus">+</span>}
@@ -65,7 +68,7 @@ export default function StudyHelp({ onClose }: { onClose: () => void }) {
                           </span>
                         ))}
                   </dt>
-                  <dd className="help-desc">{r.desc}</dd>
+                  <dd className="help-desc">{t(r.descKey)}</dd>
                 </div>
               ))}
             </dl>

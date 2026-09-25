@@ -1133,6 +1133,21 @@ kbd {
   left: max(24px, env(safe-area-inset-left));
 }
 
+/* / 页设置入口：固定视口左上角（当前为占位，不做功能） */
+.settings-btn {
+  position: fixed;
+  top: max(24px, env(safe-area-inset-top));
+  left: max(24px, env(safe-area-inset-left));
+}
+
+/* / 页 GitHub 链接：固定视口右上角（<a> 复用 .icon-btn 样式） */
+.github-btn {
+  position: fixed;
+  top: max(24px, env(safe-area-inset-top));
+  right: max(24px, env(safe-area-inset-right));
+  text-decoration: none;
+}
+
 /* 退出登录按钮：固定视口右下角，主题红 */
 .logout-btn {
   position: fixed;

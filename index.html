@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>洗牌 · 翻牌</title>
     <script>
+      // 首屏前先定语言，避免标题/语言属性闪一下（key 与 src/lib/i18n.tsx 保持一致）
+      ;(function () {
+        try {
+          var l = localStorage.getItem('vocab-lang')
+          if (l !== 'zh' && l !== 'en') {
+            l =
+              (navigator.language || '').toLowerCase().indexOf('zh') === 0
+                ? 'zh'
+                : 'en'
+          }
+          document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en'
+          document.title = l === 'zh' ? '洗牌 · 翻牌' : 'Shuf & Flip'
+        } catch (e) {}
+      })()
+    </script>
+    <script>
       // 首屏前先定主题，避免闪烁（key 与 src/theme.ts 保持一致）
       ;(function () {
         try {

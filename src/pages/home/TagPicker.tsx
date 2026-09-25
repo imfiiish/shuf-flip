@@ -3,10 +3,9 @@ import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
 import { activeFilter, loadBooks } from '../../lib/books'
 import { matchesFilter, sameFilter } from '../../lib/filter'
-import { ALL_TAGS, TAG_GROUPS } from '../../lib/tags'
+import { tagGroupsFor, tagsFor } from '../../lib/tags'
+import { useI18n } from '../../lib/i18n'
 import { allWords } from '../../data/words'
-
-const TAGS = ALL_TAGS
 
 // 点击循环：不选 → 包含 → 排除 → 不选
 function nextMode(m: TagMode | undefined): TagMode | undefined {
@@ -24,6 +23,10 @@ type Props = {
 
 /** `/` 页弹出的 tag 选择窗口 */
 export default function TagPicker({ onClose, onConfirm, existing }: Props) {
+  const { t, contentLang } = useI18n()
+  // 当前学习方向的分组与 tag（两种语言不混）
+  const groups = useMemo(() => tagGroupsFor(contentLang), [contentLang])
+  const TAGS = useMemo(() => tagsFor(contentLang), [contentLang])
   // 初始状态从上次保存的选择恢复
   const [modes, setModes] = useState<Record<string, TagMode>>(() => {
     const f = activeFilter(loadBooks()) ?? { include: [], exclude: [] }
@@ -36,12 +39,12 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
   const filter = useMemo<TagFilter>(() => {
     const include: string[] = []
     const exclude: string[] = []
-    TAGS.forEach((t) => {
-      if (modes[t] === 'include') include.push(t)
-      else if (modes[t] === 'exclude') exclude.push(t)
+    TAGS.forEach((tag) => {
+      if (modes[tag] === 'include') include.push(tag)
+      else if (modes[tag] === 'exclude') exclude.push(tag)
     })
     return { include, exclude }
-  }, [modes])
+  }, [modes, TAGS])
 
   const count = useMemo(
     () => allWords().filter((w) => matchesFilter(w, filter)).length,
@@ -67,32 +70,53 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
     onConfirm(filter)
   }
 
-  const chip = (t: string) => {
-    const m = modes[t]
+  const chip = (tag: string) => {
+    const m = modes[tag]
     return (
       <button
-        key={t}
+        key={tag}
         type="button"
         className={`tag-chip${m ? ` ${m}` : ''}`}
-        onClick={() => toggle(t)}
+        onClick={() => toggle(tag)}
         aria-pressed={!!m}
       >
-        {t}
+        {tag}
       </button>
     )
   }
 
+  // 把 {inc}/{exc} 占位符换成带样式的「包含 / 排除」
+  const hint = t('picker.hint')
+    .split(/(\{inc\}|\{exc\})/g)
+    .map((part, i) => {
+      if (part === '{inc}')
+        return (
+          <b className="inc" key={i}>
+            {t('picker.include')}
+          </b>
+        )
+      if (part === '{exc}')
+        return (
+          <b className="exc" key={i}>
+            {t('picker.exclude')}
+          </b>
+        )
+      return part
+    })
+
   return (
-    <Modal onClose={onClose} ariaLabel="选择要学的 tag">
-      <h2 className="modal-title">选择要学的 tag</h2>
-      <p className="select-hint">
-        点一下 <b className="inc">包含</b>，再点一下 <b className="exc">排除</b>
-        ，再点取消
-      </p>
+    <Modal onClose={onClose} ariaLabel={t('picker.aria')}>
+      <h2 className="modal-title">{t('picker.title')}</h2>
+      <p className="select-hint">{hint}</p>
 
       <div className="tag-groups">
-        {TAG_GROUPS.map((g) => (
-          <div className="tag-group" key={g.label} role="group" aria-label={g.label}>
+        {groups.map((g) => (
+          <div
+            className="tag-group"
+            key={g.label}
+            role="group"
+            aria-label={g.label}
+          >
             <span className="tag-group-label">{g.label}</span>
             <div className="tag-group-chips">{g.tags.map(chip)}</div>
           </div>
@@ -101,19 +125,19 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
 
       {duplicate && (
         <p className="select-warn" role="alert">
-          已存在相同 tag 的词书
+          {t('picker.duplicate')}
         </p>
       )}
 
       <div className="select-actions">
-        <span className="select-count">将学习 {count} 词</span>
+        <span className="select-count">{t('picker.count', { count })}</span>
         <div className="select-buttons">
           <button
             type="button"
             className="btn btn-ghost"
             onClick={() => setModes({})}
           >
-            清空
+            {t('picker.clear')}
           </button>
           <button
             type="button"
@@ -121,7 +145,7 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
             onClick={start}
             disabled={count === 0 || duplicate}
           >
-            创建词书
+            {t('picker.create')}
           </button>
         </div>
       </div>

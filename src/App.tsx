@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SessionProvider, useSession } from './lib/auth'
+import { I18nProvider } from './lib/i18n'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Study from './pages/Study'
@@ -16,6 +17,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
+    <I18nProvider>
     <SessionProvider>
     <BrowserRouter>
       <Routes>
@@ -49,5 +51,6 @@ export default function App() {
       </Routes>
     </BrowserRouter>
     </SessionProvider>
+    </I18nProvider>
   )
 }

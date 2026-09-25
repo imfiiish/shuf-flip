@@ -11,25 +11,34 @@ import { advance, ensureCascade, type Cascade } from '../sampling'
 // 进度用位图：metMask / revealedMask（16 张卡各占一位），失焦推、聚焦拉。
 export const study = new Hono()
 
-/** filterKey（`i:a,b|e:c`）→ include/exclude */
+/** filterKey（`l:en|i:a,b|e:c`）→ lang + include/exclude；旧的 `i:..|e:..` 默认 en。 */
 function parseFilterKey(filterKey: string): {
+  lang: string
   include: string[]
   exclude: string[]
 } {
-  const [inc = '', exc = ''] = filterKey.replace(/^i:/, '').split('|e:')
+  let rest = filterKey
+  let lang = 'en'
+  const m = rest.match(/^l:([a-z]+)\|/)
+  if (m) {
+    lang = m[1]
+    rest = rest.slice(m[0].length)
+  }
+  const [inc = '', exc = ''] = rest.replace(/^i:/, '').split('|e:')
   const split = (s: string) => (s ? s.split(',') : [])
-  return { include: split(inc), exclude: split(exc) }
+  return { lang, include: split(inc), exclude: split(exc) }
 }
 
-/** 当前筛选下的词池（保持 word 排序，稳定） */
+/** 当前筛选下的词池（按 lang + tag，保持 word 排序，稳定） */
 async function poolOf(filterKey: string): Promise<string[]> {
-  const { include, exclude } = parseFilterKey(filterKey)
+  const { lang, include, exclude } = parseFilterKey(filterKey)
   const res = await pool.query<{ word: string }>(
     `select word from words
-      where not (tags && $2::text[])
+      where lang = $3
+        and not (tags && $2::text[])
         and (cardinality($1::text[]) = 0 or tags && $1::text[])
       order by word`,
-    [include, exclude],
+    [include, exclude, lang],
   )
   return res.rows.map((x) => x.word)
 }

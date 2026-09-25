@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { ThemeMode } from '../lib/theme'
 import { applyTheme, getThemeMode, saveThemeMode } from '../lib/theme'
+import { useI18n } from '../lib/i18n'
 
 // 循环顺序：自动 → 亮 → 暗 → 自动
 const ORDER: ThemeMode[] = ['auto', 'light', 'dark']
 
-const LABEL: Record<ThemeMode, string> = {
-  auto: '自动',
-  light: '亮色',
-  dark: '暗色',
+const LABEL_KEY: Record<ThemeMode, string> = {
+  auto: 'theme.auto',
+  light: 'theme.light',
+  dark: 'theme.dark',
 }
 
 function Icon({ mode }: { mode: ThemeMode }) {
@@ -61,6 +62,8 @@ function Icon({ mode }: { mode: ThemeMode }) {
 
 export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>(getThemeMode)
+  const { t } = useI18n()
+  const label = t(LABEL_KEY[mode])
 
   useEffect(() => {
     saveThemeMode(mode)
@@ -80,8 +83,8 @@ export default function ThemeToggle() {
       onClick={() =>
         setMode((m) => ORDER[(ORDER.indexOf(m) + 1) % ORDER.length])
       }
-      aria-label={`主题：${LABEL[mode]}，点击切换`}
-      title={`主题：${LABEL[mode]}（点击切换）`}
+      aria-label={t('theme.toggle', { mode: label })}
+      title={t('theme.toggleTitle', { mode: label })}
     >
       <Icon mode={mode} />
     </button>

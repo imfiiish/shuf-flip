@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { CloseIcon } from './icons'
+import { useI18n } from '../lib/i18n'
 
 type Props = {
   onClose: () => void
@@ -20,6 +21,7 @@ export default function Modal({
   closeOnEscape = true,
   children,
 }: Props) {
+  const { t } = useI18n()
   useEffect(() => {
     if (!closeOnEscape) return
     const onKey = (e: KeyboardEvent) => {
@@ -42,8 +44,8 @@ export default function Modal({
           type="button"
           className="icon-btn modal-close"
           onClick={onClose}
-          aria-label="关闭"
-          title="关闭"
+          aria-label={t('common.close')}
+          title={t('common.close')}
         >
           <CloseIcon />
         </button>

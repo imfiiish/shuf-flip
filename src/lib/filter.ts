@@ -1,5 +1,6 @@
 import type { Word } from '../data/words'
 import { allWords } from '../data/words'
+import type { ContentLang } from './i18n'
 
 /** 选中 tag 的两态：包含 / 排除（不选 = 不在 map 里） */
 export type TagMode = 'include' | 'exclude'
@@ -18,14 +19,20 @@ export function matchesFilter(word: Word, f: TagFilter): boolean {
   return word.tags.some((t) => f.include.includes(t))
 }
 
-/** 筛选条件的稳定 key，用于区分不同词书 / 定位存储 */
-export function filterKey(f: TagFilter): string {
+/** 筛选条件的稳定 key（`l:zh|i:…|e:…`），用于区分词书 / 定位存储；含学习语言 */
+export function filterKey(f: TagFilter, lang: ContentLang): string {
+  return `l:${lang}|i:${[...f.include].sort().join(',')}|e:${[...f.exclude].sort().join(',')}`
+}
+
+/** 忽略语言、只比 include/exclude（同一学习方向内比较用） */
+function tagKey(f: TagFilter): string {
   return `i:${[...f.include].sort().join(',')}|e:${[...f.exclude].sort().join(',')}`
 }
 
-/** filterKey 的反解（tag 名里不含 , 和 |） */
+/** filterKey 的反解（tag 名里不含 , 和 |）；lang 前缀若存在则忽略 */
 export function filterFromKey(key: string): TagFilter {
-  const [inc = '', exc = ''] = key.replace(/^i:/, '').split('|e:')
+  const rest = key.replace(/^l:[a-z]+\|/, '')
+  const [inc = '', exc = ''] = rest.replace(/^i:/, '').split('|e:')
   const split = (s: string) => (s ? s.split(',') : [])
   return { include: split(inc), exclude: split(exc) }
 }
@@ -37,7 +44,7 @@ export function poolOf(f: TagFilter): string[] {
     .map((w) => w.word)
 }
 
-/** 两个筛选条件是否等价（include / exclude 都按集合比较，与顺序无关） */
+/** 两个筛选条件是否等价（只比 tag，与语言/顺序无关） */
 export function sameFilter(a: TagFilter, b: TagFilter): boolean {
-  return filterKey(a) === filterKey(b)
+  return tagKey(a) === tagKey(b)
 }

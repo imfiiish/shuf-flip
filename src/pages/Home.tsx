@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
-import { CheckIcon, CloseIcon } from '../components/icons'
+import { CheckIcon, CloseIcon, GithubIcon, SettingsIcon } from '../components/icons'
+import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/auth'
 import { filterKey } from '../lib/filter'
 import { fetchSummary } from '../lib/study'
 import type { StudySummary } from '../lib/api'
 import type { Book } from '../lib/books'
-import { MAX_BOOKS, loadBooks, saveBooks } from '../lib/books'
+import { MAX_BOOKS, bookLang, loadBooks, saveBooks } from '../lib/books'
 import BookDialog from './home/BookDialog'
 import TagPicker from './home/TagPicker'
 
@@ -15,6 +16,7 @@ export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout } = useSession()
+  const { t, contentLang } = useI18n()
   const [activeBook, setActiveBook] = useState<Book | null>(null)
   // 旧数据里的自动名「词书1/2…」规整为「词书」；自定义名保留
   const [books, setBooks] = useState<Book[]>(() =>
@@ -23,9 +25,11 @@ export default function Home() {
     ),
   )
   // 没有词书 / 从 Study 跳回来要求选词书 → 自动弹出 TagPicker
+  // 只展示当前学习内容语言的词书（两种语言不混）
+  const shown = books.filter((b) => bookLang(b) === contentLang)
   const [pickerOpen, setPickerOpen] = useState(() => {
     const st = location.state as { openPicker?: boolean } | null
-    return !!st?.openPicker || books.length === 0
+    return !!st?.openPicker || shown.length === 0
   })
   const [confirmId, setConfirmId] = useState<number | null>(null)
 
@@ -39,7 +43,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const atLimit = books.length >= MAX_BOOKS
+  const atLimit = shown.length >= MAX_BOOKS
 
   useEffect(() => {
     saveBooks(books)
@@ -50,8 +54,8 @@ export default function Home() {
   useEffect(() => {
     let alive = true
     void Promise.all(
-      books.map((b) =>
-        fetchSummary(filterKey(b.filter)).then(
+      shown.map((b) =>
+        fetchSummary(filterKey(b.filter, contentLang)).then(
           (s) => [b.id, s] as const,
           () => [b.id, { total: 0, met: 0, revealed: 0 }] as const,
         ),
@@ -62,14 +66,15 @@ export default function Home() {
     return () => {
       alive = false
     }
-  }, [books])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [books, contentLang])
 
   return (
     <div className="page">
       {/* 词书区：中间大区域，+ 始终排在最后一本后面 */}
       <div className="bookshelf">
         <div className="bookshelf-inner">
-          {books.map((book) => {
+          {shown.map((book) => {
             const s = summaries[book.id]
             const total = s?.total ?? 0
             const met = s?.met ?? 0
@@ -91,7 +96,12 @@ export default function Home() {
                   setConfirmId(null)
                   setActiveBook(book)
                 }}
-                title={`${book.name} · 碰到 ${met} · 翻开 ${revealed} · 共 ${total}`}
+                title={t('home.bookTitle', {
+                  name: book.name,
+                  met,
+                  revealed,
+                  total,
+                })}
               >
                 <span className="spine" aria-hidden="true">
                   <span
@@ -104,7 +114,9 @@ export default function Home() {
                   />
                 </span>
                 <span className="book-title">{book.name}</span>
-                <span className="book-meta">{total} 词</span>
+                <span className="book-meta">
+                  {t('home.bookWords', { total })}
+                </span>
               </button>
               <button
                 type="button"
@@ -120,11 +132,13 @@ export default function Home() {
                 }}
                 aria-label={
                   confirmId === book.id
-                    ? `再点一次删除 ${book.name}`
-                    : `删除 ${book.name}`
+                    ? t('home.confirmDeleteBook', { name: book.name })
+                    : t('home.deleteBook', { name: book.name })
                 }
                 title={
-                  confirmId === book.id ? '再点一次确认删除' : `删除 ${book.name}`
+                  confirmId === book.id
+                    ? t('home.confirmDelete')
+                    : t('home.deleteBook', { name: book.name })
                 }
               >
                 {confirmId === book.id ? (
@@ -142,8 +156,8 @@ export default function Home() {
               type="button"
               className="book book-add"
               onClick={() => setPickerOpen(true)}
-              aria-label="新建词书"
-              title="新建词书"
+              aria-label={t('home.addBook')}
+              title={t('home.addBook')}
             >
               <svg
                 width="30"
@@ -165,6 +179,28 @@ export default function Home() {
 
       <ThemeToggle />
 
+      {/* 设置入口：占位，暂不做功能 */}
+      <button
+        type="button"
+        className="icon-btn settings-btn"
+        aria-label={t('home.settings')}
+        title={t('home.settings')}
+      >
+        <SettingsIcon />
+      </button>
+
+      {/* 右上角：跳转 GitHub 仓库 */}
+      <a
+        className="icon-btn github-btn"
+        href="https://github.com/imfiiish/shuf-flip"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t('home.github')}
+        title={t('home.github')}
+      >
+        <GithubIcon />
+      </a>
+
       <button
         type="button"
         className="icon-btn logout-btn"
@@ -172,8 +208,8 @@ export default function Home() {
           void logout()
           navigate('/login', { replace: true })
         }}
-        aria-label="退出登录"
-        title="退出登录"
+        aria-label={t('home.logout')}
+        title={t('home.logout')}
       >
         <svg
           width="20"
@@ -207,14 +243,20 @@ export default function Home() {
 
       {pickerOpen && (
         <TagPicker
-          existing={books.map((b) => b.filter)}
+          existing={shown.map((b) => b.filter)}
           onClose={() => setPickerOpen(false)}
           onConfirm={(filter) => {
             setBooks((b) => {
-              if (b.length >= MAX_BOOKS) return b
+              if (shown.length >= MAX_BOOKS) return b
               return [
                 ...b.map((x) => ({ ...x, active: false })),
-                { id: Date.now(), name: '词书', filter, active: true },
+                {
+                  id: Date.now(),
+                  name: t('home.defaultBook'),
+                  filter,
+                  lang: contentLang,
+                  active: true,
+                },
               ]
             })
             setPickerOpen(false)

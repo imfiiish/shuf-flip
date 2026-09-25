@@ -4,6 +4,7 @@ import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import { findWord } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
+import { useI18n } from '../lib/i18n'
 import { api } from '../lib/api'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
@@ -24,6 +25,7 @@ import {
  */
 export default function Quiz() {
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   // 初始 quiz 只读一次（不存在则下面重定向到 /study）
   const initRef = useRef<QuizState | null | undefined>(undefined)
@@ -233,7 +235,7 @@ export default function Quiz() {
   return (
     <div className="app" ref={appRef}>
       {/* 返回主页（与 Study 一致；不会跳过 quiz） */}
-      <BackButton to="/" label="返回主页" />
+      <BackButton to="/" label={t('nav.home')} />
 
       {/* 右下角：跳过（与 Study 的「下一轮」镜像对称），需点两次确认 */}
       <button
@@ -243,8 +245,8 @@ export default function Quiz() {
           if (skipArmed) skip()
           else setSkipArmed(true)
         }}
-        aria-label={skipArmed ? '再点一次确认跳过' : '跳过测验'}
-        title={skipArmed ? '再点一次确认跳过' : '跳过测验'}
+        aria-label={skipArmed ? t('quiz.skipConfirm') : t('quiz.skip')}
+        title={skipArmed ? t('quiz.skipConfirm') : t('quiz.skip')}
       >
         <svg
           width="20"
@@ -279,7 +281,7 @@ export default function Quiz() {
               rate(1)
             }}
           >
-            <kbd>1</kbd> 陌生
+            <kbd>1</kbd> {t('quiz.unknown')}
           </button>
           <button
             type="button"
@@ -289,7 +291,7 @@ export default function Quiz() {
               rate(2)
             }}
           >
-            <kbd>2</kbd> 模糊
+            <kbd>2</kbd> {t('quiz.fuzzy')}
           </button>
           <button
             type="button"
@@ -299,7 +301,7 @@ export default function Quiz() {
               rate(3)
             }}
           >
-            <kbd>3</kbd> 熟悉
+            <kbd>3</kbd> {t('quiz.known')}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
 import { pullBooks } from '../lib/books'
+import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/auth'
 
 // 登录页品牌名：中英交替显示
@@ -14,6 +15,7 @@ const PASSWORD_LEN = 4
 export default function Login() {
   const navigate = useNavigate()
   const { setUser } = useSession()
+  const { t } = useI18n()
   const [idx, setIdx] = useState(0)
   // 0=进入；1=username（确认）；2=密码（进入）；3=再输一次密码确认（注册）
   const [stage, setStage] = useState<0 | 1 | 2 | 3>(0)
@@ -241,7 +243,7 @@ export default function Login() {
 
   const onPasswordChange = (raw: string) => {
     if (/[^\d]/.test(raw)) {
-      showPasswordNote('请输入数字')
+      showPasswordNote(t('login.needDigits'))
     } else {
       setPasswordHint('')
       window.clearTimeout(passwordHintTimer.current)
@@ -253,14 +255,16 @@ export default function Login() {
   const errText = (e: unknown): string => {
     if (e instanceof ApiError) {
       if (e.status === 429)
-        return `尝试太频繁，请 ${e.retryAfter ?? '稍后'} 秒后再试`
-      if (e.code === 'invalid_credentials') return '账号或密码错误'
-      if (e.code === 'username_taken') return '这个用户名已被注册'
-      if (e.code === 'username_unavailable') return '这个用户名不可用'
-      if (e.code === 'invalid_password') return '请输入 4 位数字密码'
-      if (e.code === 'network') return '网络异常，请重试'
+        return e.retryAfter != null
+          ? t('login.err429', { sec: e.retryAfter })
+          : t('login.err429NoSec')
+      if (e.code === 'invalid_credentials') return t('login.errCredentials')
+      if (e.code === 'username_taken') return t('login.errTaken')
+      if (e.code === 'username_unavailable') return t('login.errUnavailable')
+      if (e.code === 'invalid_password') return t('login.errPassword')
+      if (e.code === 'network') return t('login.errNetwork')
     }
-    return '出错了，请重试'
+    return t('login.errGeneric')
   }
 
   // 按钮/回车统一走这里：进入 → 确认(username) → 进入(password) → 注册(再输一次)
@@ -291,7 +295,7 @@ export default function Login() {
       // 新账号：先记下密码，再输一次确认
       setPass1(password)
       setPassword('')
-      setPasswordLabel('再输入密码')
+      setPasswordLabel(t('login.passwordLabel'))
       setStage(3)
       return
     }
@@ -319,7 +323,7 @@ export default function Login() {
 
     // stage 3：注册（两次一致才提交）
     if (password !== pass1) {
-      showPasswordNote('两次不一致，请重输')
+      showPasswordNote(t('login.mismatch'))
       setPassword('')
       return
     }
@@ -367,7 +371,7 @@ export default function Login() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="username"
+              placeholder={t('login.username')}
               value={username}
               disabled={stage === 0}
               readOnly={stage >= 2}
@@ -414,7 +418,7 @@ export default function Login() {
                 value={password}
                 disabled={stage < 2}
                 tabIndex={stage >= 2 ? 0 : -1}
-                aria-label="password"
+                aria-label={t('login.passwordAria')}
                 onChange={(e) => onPasswordChange(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') advance()
@@ -424,7 +428,7 @@ export default function Login() {
           </div>
 
           <p className={`login-hint${showHint ? ' show' : ''}`} aria-hidden={!showHint}>
-            3–20 位，字母开头，仅小写字母与数字
+            {t('login.usernameHint')}
           </p>
           <p className={`password-label${passwordLabel ? ' show' : ''}`} aria-hidden={!passwordLabel}>
             {passwordLabel}
@@ -446,14 +450,18 @@ export default function Login() {
               setPasswordLabel('')
             }}
           >
-            返回
+            {t('login.back')}
           </button>
           <button
             className={`btn btn-primary${readyPulse ? ' ready' : ''}`}
             disabled={!canPress}
             onClick={advance}
           >
-            {stage === 1 ? '确认' : stage === 3 ? '注册' : '进入'}
+            {stage === 1
+              ? t('login.confirm')
+              : stage === 3
+                ? t('login.register')
+                : t('login.enter')}
           </button>
         </div>
       </div>

@@ -4,9 +4,10 @@ import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import StudyHelp from '../components/StudyHelp'
 import { useAudioPlayer } from '../lib/audio'
-import { activeFilter, loadBooks, setActiveFilter } from '../lib/books'
+import { activeFilter, bookLang, loadBooks, setActiveFilter } from '../lib/books'
 import type { TagFilter } from '../lib/filter'
 import { filterKey, poolOf } from '../lib/filter'
+import type { ContentLang } from '../lib/i18n'
 import { loadRevealStore, saveRevealStore } from '../lib/progress'
 import { findWord, type Word } from '../data/words'
 import { api, ApiError, type StudyRound } from '../lib/api'
@@ -17,6 +18,7 @@ import {
   type RoundState,
 } from '../lib/study'
 import { copyText } from '../lib/clipboard'
+import { useI18n } from '../lib/i18n'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logicalDay } from '../lib/day'
@@ -28,16 +30,16 @@ const QUIZ_EVERY = 8
 
 type Phase = 'loading' | 'ready' | 'needPick' | 'error'
 
-/** 选一本要学的词书（用本地索引判断哪本有词） */
-function pickBook(): {
+/** 选一本要学的词书（只限当前学习方向） */
+function pickBook(lang: ContentLang): {
   filterKey: string
   filter: TagFilter | null
   needPick: boolean
 } {
-  const books = loadBooks()
+  const books = loadBooks().filter((b) => bookLang(b) === lang)
   const f = activeFilter(books)
   if (f) {
-    const key = filterKey(f)
+    const key = filterKey(f, lang)
     if (poolOf(f).length > 0)
       return { filterKey: key, filter: null, needPick: false }
   }
@@ -45,14 +47,14 @@ function pickBook(): {
     .sort((a, b) => b.id - a.id)
     .map((b) => ({
       filter: b.filter,
-      key: filterKey(b.filter),
+      key: filterKey(b.filter, lang),
       pool: poolOf(b.filter),
     }))
     .find((b) => b.pool.length > 0)
   if (next)
     return { filterKey: next.key, filter: next.filter, needPick: false }
   return {
-    filterKey: filterKey(f ?? { include: [], exclude: [] }),
+    filterKey: filterKey(f ?? { include: [], exclude: [] }, lang),
     filter: null,
     needPick: books.length === 0,
   }
@@ -60,6 +62,7 @@ function pickBook(): {
 
 export default function Study() {
   const navigate = useNavigate()
+  const { t, contentLang } = useI18n()
 
   // 已到 quiz 边界（Quiz 已 arm）时，/study 一律重定向到 /quiz
   const quizArmed = useMemo(() => loadQuiz() !== null, [])
@@ -144,7 +147,7 @@ export default function Study() {
   useEffect(() => {
     if (quizArmed || initRef.current) return
     initRef.current = true
-    const choice = pickBook()
+    const choice = pickBook(contentLang)
     if (choice.needPick) {
       setPhase('needPick')
       return
@@ -160,7 +163,7 @@ export default function Study() {
         else setPhase('error')
       },
     )
-  }, [quizArmed, applyRound])
+  }, [quizArmed, applyRound, contentLang])
 
   const deckKey = useMemo(() => deck.join('.'), [deck])
   const TOTAL = deck.length
@@ -264,10 +267,10 @@ export default function Study() {
     void copyText(centerName).then((ok) => {
       if (!ok) return
       window.clearTimeout(copyTimerRef.current)
-      setCopyNotice('已复制')
+      setCopyNotice(t('common.copied'))
       copyTimerRef.current = window.setTimeout(() => setCopyNotice(null), 1000)
     })
-  }, [centerName])
+  }, [centerName, t])
 
   // 下一轮：到 quiz 边界先插 quiz；否则向服务器要下一轮
   const nextRound = useCallback(() => {
@@ -358,8 +361,9 @@ export default function Study() {
   if (phase === 'needPick')
     return <Navigate to="/" replace state={{ openPicker: true }} />
   if (phase === 'error')
-    return <div className="load-error">加载失败，请刷新重试</div>
-  if (phase === 'loading') return <div className="load-error">加载中…</div>
+    return <div className="load-error">{t('app.loadFailed')}</div>
+  if (phase === 'loading')
+    return <div className="load-error">{t('app.loading')}</div>
 
   const onCardClick = (_name: string, slot: Slot) => {
     if (slot === 0) toggleReveal()
@@ -369,13 +373,13 @@ export default function Study() {
 
   return (
     <div className="app" ref={appRef}>
-      <BackButton to="/" label="返回主页" />
+      <BackButton to="/" label={t('nav.home')} />
       <button
         type="button"
         className="icon-btn next-round-btn"
         onClick={nextRound}
-        aria-label="下一轮"
-        title="下一轮"
+        aria-label={t('study.next')}
+        title={t('study.next')}
       >
         <svg
           width="20"
@@ -414,13 +418,13 @@ export default function Study() {
             setHelpOpen(true)
           }}
         >
-          <kbd>?</kbd> 帮助
+          <kbd>?</kbd> {t('study.help')}
         </button>
         <span>
-          <kbd>Space</kbd> {revealed ? '重新播放' : '显示释义'}
+          <kbd>Space</kbd> {revealed ? t('study.replay') : t('study.reveal')}
         </span>
         <span>
-          <kbd>Enter</kbd> 下一轮
+          <kbd>Enter</kbd> {t('study.next')}
         </span>
       </div>
 
