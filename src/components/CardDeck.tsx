@@ -245,7 +245,9 @@ function Card({
   // 复制后短暂用「已复制」顶掉词的位置；正反面都放一份，哪面朝上都能看到
   const wordLine = (
     <div className={`word${showNotice ? ' copying' : ''}`}>
-      <span className="word-text">{word.word}</span>
+      <span className="word-text" lang={contentLang === 'zh' ? 'zh-Hans' : 'en'}>
+        {word.word}
+      </span>
       {showNotice && <span className="copy-notice">{notice}</span>}
     </div>
   )
@@ -296,7 +298,10 @@ function Card({
                       {contentLang !== 'zh' && s.pos && (
                         <span className="sense-pos">{s.pos}</span>
                       )}
-                      <span className="sense-defs">
+                      <span
+                        className="sense-defs"
+                        lang={contentLang === 'en' ? 'zh-Hans' : 'en'}
+                      >
                         {s.defs.join(contentLang === 'zh' ? '; ' : '；')}
                       </span>
                     </div>

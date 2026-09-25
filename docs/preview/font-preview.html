@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>字体预览 · 洗牌翻牌</title>
+<style>
+  :root {
+    --bg: #efe6d3; --text: #2b2115; --muted: #8a7c64;
+    --card: #fffcf3; --border: #d8cbb2;
+  }
+  html[data-theme='dark'] {
+    --bg: #223026; --text: #e8e2d4; --muted: #9aa895;
+    --card: #35463a; --border: #3f5145;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 28px 60px;
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, sans-serif;
+  }
+  .bar { display: flex; align-items: baseline; gap: 16px; margin: 0 0 6px; }
+  h1 { font-size: 1.15rem; margin: 0; }
+  p.note { color: var(--muted); font-size: .84rem; margin: 0 0 4px; }
+  button {
+    font: inherit; font-size: .85rem; padding: 5px 14px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--card); color: var(--text); cursor: pointer;
+  }
+  h2 { font-size: .82rem; letter-spacing: .04em; text-transform: uppercase;
+       color: var(--muted); margin: 30px 0 12px; font-weight: 600; }
+  .sample {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 10px;
+  }
+  .label { font: 12px/1.4 ui-monospace, SFMono-Regular, monospace;
+           color: var(--muted); margin-bottom: 8px; }
+  .big { font-size: 2rem; line-height: 1.3; }
+  .big .zh { margin-left: .6em; }
+  .w4 { font-weight: 400; }
+  .w6 { font-weight: 600; }
+  .ui { font-size: 1rem; line-height: 1.6; }
+  .sep { color: var(--muted); }
+
+  /* 大词候选（serif） */
+  .f-orig    { font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'Noto Serif SC', serif; }
+  .f-lib     { font-family: 'Liberation Serif', serif; }
+  .f-noto    { font-family: 'Noto Serif', serif; }
+  .f-dejavu  { font-family: 'DejaVu Serif', serif; }
+  .f-georgia { font-family: Georgia, serif; }
+  .f-notocjk { font-family: 'Noto Serif CJK SC', serif; }
+  .f-times   { font-family: 'Times New Roman', Times, serif; }
+  .f-generic { font-family: serif; }
+
+  /* 界面候选（sans） */
+  .u-system { font-family: system-ui, sans-serif; }
+  .u-noto   { font-family: 'Noto Sans', sans-serif; }
+  .u-dejavu { font-family: 'DejaVu Sans', sans-serif; }
+  .u-lib    { font-family: 'Liberation Sans', sans-serif; }
+  .u-cjk    { font-family: 'Noto Sans CJK SC', sans-serif; }
+  .u-generic{ font-family: sans-serif; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>字体预览 · Shuf &amp; Flip</h1>
+    <button onclick="toggle()">切换亮 / 暗</button>
+  </div>
+  <p class="note">每行左侧小字是 font-family。英文大字看 400（常规）与 600（粗）两种。</p>
+
+  <h2>英文大字候选（display · serif）</h2>
+
+  <div class="sample">
+    <div class="label">f-orig　原始字体栈（app 之前一直用的）</div>
+    <div class="big f-orig"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-lib　'Liberation Serif'</div>
+    <div class="big f-lib"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-noto　'Noto Serif'</div>
+    <div class="big f-noto"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-dejavu　'DejaVu Serif'</div>
+    <div class="big f-dejavu"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-georgia　Georgia（缺失时按系统替换）</div>
+    <div class="big f-georgia"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-notocjk　'Noto Serif CJK SC'</div>
+    <div class="big f-notocjk"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-times　'Times New Roman' / Times</div>
+    <div class="big f-times"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <div class="sample">
+    <div class="label">f-generic　serif（浏览器默认）</div>
+    <div class="big f-generic"><span class="w4">eighty corn</span> <span class="sep">·</span> <span class="w6">eighty corn</span> <span class="zh">沉睡 汉字</span></div>
+  </div>
+
+  <h2>界面文字候选（UI · sans）</h2>
+
+  <div class="sample">
+    <div class="label">u-system　system-ui</div>
+    <div class="ui u-system">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+  <div class="sample">
+    <div class="label">u-noto　'Noto Sans'</div>
+    <div class="ui u-noto">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+  <div class="sample">
+    <div class="label">u-dejavu　'DejaVu Sans'</div>
+    <div class="ui u-dejavu">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+  <div class="sample">
+    <div class="label">u-lib　'Liberation Sans'</div>
+    <div class="ui u-lib">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+  <div class="sample">
+    <div class="label">u-cjk　'Noto Sans CJK SC'</div>
+    <div class="ui u-cjk">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+  <div class="sample">
+    <div class="label">u-generic　sans-serif（浏览器默认）</div>
+    <div class="ui u-generic">洗牌 · 翻牌 &nbsp; Shuffle <span class="sep">·</span> 帮助 <span class="sep">·</span> 显示释义</div>
+  </div>
+
+<script>
+  function toggle() {
+    var h = document.documentElement
+    h.dataset.theme = h.dataset.theme === 'dark' ? '' : 'dark'
+  }
+</script>
+</body>
+</html>

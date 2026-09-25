@@ -1,13 +1,44 @@
+/* ---- CJK 回退字体：只接管中日韩码位，拉丁/西文仍走原字体栈 ----
+   明确用简体（SC）字形，避免浏览器在 JP/TC/SC 间乱挑（Zen 与 Chrome 不一致的根因）。
+   各平台已有原生简中字体会先命中，这里主要补 Linux。 */
+@font-face {
+  font-family: 'App CJK Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('NotoSansCJKsc-Regular');
+  unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF, U+20000-2FA1F;
+}
+@font-face {
+  font-family: 'App CJK Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('NotoSansCJKsc-Medium');
+  unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF, U+20000-2FA1F;
+}
+@font-face {
+  font-family: 'App CJK Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('NotoSansCJKsc-Bold');
+  unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF, U+20000-2FA1F;
+}
+
 :root {
   /* 明暗主题由 <html data-theme> 控制（自动/亮/暗），见 src/theme.ts */
   color-scheme: light dark;
 
   /* ---- 字体 ---- */
+  /* 拉丁/西文按各平台原样；简体中文由上面的 @font-face（App CJK *）按码位接管 */
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC',
-    'Microsoft YaHei', sans-serif;
-  /* 词条展示：纸本词典的衬线感（全用系统字体，不依赖网络） */
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino,
-    'Book Antiqua', Georgia, 'Songti SC', 'Noto Serif SC', serif;
+    'Microsoft YaHei', 'App CJK Sans', sans-serif;
+  --font-display: 'Noto Serif CJK SC', 'Iowan Old Style', 'Palatino Linotype',
+    Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'Noto Serif SC', serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-family: var(--font-ui);
 
