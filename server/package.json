@@ -10,8 +10,7 @@
     "migrate": "node --env-file-if-exists=.env node_modules/node-pg-migrate/bin/node-pg-migrate.js -m migrations --migration-file-language sql up",
     "migrate:down": "node --env-file-if-exists=.env node_modules/node-pg-migrate/bin/node-pg-migrate.js -m migrations --migration-file-language sql down 1",
     "seed": "node --env-file-if-exists=.env scripts/seed.mjs",
-    "build:zh-seed": "node scripts/build-zh-seed.mjs",
-    "audio:zh": "node --env-file-if-exists=.env scripts/build-zh-audio.mjs"
+    "build:zh-seed": "node scripts/build-zh-seed.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",

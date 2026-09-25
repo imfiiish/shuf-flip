@@ -31,10 +31,10 @@ npm run preview  # 预览构建产物
 - `data/zh/` — 中文词表（HSK 词汇/汉字）
   - `definitions.json` — 拼音 + 英文释义（取自 [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict)，CC BY-SA 4.0）
   - `字义.json` — 汉字英文 gloss（取自 [Unihan](https://www.unicode.org/Public/UCD/chart/) kDefinition，Unicode License V3）
-- 音频文件不入库，放在 `public/audio/`（缺失时自动静音）。中文音频可用 `npm run audio:zh` 生成（edge-tts）。
+- 音频文件不入库，放在 `public/audio/`（缺失时自动静音）。中文音频（`zh/cn` 普通话 / `zh/hk` 粤语，同名文件）离线生成，`build:zh-seed` 通过 `AUDIO_DIR` 从 `zh/manifest.json` 读入文件名写入 `words.audio`；目前只接普通话。
 
 两种学习方向由界面语言决定，tag 不混：中文界面学英文（CET/Oxford），English 界面学中文（HSK）。
-中文词条可通过 `npm run build:zh-seed` 生成 `server/seed/words_zh.sql` 后随 seed 入库。
+中文词条可通过 `npm run build:zh-seed` 生成 `server/seed/words_zh.sql`（音频文件名从 `AUDIO_DIR/zh/manifest.json` 读入）后随 seed 入库。
 
 词表内容版权归原作者 / 出版机构（Oxford University Press、相关教育机构等），仅用于学习研究；商用请自行取得授权。
 CC-CEDICT 部分采用 CC BY-SA 4.0，Unihan 部分采用 Unicode License V3。
