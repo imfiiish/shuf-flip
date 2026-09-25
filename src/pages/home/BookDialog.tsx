@@ -42,15 +42,15 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const key = useMemo(() => filterKey(book.filter), [book])
 
   // 本轮由服务器发牌（与 /study 拿到的同一轮）
-  const [round, setRound] = useState<string[]>([])
+  const [words, setWords] = useState<string[]>([])
   useEffect(() => {
     let alive = true
     void api.studyRound(key, false).then(
       (res) => {
-        if (alive) setRound(res.round)
+        if (alive) setWords(res.words)
       },
       () => {
-        if (alive) setRound([])
+        if (alive) setWords([])
       },
     )
     return () => {
@@ -78,17 +78,17 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   // 音频：按需播放（同一时刻只播一个），并预加载本轮，首次点击不延迟
-  const detailsReady = useWordDetails(round)
+  const detailsReady = useWordDetails(words)
   const play = useAudioPlayer()
   const playWord = (name: string) => {
     const w = findWord(name)
     if (w) play(w.audio)
   }
 
-  usePreloadWords(round, detailsReady)
+  usePreloadWords(words, detailsReady)
 
   const start = () => {
-    if (round.length === 0) return
+    if (words.length === 0) return
     setActiveFilter(book.filter)
     navigate('/study')
   }
@@ -158,10 +158,10 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
 
         {/* 左栏：本轮词表 */}
         <div className="book-list">
-          {round.length === 0 ? (
+          {words.length === 0 ? (
             <p className="book-empty">这本词书还没有词</p>
           ) : (
-            round.map((name) => {
+            words.map((name) => {
               const w = findWord(name)
               if (!w) return null
               return (
@@ -192,7 +192,7 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
               type="button"
               className="btn btn-primary side-btn"
               onClick={start}
-              disabled={round.length === 0}
+              disabled={words.length === 0}
             >
               开始学习
             </button>

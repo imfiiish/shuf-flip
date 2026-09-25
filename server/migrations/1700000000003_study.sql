@@ -1,6 +1,6 @@
 -- Up Migration
 
--- Model B 学习数据。设计：一次 quiz 就是「另一种轮」（rounds.kind），
+-- 学习数据。设计：一次 quiz 就是「另一种轮」（rounds.kind），
 -- quiz 评分就是「带 rating 的动作」（actions.rating）。
 
 -- 每用户 + 筛选的抽样状态 + 当前位置（center）

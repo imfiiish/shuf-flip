@@ -45,7 +45,7 @@ export default function Home() {
     saveBooks(books)
   }, [books])
 
-  // 每本书的 total/seen/revealed 由服务器汇总
+  // 每本书的 total/met/revealed 由服务器汇总
   const [summaries, setSummaries] = useState<Record<number, StudySummary>>({})
   useEffect(() => {
     let alive = true
@@ -53,7 +53,7 @@ export default function Home() {
       books.map((b) =>
         fetchSummary(filterKey(b.filter)).then(
           (s) => [b.id, s] as const,
-          () => [b.id, { total: 0, seen: 0, revealed: 0 }] as const,
+          () => [b.id, { total: 0, met: 0, revealed: 0 }] as const,
         ),
       ),
     ).then((entries) => {
@@ -72,9 +72,9 @@ export default function Home() {
           {books.map((book) => {
             const s = summaries[book.id]
             const total = s?.total ?? 0
-            const seen = s?.seen ?? 0
+            const met = s?.met ?? 0
             const revealed = s?.revealed ?? 0
-            const seenPct = total ? (seen / total) * 100 : 0
+            const metPct = total ? (met / total) * 100 : 0
             const revPct = total ? (revealed / total) * 100 : 0
             return (
             <div
@@ -91,12 +91,12 @@ export default function Home() {
                   setConfirmId(null)
                   setActiveBook(book)
                 }}
-                title={`${book.name} · 碰到 ${seen} · 翻开 ${revealed} · 共 ${total}`}
+                title={`${book.name} · 碰到 ${met} · 翻开 ${revealed} · 共 ${total}`}
               >
                 <span className="spine" aria-hidden="true">
                   <span
                     className="spine-yellow"
-                    style={{ height: `${seenPct}%` }}
+                    style={{ height: `${metPct}%` }}
                   />
                   <span
                     className="spine-green"

@@ -5,20 +5,25 @@ export type User = { id: number; username: string }
 /** 一轮（服务器发牌） */
 export type StudyRound = {
   roundId: number
-  r: number
-  fk: string
-  round: string[]
+  /** 轮序号 */
+  roundSeq: number
+  /** 词池筛选键 */
+  filterKey: string
+  /** 这一轮的词 */
+  words: string[]
   center: number
   /** 碰过的卡（16 位位图） */
   metMask: number
   /** 翻开过的卡（16 位位图） */
-  checkedMask: number
+  revealedMask: number
 }
 
 /** Home 汇总 */
 export type StudySummary = {
   total: number
-  seen: number
+  /** 碰过的词数 */
+  met: number
+  /** 翻开过的词数 */
   revealed: number
 }
 
@@ -114,26 +119,26 @@ export const api = {
       `/auth/exists?username=${encodeURIComponent(username)}`,
     ),
 
-  // —— Model B：服务器发牌 / 收动作 ——
-  studyRound: (fk: string, advance: boolean) =>
+  // —— 学习：服务器发牌 / 收动作 ——
+  studyRound: (filterKey: string, advance: boolean) =>
     request<StudyRound>('/study/round', {
       method: 'POST',
-      body: { fk, advance },
+      body: { filterKey, advance },
     }),
   studyState: (
     roundId: number,
     center: number,
     metMask: number,
-    checkedMask: number,
+    revealedMask: number,
   ) =>
-    request<{ ok: true; metMask: number; checkedMask: number }>(
+    request<{ ok: true; metMask: number; revealedMask: number }>(
       '/study/state',
-      { method: 'PUT', body: { roundId, center, metMask, checkedMask } },
+      { method: 'PUT', body: { roundId, center, metMask, revealedMask } },
     ),
-  studyQuiz: (fk: string, batch: number) =>
+  studyQuiz: (filterKey: string, roundSeq: number) =>
     request<{ quizId: number | null; words: string[] }>('/study/quiz', {
       method: 'POST',
-      body: { fk, batch },
+      body: { filterKey, roundSeq },
     }),
   studyQuizRatings: (
     quizId: number,
@@ -143,9 +148,9 @@ export const api = {
       method: 'POST',
       body: { quizId, ratings },
     }),
-  studySummary: (fk: string) =>
+  studySummary: (filterKey: string) =>
     request<StudySummary>(
-      `/study/summary?fk=${encodeURIComponent(fk)}`,
+      `/study/summary?filterKey=${encodeURIComponent(filterKey)}`,
     ),
 
   // —— 词书（用户配置，整体读/写）——

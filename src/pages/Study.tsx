@@ -29,12 +29,17 @@ const QUIZ_EVERY = 8
 type Phase = 'loading' | 'ready' | 'needPick' | 'error'
 
 /** 选一本要学的词书（用本地索引判断哪本有词） */
-function pickBook(): { fk: string; filter: TagFilter | null; needPick: boolean } {
+function pickBook(): {
+  filterKey: string
+  filter: TagFilter | null
+  needPick: boolean
+} {
   const books = loadBooks()
   const f = activeFilter(books)
   if (f) {
-    const fk = filterKey(f)
-    if (poolOf(f).length > 0) return { fk, filter: null, needPick: false }
+    const key = filterKey(f)
+    if (poolOf(f).length > 0)
+      return { filterKey: key, filter: null, needPick: false }
   }
   const next = [...books]
     .sort((a, b) => b.id - a.id)
@@ -44,9 +49,10 @@ function pickBook(): { fk: string; filter: TagFilter | null; needPick: boolean }
       pool: poolOf(b.filter),
     }))
     .find((b) => b.pool.length > 0)
-  if (next) return { fk: next.key, filter: next.filter, needPick: false }
+  if (next)
+    return { filterKey: next.key, filter: next.filter, needPick: false }
   return {
-    fk: filterKey(f ?? { include: [], exclude: [] }),
+    filterKey: filterKey(f ?? { include: [], exclude: [] }),
     filter: null,
     needPick: books.length === 0,
   }
@@ -64,13 +70,13 @@ export default function Study() {
   const [roundTick, setRoundTick] = useState(0)
 
   // 上报用的可变引用（避免闭包过期）
-  const fkRef = useRef('')
+  const filterKeyRef = useRef('')
   const roundIdRef = useRef(0)
-  const roundRRef = useRef(0)
+  const roundSeqRef = useRef(0)
   const centerRef = useRef(0)
   const deckRef = useRef<string[]>([])
   const metMaskRef = useRef(0)
-  const checkedMaskRef = useRef(0)
+  const revealedMaskRef = useRef(0)
   centerRef.current = center
 
   /** 组装当前进度（位图） */
@@ -79,20 +85,20 @@ export default function Study() {
       roundId: roundIdRef.current,
       center: centerRef.current,
       metMask: metMaskRef.current,
-      checkedMask: checkedMaskRef.current,
+      revealedMask: revealedMaskRef.current,
     }),
     [],
   )
 
   const applyRound = useCallback((res: StudyRound) => {
-    fkRef.current = res.fk
+    filterKeyRef.current = res.filterKey
     roundIdRef.current = res.roundId
-    roundRRef.current = res.r
-    deckRef.current = res.round
+    roundSeqRef.current = res.roundSeq
+    deckRef.current = res.words
     metMaskRef.current = res.metMask ?? 0
-    checkedMaskRef.current = res.checkedMask ?? 0
-    setDeck(res.round)
-    setCenter(res.round.length ? Math.min(res.center, res.round.length - 1) : 0)
+    revealedMaskRef.current = res.revealedMask ?? 0
+    setDeck(res.words)
+    setCenter(res.words.length ? Math.min(res.center, res.words.length - 1) : 0)
     setRoundTick((t) => t + 1)
   }, [])
 
@@ -143,7 +149,7 @@ export default function Study() {
       setPhase('needPick')
       return
     }
-    void api.studyRound(choice.fk, false).then(
+    void api.studyRound(choice.filterKey, false).then(
       (res) => {
         if (choice.filter) setActiveFilter(choice.filter)
         applyRound(res)
@@ -172,10 +178,10 @@ export default function Study() {
 
   // 聚焦拉、失焦推（多浏览器共用同一账号时同步）
   const pullAndApply = useCallback(async () => {
-    const f = fkRef.current
-    if (!f || roundIdRef.current <= 0) return
+    const currentFilterKey = filterKeyRef.current
+    if (!currentFilterKey || roundIdRef.current <= 0) return
     try {
-      const res = await api.studyRound(f, false)
+      const res = await api.studyRound(currentFilterKey, false)
       if (res.roundId !== roundIdRef.current) {
         // 另一浏览器推进过：跟着跳到新轮
         applyRound(res)
@@ -184,9 +190,9 @@ export default function Study() {
       } else {
         // 同一轮：合并远端位图，位置以后写为准
         metMaskRef.current |= res.metMask
-        checkedMaskRef.current |= res.checkedMask
+        revealedMaskRef.current |= res.revealedMask
         setCenter(
-          res.round.length ? Math.min(res.center, res.round.length - 1) : 0,
+          res.words.length ? Math.min(res.center, res.words.length - 1) : 0,
         )
       }
     } catch {
@@ -242,7 +248,7 @@ export default function Study() {
     const name = deckRef.current[centerRef.current]
     if (name) {
       setRevealCounts((c) => ({ ...c, [name]: (c[name] || 0) + 1 }))
-      checkedMaskRef.current |= 1 << centerRef.current
+      revealedMaskRef.current |= 1 << centerRef.current
       queueState(buildState())
     }
     play(centerWord?.audio)
@@ -265,13 +271,13 @@ export default function Study() {
 
   // 下一轮：到 quiz 边界先插 quiz；否则向服务器要下一轮
   const nextRound = useCallback(() => {
-    const f = fkRef.current
-    if (!f) return
-    const r = roundRRef.current
+    const currentFilterKey = filterKeyRef.current
+    if (!currentFilterKey) return
+    const currentRoundSeq = roundSeqRef.current
 
     const doAdvance = () => {
       sendStateNow(buildState())
-      void api.studyRound(f, true).then(
+      void api.studyRound(currentFilterKey, true).then(
         (res) => {
           applyRound(res)
           setRevealed(false)
@@ -284,11 +290,11 @@ export default function Study() {
     }
 
     // 到 quiz 边界：向服务器要题（待考池在服务器算）
-    if (r > 0 && r % QUIZ_EVERY === 0) {
-      void api.studyQuiz(f, r).then(
+    if (currentRoundSeq > 0 && currentRoundSeq % QUIZ_EVERY === 0) {
+      void api.studyQuiz(currentFilterKey, currentRoundSeq).then(
         (res) => {
           if (res.quizId != null && res.words.length > 0) {
-            startQuiz(f, r, res.quizId, res.words)
+            startQuiz(currentFilterKey, currentRoundSeq, res.quizId, res.words)
             sendStateNow(buildState())
             navigate('/quiz')
           } else {

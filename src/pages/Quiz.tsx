@@ -83,7 +83,7 @@ export default function Quiz() {
         // 等服务器记录评分并推进下一轮再跳；失败也跳
         const toStudy = () => navigate('/study', { replace: true })
         const advance = () =>
-          void api.studyRound(q.fk, true).then(toStudy, toStudy)
+          void api.studyRound(q.filterKey, true).then(toStudy, toStudy)
         if (q.quizId > 0 && list.length > 0) {
           void api.studyQuizRatings(q.quizId, list).then(advance, advance)
         } else {

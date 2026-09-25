@@ -24,10 +24,10 @@ export const UNDO_LIMIT = 3
 export type QuizState = {
   /** 服务器签发的 quiz id（0 = 旧数据，缺失） */
   quizId: number
-  /** 目标词书（filterKey） */
-  fk: string
-  /** 触发时的 cascade.r（批次：8/16/24…） */
-  batch: number
+  /** 目标词书的筛选键 */
+  filterKey: string
+  /** 触发时的轮序号（8/16/24…） */
+  roundSeq: number
   /** 本次 quiz 的词（已洗牌，顺序固定） */
   words: string[]
   /** word → 评分（未评 = 不在 map 里） */
@@ -41,7 +41,9 @@ export type QuizState = {
 function parseQuiz(v: unknown): QuizState | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
-  if (typeof o.fk !== 'string' || typeof o.batch !== 'number') return null
+  if (typeof o.filterKey !== 'string' || typeof o.roundSeq !== 'number') {
+    return null
+  }
   if (!isStringArray(o.words) || !isStringArray(o.undo)) return null
   if (typeof o.ratings !== 'object' || o.ratings === null) return null
   const ratings: Record<string, Rating> = {}
@@ -54,8 +56,8 @@ function parseQuiz(v: unknown): QuizState | null {
       : 0
   return {
     quizId: Number.isInteger(o.quizId) ? (o.quizId as number) : 0,
-    fk: o.fk,
-    batch: o.batch,
+    filterKey: o.filterKey,
+    roundSeq: o.roundSeq,
     words: o.words,
     ratings,
     undo: o.undo,
@@ -91,8 +93,8 @@ export async function hydrateQuiz(): Promise<void> {
  * 已存在则不覆盖（续做）。
  */
 export function startQuiz(
-  fk: string,
-  batch: number,
+  filterKey: string,
+  roundSeq: number,
   quizId: number,
   words: string[],
 ): QuizState {
@@ -100,8 +102,8 @@ export function startQuiz(
   if (existing) return existing
   const state: QuizState = {
     quizId,
-    fk,
-    batch,
+    filterKey,
+    roundSeq,
     words,
     ratings: {},
     undo: [],

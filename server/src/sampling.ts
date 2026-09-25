@@ -1,5 +1,4 @@
-// 级联窗口抽样（服务端版，逻辑与前端 src/lib/cascade.ts 一致）。
-// 详见 docs/sampling.md。参数：R=16、W=64、g=4、n=8、m=3。
+// 级联窗口抽样（服务端）。详见 docs/sampling.md。参数：R=16、W=64、g=4、n=8、m=3。
 
 /** 每轮抽取的词数 */
 export const ROUND_SIZE = 16
@@ -14,11 +13,11 @@ const MULT = 3
 
 export type Cascade = {
   /** 下一轮要画的序号（0 起） */
-  r: number
+  roundSeq: number
   /** levels[0] = 活跃窗口；…；levels[last] = 整个词池 */
   levels: string[][]
-  /** 当前显示的这一轮（ROUND_SIZE 个词） */
-  round: string[]
+  /** 当前显示的这一轮的词 */
+  words: string[]
 }
 
 /** 洗牌取前 k 个（均匀随机、不重复） */
@@ -101,16 +100,20 @@ function fitLevels(
 export function advance(c: Cascade, pool: readonly string[]): Cascade {
   const chain = chainOf(pool.length)
   const levels = c.levels.map((l) => [...l])
-  const r = c.r
-  if (r > 0) {
+  const roundSeq = c.roundSeq
+  if (roundSeq > 0) {
     for (let i = levels.length - 2; i >= 0; i--) {
-      if (r % periodOf(i) === 0) {
+      if (roundSeq % periodOf(i) === 0) {
         levels[i] = pick(levels[i + 1] ?? pool, chain[i])
       }
     }
   }
   const win = levels[0] ?? [...pool]
-  return { r: r + 1, levels, round: pick(win, ROUND_SIZE) }
+  return {
+    roundSeq: roundSeq + 1,
+    levels,
+    words: pick(win, ROUND_SIZE),
+  }
 }
 
 /**
@@ -123,9 +126,9 @@ export function ensureCascade(
 ): { cascade: Cascade; generated: boolean } {
   const levels = fitLevels(stored?.levels ?? null, pool)
   const poolSet = new Set(pool)
-  const round = (stored?.round ?? []).filter((w) => poolSet.has(w))
-  const state: Cascade = { r: stored?.r ?? 0, levels, round }
-  if (round.length === 0 && pool.length > 0) {
+  const words = (stored?.words ?? []).filter((w) => poolSet.has(w))
+  const state: Cascade = { roundSeq: stored?.roundSeq ?? 0, levels, words }
+  if (words.length === 0 && pool.length > 0) {
     return { cascade: advance(state, pool), generated: true }
   }
   return { cascade: state, generated: false }

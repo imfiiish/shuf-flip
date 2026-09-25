@@ -1,18 +1,18 @@
-// Model B 客户端辅助：上报当前轮进度（失焦推、聚焦拉）。
-// 进度用位图：metMask / checkedMask（16 张卡各一位）。
+// 学习进度上报：失焦推、聚焦拉，服务器收动作。
+// 进度用位图：metMask / revealedMask（16 张卡各一位）。
 import { api, type StudySummary } from './api'
 
 export type RoundState = {
   roundId: number
   center: number
   metMask: number
-  checkedMask: number
+  revealedMask: number
 }
 
 function send(s: RoundState): void {
   if (s.roundId <= 0) return
   void api
-    .studyState(s.roundId, s.center, s.metMask, s.checkedMask)
+    .studyState(s.roundId, s.center, s.metMask, s.revealedMask)
     .catch(() => {})
 }
 
@@ -58,6 +58,6 @@ export function sendStateBeacon(s: RoundState): void {
 }
 
 /** Home 汇总 */
-export function fetchSummary(fk: string): Promise<StudySummary> {
-  return api.studySummary(fk)
+export function fetchSummary(filterKey: string): Promise<StudySummary> {
+  return api.studySummary(filterKey)
 }
