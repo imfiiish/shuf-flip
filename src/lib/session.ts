@@ -1,7 +1,8 @@
 // Study / Quiz 共用的卡片会话逻辑
 import { useEffect, useRef, useState } from 'react'
 import { preloadAudio } from './audio'
-import { findWord, loadDetails } from '../data/words'
+import { findWord, loadDetails, wordAudio } from '../data/words'
+import type { Accent } from './i18n'
 
 /**
  * 拉取这组词的详情（音标/释义/音频），返回是否就绪。
@@ -29,16 +30,20 @@ export function useWordDetails(names: readonly string[]): boolean {
 }
 
 /** 预加载一组词的发音（缺音频的自动跳过）；ready=false 时不加载 */
-export function usePreloadWords(names: readonly string[], ready = true): void {
+export function usePreloadWords(
+  names: readonly string[],
+  ready = true,
+  accent: Accent = 'cn',
+): void {
   useEffect(() => {
     if (!ready) return
     preloadAudio(
       names.flatMap((n) => {
-        const w = findWord(n)
-        return w?.audio ? [w.audio] : []
+        const file = wordAudio(findWord(n), accent)
+        return file ? [file] : []
       }),
     )
-  }, [names, ready])
+  }, [names, ready, accent])
 }
 
 /**

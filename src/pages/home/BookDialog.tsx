@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Modal from '../../components/Modal'
-import { setActiveFilter, type Book } from '../../lib/books'
+import { bookAccent, bookLang, setActiveBook, type Book } from '../../lib/books'
 import { copyText } from '../../lib/clipboard'
 import { filterKey } from '../../lib/filter'
 import { api } from '../../lib/api'
 import { useAudioPlayer } from '../../lib/audio'
 import { useI18n } from '../../lib/i18n'
 import { usePreloadWords, useWordDetails } from '../../lib/session'
-import { findWord } from '../../data/words'
+import { findWord, wordAudio } from '../../data/words'
 
 type Props = {
   book: Book
@@ -23,7 +23,7 @@ type Props = {
  */
 export default function BookDialog({ book, onClose, onRename }: Props) {
   const navigate = useNavigate()
-  const { t, contentLang } = useI18n()
+  const { t } = useI18n()
 
   // 顶部标题改名：点击进入编辑，Enter / 失焦提交，Esc 取消
   const [editing, setEditing] = useState(false)
@@ -42,8 +42,8 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   }
 
   const key = useMemo(
-    () => filterKey(book.filter, contentLang),
-    [book, contentLang],
+    () => filterKey(book.filter, bookLang(book)),
+    [book],
   )
 
   // 本轮由服务器发牌（与 /study 拿到的同一轮）
@@ -87,14 +87,14 @@ export default function BookDialog({ book, onClose, onRename }: Props) {
   const play = useAudioPlayer()
   const playWord = (name: string) => {
     const w = findWord(name)
-    if (w) play(w.audio)
+    if (w) play(wordAudio(w, bookAccent(book)))
   }
 
-  usePreloadWords(words, detailsReady)
+  usePreloadWords(words, detailsReady, bookAccent(book))
 
   const start = () => {
     if (words.length === 0) return
-    setActiveFilter(book.filter)
+    setActiveBook(book.id)
     navigate('/study')
   }
 

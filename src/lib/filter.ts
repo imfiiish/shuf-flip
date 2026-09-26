@@ -37,10 +37,10 @@ export function filterFromKey(key: string): TagFilter {
   return { include: split(inc), exclude: split(exc) }
 }
 
-/** 当前筛选下的词池（word 字符串数组，保持词库顺序） */
-export function poolOf(f: TagFilter): string[] {
+/** 当前筛选下的词池（word 字符串数组，保持词库顺序）；lang 可限定只取某套词库 */
+export function poolOf(f: TagFilter, lang?: ContentLang): string[] {
   return allWords()
-    .filter((w) => matchesFilter(w, f))
+    .filter((w) => (!lang || w.lang === lang) && matchesFilter(w, f))
     .map((w) => w.word)
 }
 

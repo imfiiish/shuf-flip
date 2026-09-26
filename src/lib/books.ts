@@ -1,6 +1,5 @@
 import type { TagFilter } from './filter'
-import { sameFilter } from './filter'
-import type { ContentLang } from './i18n'
+import type { Accent, ContentLang } from './i18n'
 import { isStringArray } from './guard'
 import { readJSON, writeJSON } from './storage'
 import { api } from './api'
@@ -12,6 +11,8 @@ export type Book = {
   filter: TagFilter
   /** 学习内容语言；旧数据没有，视为 'en' */
   lang?: ContentLang
+  /** 中文发音口音；旧数据/英文没有，视为普通话 'cn' */
+  accent?: Accent
   /** 是否是「当前在学」的那本（当前筛选的来路） */
   active?: boolean
 }
@@ -19,6 +20,11 @@ export type Book = {
 /** 词书的语言（兼容旧数据） */
 export function bookLang(b: Book): ContentLang {
   return b.lang === 'zh' ? 'zh' : 'en'
+}
+
+/** 词书的中文口音（兼容旧数据） */
+export function bookAccent(b: Book): Accent {
+  return b.accent === 'hk' ? 'hk' : 'cn'
 }
 
 const KEY = 'vocab-books'
@@ -32,7 +38,10 @@ function isBook(v: unknown): v is Book {
   if (typeof b.id !== 'number' || typeof b.name !== 'string') return false
   const f = b.filter as Record<string, unknown> | undefined
   if (!f || !isStringArray(f.include) || !isStringArray(f.exclude)) return false
-  return b.lang === undefined || b.lang === 'en' || b.lang === 'zh'
+  if (b.lang !== undefined && b.lang !== 'en' && b.lang !== 'zh') return false
+  if (b.accent !== undefined && b.accent !== 'cn' && b.accent !== 'hk')
+    return false
+  return true
 }
 
 export function loadBooks(): Book[] {
@@ -81,10 +90,9 @@ export function activeFilter(books: Book[]): TagFilter | null {
   return books.find((b) => b.active)?.filter ?? null
 }
 
-/** 把与 filter 相同的那本书设为当前（没有匹配的书则不动） */
-export function setActiveFilter(filter: TagFilter): void {
+/** 把指定 id 的词书设为当前（同 filter 不同口音也能区分） */
+export function setActiveBook(id: number): void {
   const books = loadBooks()
-  if (!books.some((b) => sameFilter(b.filter, filter))) return
-  const next = books.map((b) => ({ ...b, active: sameFilter(b.filter, filter) }))
-  saveBooks(next)
+  if (!books.some((b) => b.id === id)) return
+  saveBooks(books.map((b) => ({ ...b, active: b.id === id })))
 }

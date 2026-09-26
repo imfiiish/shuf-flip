@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import type { TagFilter, TagMode } from '../../lib/filter'
 import { activeFilter, loadBooks } from '../../lib/books'
-import { matchesFilter, sameFilter } from '../../lib/filter'
-import { tagGroupsFor, tagsFor } from '../../lib/tags'
+import { poolOf, sameFilter } from '../../lib/filter'
+import { tagDefsFor, tagGroupsFor } from '../../lib/tags'
+import type { TagDef } from '../../lib/tags'
 import { useI18n } from '../../lib/i18n'
-import { allWords } from '../../data/words'
+import type { Accent, ContentLang } from '../../lib/i18n'
 
 // 点击循环：不选 → 包含 → 排除 → 不选
 function nextMode(m: TagMode | undefined): TagMode | undefined {
@@ -16,39 +17,61 @@ function nextMode(m: TagMode | undefined): TagMode | undefined {
 
 type Props = {
   onClose: () => void
-  onConfirm: (filter: TagFilter) => void
+  onConfirm: (filter: TagFilter, lang: ContentLang, accent: Accent) => void
   /** 已有的词书筛选条件，用于查重 */
   existing: TagFilter[]
 }
 
 /** `/` 页弹出的 tag 选择窗口 */
 export default function TagPicker({ onClose, onConfirm, existing }: Props) {
-  const { t, contentLang } = useI18n()
-  // 当前学习方向的分组与 tag（两种语言不混）
-  const groups = useMemo(() => tagGroupsFor(contentLang), [contentLang])
-  const TAGS = useMemo(() => tagsFor(contentLang), [contentLang])
-  // 初始状态从上次保存的选择恢复
+  const { t, lang, contentLang } = useI18n()
+  // 当前界面语言的 tag 分组（中英界面的组不一样）
+  const groups = useMemo(() => tagGroupsFor(lang), [lang])
+  const tagDefs = useMemo(() => tagDefsFor(lang), [lang])
+  const defByLabel = useMemo(() => {
+    const m = new Map<string, TagDef>()
+    for (const d of tagDefs) m.set(d.label, d)
+    return m
+  }, [tagDefs])
+
+  // 初始状态从上次保存的选择恢复（按底层值反查展示名）
   const [modes, setModes] = useState<Record<string, TagMode>>(() => {
     const f = activeFilter(loadBooks()) ?? { include: [], exclude: [] }
     const m: Record<string, TagMode> = {}
-    f.include.forEach((t) => (m[t] = 'include'))
-    f.exclude.forEach((t) => (m[t] = 'exclude'))
+    for (const d of tagDefsFor(lang)) {
+      if (d.values.some((v) => f.include.includes(v))) m[d.label] = 'include'
+      else if (d.values.some((v) => f.exclude.includes(v)))
+        m[d.label] = 'exclude'
+    }
     return m
   })
+
+  const selectedDefs = useMemo(
+    () => tagDefs.filter((d) => modes[d.label]),
+    [tagDefs, modes],
+  )
+  // 当前选择落在哪套词库（没选 = 界面默认学习方向）
+  const activeLang: ContentLang = selectedDefs[0]?.lang ?? contentLang
+  // 选到粤语 tag 时发音走粤语
+  const accent: Accent =
+    activeLang === 'zh' && selectedDefs.some((d) => d.accent === 'hk')
+      ? 'hk'
+      : 'cn'
 
   const filter = useMemo<TagFilter>(() => {
     const include: string[] = []
     const exclude: string[] = []
-    TAGS.forEach((tag) => {
-      if (modes[tag] === 'include') include.push(tag)
-      else if (modes[tag] === 'exclude') exclude.push(tag)
-    })
+    for (const d of selectedDefs) {
+      const mode = modes[d.label]
+      if (mode === 'include') include.push(...d.values)
+      else if (mode === 'exclude') exclude.push(...d.values)
+    }
     return { include, exclude }
-  }, [modes, TAGS])
+  }, [selectedDefs, modes])
 
   const count = useMemo(
-    () => allWords().filter((w) => matchesFilter(w, filter)).length,
-    [filter],
+    () => poolOf(filter, activeLang).length,
+    [filter, activeLang],
   )
 
   // 和已有词书 tag 组合重复时不允许创建
@@ -57,30 +80,34 @@ export default function TagPicker({ onClose, onConfirm, existing }: Props) {
     [existing, filter],
   )
 
-  const toggle = (tag: string) =>
+  const toggle = (d: TagDef) =>
     setModes((s) => {
-      const next = nextMode(s[tag])
-      const copy = { ...s }
-      if (next) copy[tag] = next
-      else delete copy[tag]
+      const next = nextMode(s[d.label])
+      // 选到另一种语言：清掉旧语言的选择（一本词书只学一种）
+      const sameLang = Object.keys(s).every(
+        (k) => k === d.label || defByLabel.get(k)?.lang === d.lang,
+      )
+      const copy = next && !sameLang ? {} : { ...s }
+      if (next) copy[d.label] = next
+      else delete copy[d.label]
       return copy
     })
 
   const start = () => {
-    onConfirm(filter)
+    onConfirm(filter, activeLang, accent)
   }
 
-  const chip = (tag: string) => {
-    const m = modes[tag]
+  const chip = (d: TagDef) => {
+    const m = modes[d.label]
     return (
       <button
-        key={tag}
+        key={d.label}
         type="button"
         className={`tag-chip${m ? ` ${m}` : ''}`}
-        onClick={() => toggle(tag)}
+        onClick={() => toggle(d)}
         aria-pressed={!!m}
       >
-        {tag}
+        {d.label}
       </button>
     )
   }

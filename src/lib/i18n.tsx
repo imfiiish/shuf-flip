@@ -17,6 +17,8 @@ import { readString, writeString } from './storage'
 export type Lang = 'zh' | 'en'
 /** 学习内容语言：UI 语言 = 母语，学另一种 */
 export type ContentLang = 'en' | 'zh'
+/** 中文发音口音：cn=普通话，hk=粤语 */
+export type Accent = 'cn' | 'hk'
 
 /** 由 UI 语言推出要学的语言（中文界面 → 学英文；英文界面 → 学中文） */
 export function contentLangOf(ui: Lang): ContentLang {

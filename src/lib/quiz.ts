@@ -10,6 +10,7 @@
 //  - /quiz 挂载时若不存在 QuizState → 重定向到 /study
 import { getKV, put, del } from './kv'
 import { isStringArray } from './guard'
+import type { Accent } from './i18n'
 
 /** quiz 三档：1 陌生 / 2 模糊 / 3 熟悉 */
 export type Rating = 1 | 2 | 3
@@ -26,6 +27,8 @@ export type QuizState = {
   quizId: number
   /** 目标词书的筛选键 */
   filterKey: string
+  /** 目标词书的中文口音（普通话/粤语）；旧数据缺失视为普通话 */
+  accent?: Accent
   /** 触发时的轮序号（8/16/24…） */
   roundSeq: number
   /** 本次 quiz 的词（已洗牌，顺序固定） */
@@ -57,6 +60,7 @@ function parseQuiz(v: unknown): QuizState | null {
   return {
     quizId: Number.isInteger(o.quizId) ? (o.quizId as number) : 0,
     filterKey: o.filterKey,
+    accent: o.accent === 'hk' ? 'hk' : 'cn',
     roundSeq: o.roundSeq,
     words: o.words,
     ratings,
@@ -97,12 +101,14 @@ export function startQuiz(
   roundSeq: number,
   quizId: number,
   words: string[],
+  accent: Accent = 'cn',
 ): QuizState {
   const existing = loadQuiz()
   if (existing) return existing
   const state: QuizState = {
     quizId,
     filterKey,
+    accent,
     roundSeq,
     words,
     ratings: {},

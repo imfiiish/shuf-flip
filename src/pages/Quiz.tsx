@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
-import { findWord } from '../data/words'
+import { findWord, wordAudio } from '../data/words'
 import { useAudioPlayer } from '../lib/audio'
-import { useI18n } from '../lib/i18n'
+import { useI18n, type Accent } from '../lib/i18n'
 import { api } from '../lib/api'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
@@ -33,6 +33,8 @@ export default function Quiz() {
   const quiz = initRef.current
 
   const order = useMemo(() => quiz?.words ?? [], [quiz])
+  // 本次 quiz 的词书口音（普通话/粤语）
+  const accent: Accent = quiz?.accent === 'hk' ? 'hk' : 'cn'
 
   const [ratings, setRatings] = useState<Record<string, Rating>>(
     () => quiz?.ratings ?? {},
@@ -63,7 +65,7 @@ export default function Quiz() {
   // 音频：按需播放 + 预加载本次 quiz，首次不延迟
   const play = useAudioPlayer()
   const detailsReady = useWordDetails(order)
-  usePreloadWords(order, detailsReady)
+  usePreloadWords(order, detailsReady, accent)
 
   // 持久化：评分 / 撤销栈 / center 变化即落盘（刷新或返回后重进可续）
   useEffect(() => {
@@ -100,8 +102,8 @@ export default function Quiz() {
 
   // 空格：只发音，不显示释义
   const playWord = useCallback(() => {
-    play(centerWord?.audio)
-  }, [play, centerWord])
+    play(wordAudio(centerWord, accent))
+  }, [play, centerWord, accent])
 
   // 评分：移除该词，自动滑到下一张未评卡
   const rate = useCallback(

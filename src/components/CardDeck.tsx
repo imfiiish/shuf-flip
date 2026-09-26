@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { findWord, type Word } from '../data/words'
-import { tagRank } from '../lib/tags'
-import { useI18n } from '../lib/i18n'
+import { displayTags } from '../lib/tags'
 
 /** 圆点的颜色：r 红 / y 黄 / g 绿 / empty 空位灰 */
 type DotColor = 'r' | 'y' | 'g' | 'empty'
@@ -231,7 +230,6 @@ function Card({
   onClick,
   onContextMenu,
 }: CardProps) {
-  const { contentLang } = useI18n()
   const isCenter = slot === 0
   // 超出窗口的槽位不用具体 pos-N，而是落到右侧/左侧的隐身位（仍挂载，只隐起来）
   const off = typeof slot === 'number' && Math.abs(slot) > SIDE
@@ -245,7 +243,7 @@ function Card({
   // 复制后短暂用「已复制」顶掉词的位置；正反面都放一份，哪面朝上都能看到
   const wordLine = (
     <div className={`word${showNotice ? ' copying' : ''}`}>
-      <span className="word-text" lang={contentLang === 'zh' ? 'zh-Hans' : 'en'}>
+      <span className="word-text" lang={word.lang === 'zh' ? 'zh-Hans' : 'en'}>
         {word.word}
       </span>
       {showNotice && <span className="copy-notice">{notice}</span>}
@@ -295,14 +293,14 @@ function Card({
                   {(word.senses ?? []).map((s, i) => (
                     <div className="sense" key={i}>
                       {/* zh 不显示词性（动/名…），只留释义 */}
-                      {contentLang !== 'zh' && s.pos && (
+                      {word.lang === 'en' && s.pos && (
                         <span className="sense-pos">{s.pos}</span>
                       )}
                       <span
                         className="sense-defs"
-                        lang={contentLang === 'en' ? 'zh-Hans' : 'en'}
+                        lang={word.lang === 'en' ? 'zh-Hans' : 'en'}
                       >
-                        {s.defs.join(contentLang === 'zh' ? '; ' : '；')}
+                        {s.defs.join(word.lang === 'zh' ? '; ' : '；')}
                       </span>
                     </div>
                   ))}
@@ -314,13 +312,11 @@ function Card({
           {/* 释义展开时，tags 贴卡片底部，用 · 分隔 */}
           {isCenter && revealed && word.tags.length > 0 && (
             <div className="tag-list">
-              {[...word.tags]
-                .sort((a, b) => tagRank(a) - tagRank(b))
-                .map((tag) => (
-                  <span className="tag" key={tag}>
-                    {tag}
-                  </span>
-                ))}
+              {displayTags(word.tags).map((label) => (
+                <span className="tag" key={label}>
+                  {label}
+                </span>
+              ))}
             </div>
           )}
         </div>

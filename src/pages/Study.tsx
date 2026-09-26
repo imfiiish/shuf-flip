@@ -4,12 +4,11 @@ import BackButton from '../components/BackButton'
 import CardDeck, { useStageScale, type Slot } from '../components/CardDeck'
 import StudyHelp from '../components/StudyHelp'
 import { useAudioPlayer } from '../lib/audio'
-import { activeFilter, bookLang, loadBooks, setActiveFilter } from '../lib/books'
-import type { TagFilter } from '../lib/filter'
+import { bookAccent, bookLang, loadBooks, setActiveBook, type Book } from '../lib/books'
 import { filterKey, poolOf } from '../lib/filter'
 import type { ContentLang } from '../lib/i18n'
 import { loadRevealStore, saveRevealStore } from '../lib/progress'
-import { findWord, type Word } from '../data/words'
+import { findWord, wordAudio, type Word } from '../data/words'
 import { api, ApiError, type StudyRound } from '../lib/api'
 import {
   queueState,
@@ -18,7 +17,7 @@ import {
   type RoundState,
 } from '../lib/study'
 import { copyText } from '../lib/clipboard'
-import { useI18n } from '../lib/i18n'
+import { useI18n, type Accent } from '../lib/i18n'
 import { useWheelFlip } from '../lib/wheel'
 import { useDoubleRightClick } from '../lib/rightclick'
 import { logicalDay } from '../lib/day'
@@ -30,39 +29,54 @@ const QUIZ_EVERY = 8
 
 type Phase = 'loading' | 'ready' | 'needPick' | 'error'
 
-/** 选一本要学的词书（只限当前学习方向） */
-function pickBook(lang: ContentLang): {
+/** 选一本要学的词书（中英都能选，方向随词书） */
+function pickBook(): {
   filterKey: string
-  filter: TagFilter | null
+  book: Book | null
+  lang: ContentLang
+  accent: Accent
   needPick: boolean
 } {
-  const books = loadBooks().filter((b) => bookLang(b) === lang)
-  const f = activeFilter(books)
-  if (f) {
-    const key = filterKey(f, lang)
-    if (poolOf(f).length > 0)
-      return { filterKey: key, filter: null, needPick: false }
+  const books = loadBooks()
+  const active = books.find((b) => b.active)
+  if (active) {
+    const lang = bookLang(active)
+    return {
+      filterKey: filterKey(active.filter, lang),
+      book: null,
+      lang,
+      accent: bookAccent(active),
+      needPick: false,
+    }
   }
   const next = [...books]
     .sort((a, b) => b.id - a.id)
     .map((b) => ({
-      filter: b.filter,
-      key: filterKey(b.filter, lang),
-      pool: poolOf(b.filter),
+      book: b,
+      lang: bookLang(b),
+      pool: poolOf(b.filter, bookLang(b)),
     }))
-    .find((b) => b.pool.length > 0)
+    .find((x) => x.pool.length > 0)
   if (next)
-    return { filterKey: next.key, filter: next.filter, needPick: false }
+    return {
+      filterKey: filterKey(next.book.filter, next.lang),
+      book: next.book,
+      lang: next.lang,
+      accent: bookAccent(next.book),
+      needPick: false,
+    }
   return {
-    filterKey: filterKey(f ?? { include: [], exclude: [] }, lang),
-    filter: null,
+    filterKey: filterKey({ include: [], exclude: [] }, 'en'),
+    book: null,
+    lang: 'en',
+    accent: 'cn',
     needPick: books.length === 0,
   }
 }
 
 export default function Study() {
   const navigate = useNavigate()
-  const { t, contentLang } = useI18n()
+  const { t } = useI18n()
 
   // 已到 quiz 边界（Quiz 已 arm）时，/study 一律重定向到 /quiz
   const quizArmed = useMemo(() => loadQuiz() !== null, [])
@@ -71,6 +85,8 @@ export default function Study() {
   const [deck, setDeck] = useState<string[]>([])
   const [center, setCenter] = useState(0)
   const [roundTick, setRoundTick] = useState(0)
+  // 当前词书的中文口音（普通话/粤语），粤语词书播放粤语音频
+  const [accent, setAccent] = useState<Accent>('cn')
 
   // 上报用的可变引用（避免闭包过期）
   const filterKeyRef = useRef('')
@@ -147,14 +163,15 @@ export default function Study() {
   useEffect(() => {
     if (quizArmed || initRef.current) return
     initRef.current = true
-    const choice = pickBook(contentLang)
+    const choice = pickBook()
     if (choice.needPick) {
       setPhase('needPick')
       return
     }
+    setAccent(choice.accent)
     void api.studyRound(choice.filterKey, false).then(
       (res) => {
-        if (choice.filter) setActiveFilter(choice.filter)
+        if (choice.book) setActiveBook(choice.book.id)
         applyRound(res)
         setPhase('ready')
       },
@@ -163,7 +180,7 @@ export default function Study() {
         else setPhase('error')
       },
     )
-  }, [quizArmed, applyRound, contentLang])
+  }, [quizArmed, applyRound])
 
   const deckKey = useMemo(() => deck.join('.'), [deck])
   const TOTAL = deck.length
@@ -243,7 +260,7 @@ export default function Study() {
 
   const detailsReady = useWordDetails(deck)
   const play = useAudioPlayer()
-  usePreloadWords(deck, detailsReady)
+  usePreloadWords(deck, detailsReady, accent)
 
   const reveal = useCallback(() => {
     ensureDay()
@@ -254,13 +271,13 @@ export default function Study() {
       revealedMaskRef.current |= 1 << centerRef.current
       queueState(buildState())
     }
-    play(centerWord?.audio)
-  }, [play, centerWord, ensureDay, buildState])
+    play(wordAudio(centerWord, accent))
+  }, [play, centerWord, accent, ensureDay, buildState])
 
   const toggleReveal = useCallback(() => {
-    if (revealed) play(centerWord?.audio)
+    if (revealed) play(wordAudio(centerWord, accent))
     else reveal()
-  }, [revealed, play, reveal, centerWord])
+  }, [revealed, play, accent, reveal, centerWord])
 
   const copyCurrent = useCallback(() => {
     if (!centerName) return
@@ -297,7 +314,7 @@ export default function Study() {
       void api.studyQuiz(currentFilterKey, currentRoundSeq).then(
         (res) => {
           if (res.quizId != null && res.words.length > 0) {
-            startQuiz(currentFilterKey, currentRoundSeq, res.quizId, res.words)
+            startQuiz(currentFilterKey, currentRoundSeq, res.quizId, res.words, accent)
             sendStateNow(buildState())
             navigate('/quiz')
           } else {
@@ -309,7 +326,7 @@ export default function Study() {
       return
     }
     doAdvance()
-  }, [applyRound, buildState, clearCopy, navigate])
+  }, [applyRound, buildState, clearCopy, navigate, accent])
 
   // 键盘：Space 释义 / Enter 下一轮 / H L 翻页
   useEffect(() => {

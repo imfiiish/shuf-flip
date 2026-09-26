@@ -17,7 +17,7 @@ export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout } = useSession()
-  const { t, contentLang } = useI18n()
+  const { t } = useI18n()
   const [activeBook, setActiveBook] = useState<Book | null>(null)
   // 旧数据里的自动名「词书1/2…」规整为「词书」；自定义名保留
   const [books, setBooks] = useState<Book[]>(() =>
@@ -26,8 +26,8 @@ export default function Home() {
     ),
   )
   // 没有词书 / 从 Study 跳回来要求选词书 → 自动弹出 TagPicker
-  // 只展示当前学习内容语言的词书（两种语言不混）
-  const shown = books.filter((b) => bookLang(b) === contentLang)
+  // 中英词书都展示（界面里的 tag 组可跨语言）
+  const shown = books
   const [pickerOpen, setPickerOpen] = useState(() => {
     const st = location.state as { openPicker?: boolean } | null
     return !!st?.openPicker || shown.length === 0
@@ -57,7 +57,7 @@ export default function Home() {
     let alive = true
     void Promise.all(
       shown.map((b) =>
-        fetchSummary(filterKey(b.filter, contentLang)).then(
+        fetchSummary(filterKey(b.filter, bookLang(b))).then(
           (s) => [b.id, s] as const,
           () => [b.id, { total: 0, met: 0, revealed: 0 }] as const,
         ),
@@ -69,7 +69,7 @@ export default function Home() {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [books, contentLang])
+  }, [books])
 
   return (
     <div className="page">
@@ -248,7 +248,7 @@ export default function Home() {
         <TagPicker
           existing={shown.map((b) => b.filter)}
           onClose={() => setPickerOpen(false)}
-          onConfirm={(filter) => {
+          onConfirm={(filter, lang, accent) => {
             setBooks((b) => {
               if (shown.length >= MAX_BOOKS) return b
               return [
@@ -257,7 +257,8 @@ export default function Home() {
                   id: Date.now(),
                   name: t('home.defaultBook'),
                   filter,
-                  lang: contentLang,
+                  lang,
+                  accent,
                   active: true,
                 },
               ]
