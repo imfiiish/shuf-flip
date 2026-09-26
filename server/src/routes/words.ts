@@ -21,7 +21,7 @@ words.get('/', async (c) => {
   return c.json(out)
 })
 
-/** 批量详情：?words=a,b,c → { word: { phonetic, pinyin, senses, audio, kind } }。 */
+/** 批量详情：?words=a,b,c → { word: { phonetic, pinyin, jyutping, senses, audio, kind } }。 */
 words.get('/details', async (c) => {
   const list = (c.req.query('words') ?? '')
     .split(',')
@@ -33,11 +33,12 @@ words.get('/details', async (c) => {
     word: string
     phonetic: string | null
     pinyin: string | null
+    jyutping: string | null
     senses: unknown
     audio: string | null
     kind: string | null
   }>(
-    `select word, phonetic, pinyin, senses, audio, kind
+    `select word, phonetic, pinyin, jyutping, senses, audio, kind
        from words where lang = $1 and word = any($2::text[])`,
     [langOf(c), list],
   )
@@ -47,6 +48,7 @@ words.get('/details', async (c) => {
     out[row.word] = {
       phonetic: row.phonetic,
       pinyin: row.pinyin,
+      jyutping: row.jyutping,
       senses: row.senses,
       audio: row.audio,
       kind: row.kind,

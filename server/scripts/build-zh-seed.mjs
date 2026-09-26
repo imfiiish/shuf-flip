@@ -1,14 +1,13 @@
 // 从 wordlists 的 data/zh 生成 server/seed/words_zh.sql（COPY 文本格式）。
 //
-//   definitions.json  词/字 -> [拼音, [[读音, [英文释义…]], …]]   (CC-CEDICT)
-//   字义.json          汉字 -> 英文 gloss                          (Unihan)
+//   definitions.json  字/词 -> [[拼音, 粤拼, [英文释义…]], …]
+//   字义.json          汉字 -> 英文 gloss（definitions 里单字已带，此处兜底）
 //   HSK词汇.json       分 7 级，词 -> [[拼音, 词性], …]
 //   HSK汉字.json       分认读/书写段，段 -> [字…]
 //
 // 落库口径：
-//   pinyin = HSK 拼音；senses = [[词性, [英文释义]], …]（与 en 同结构）
-//   单字（含既是字又是词）→ 释义取 字义.json 的 Unihan gloss
-//   多字词               → 释义取 definitions.json（CC-CEDICT，各读音摊平去重）
+//   pinyin   = 各读音拼音用「、」连；jyutping = 各读音粤拼用「、」连
+//   senses   = [[词性, [英文释义]], …]；字取 Unihan gloss、词取 CC-CEDICT（均已在 definitions 里）
 //   词性只为对齐结构（前端不显示）；tag = HSK 等级（字用认读字级）。
 //   audio = 音频文件名（方案 C：只存文件名，目录由「语言+发音」在前端拼；
 //           cn/hk 同名，来源为 audio 仓库的 zh/manifest.json）。
@@ -34,12 +33,13 @@ const audioOf = (word) =>
   typeof manifest[word] === 'string' ? manifest[word] : null
 
 const read = (name) => {
-  const p = resolve(zh, name)
-  if (!existsSync(p)) {
-    console.error(`[build-zh-seed] 找不到 ${p}`)
-    process.exit(1)
+  // 输出类（definitions.json / 字义.json）在 data/zh；输入词表（HSK*.json）已归档到 data/zh/archive
+  for (const dir of [zh, resolve(zh, 'archive')]) {
+    const p = resolve(dir, name)
+    if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8'))
   }
-  return JSON.parse(readFileSync(p, 'utf8'))
+  console.error(`[build-zh-seed] 找不到 ${name}（找过 ${zh}、${resolve(zh, 'archive')}）`)
+  process.exit(1)
 }
 const stripMeta = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== '_meta'))
 
@@ -94,14 +94,16 @@ const wordSet = new Set(
   Object.values(hskw).flatMap((words) => Object.keys(words)),
 )
 
-/** 摊平 definitions.json 各读音的释义并去重 */
-function flatDefs(senses) {
+/** 摊平 definitions.json 一条目各读音的释义并去重（新格式：[[拼音, 粤拼, [释义]], …]）*/
+function flatDefs(entry) {
   const out = []
-  for (const group of senses ?? []) {
-    for (const d of group?.[1] ?? []) if (!out.includes(d)) out.push(d)
+  for (const reading of entry ?? []) {
+    for (const d of reading?.[2] ?? []) if (!out.includes(d)) out.push(d)
   }
   return out
 }
+const joinReadings = (entry, i) =>
+  (entry ?? []).map((r) => r?.[i]).filter(Boolean).join('、') || null
 
 const esc = (v) => {
   if (v === null || v === undefined) return '\\N'
@@ -122,17 +124,15 @@ for (const [word, entry] of Object.entries(defs)) {
   const isChar = charSet.has(word)
   const isWord = wordSet.has(word)
   const kind = isChar && isWord ? 'both' : isChar ? 'char' : 'word'
-  const pinyin = entry[0] || null
+  const pinyin = joinReadings(entry, 0)
+  const jyutping = joinReadings(entry, 1)
 
-  // 单字（含 both）→ Unihan gloss；多字词 → CC-CEDICT
-  let list
-  if (isChar && ziyi[word]) {
-    list = [ziyi[word]]
-    charDefs++
-  } else {
-    list = flatDefs(entry[1])
-    if (list.length) wordDefs++
+  let list = flatDefs(entry)
+  if (list.length) wordDefs++
+  if (list.length === 0 && isChar && ziyi[word]) {
+    list = [ziyi[word]]  // 兜底：definitions 里单字应已带 Unihan gloss
   }
+  if (isChar) charDefs++
   if (list.length === 0) noDefs++
 
   const pos = [...(wordPos.get(word) ?? [])].join('、')
@@ -145,7 +145,7 @@ for (const [word, entry] of Object.entries(defs)) {
   if (audio) withAudio++
 
   lines.push(
-    ['zh', word, arr(tags), pinyin, JSON.stringify(senses), audio, kind]
+    ['zh', word, arr(tags), pinyin, jyutping, JSON.stringify(senses), audio, kind]
       .map(esc)
       .join('\t'),
   )
@@ -156,7 +156,7 @@ const header = `--
 -- 来源: wordlists data/zh（CC-CEDICT / Unihan / HSK 大纲）；音频来自 audio 仓库
 --
 SET client_encoding = 'UTF8';
-COPY public.words (lang, word, tags, pinyin, senses, audio, kind) FROM stdin;
+COPY public.words (lang, word, tags, pinyin, jyutping, senses, audio, kind) FROM stdin;
 `
 writeFileSync(out, `${header}${lines.join('\n')}\n\\.\n`, 'utf8')
 console.log(

@@ -24,6 +24,8 @@ export type Word = {
   phonetic?: string
   /** zh: 拼音（en 无，用 phonetic） */
   pinyin?: string
+  /** zh: 粤拼 Jyutping（多读音用「、」连） */
+  jyutping?: string
   senses?: Sense[]
   /** 音频文件名（不含目录）；缺音频的词没有 */
   audio?: string
@@ -93,6 +95,7 @@ export async function loadAllIndices(): Promise<void> {
 type Detail = {
   phonetic?: unknown
   pinyin?: unknown
+  jyutping?: unknown
   senses?: unknown
   audio?: unknown
   kind?: unknown
@@ -123,6 +126,7 @@ export async function loadDetails(names: readonly string[]): Promise<void> {
           if (!w) continue
           if (typeof d.phonetic === 'string') w.phonetic = d.phonetic
           if (typeof d.pinyin === 'string') w.pinyin = d.pinyin
+          if (typeof d.jyutping === 'string') w.jyutping = d.jyutping
           if (Array.isArray(d.senses)) {
             w.senses = (d.senses as [string, string[]][])
               .filter(
