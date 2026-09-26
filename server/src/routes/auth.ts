@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { Hono } from 'hono'
 import { getConnInfo } from '@hono/node-server/conninfo'
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie'
@@ -66,6 +67,30 @@ auth.post('/register', async (c) => {
   const token = await createSession(userId)
   setCookie(c, env.cookieName, token, cookieOpts())
   return c.json({ user: { id: userId, username: lower } })
+})
+
+// 游客：一键创建一次性账号 + 会话。无密码（password_hash 存空串，无法用于登录），
+// is_guest=true 便于按 created_at 定期清理。
+auth.post('/guest', async (c) => {
+  for (let i = 0; i < 5; i++) {
+    const username = `guest_${randomBytes(4).toString('hex')}`
+    try {
+      const res = await pool.query(
+        `insert into users (username, password_hash, is_guest)
+         values ($1, '', true) returning id`,
+        [username],
+      )
+      const userId = Number(res.rows[0].id)
+      const token = await createSession(userId)
+      setCookie(c, env.cookieName, token, cookieOpts())
+      return c.json({ user: { id: userId, username } })
+    } catch (e) {
+      // 用户名撞车（唯一约束）则换一个再试
+      if ((e as { code?: string }).code === '23505') continue
+      throw e
+    }
+  }
+  return c.json({ error: 'guest_failed' }, 500)
 })
 
 auth.post('/login', async (c) => {

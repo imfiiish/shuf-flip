@@ -106,6 +106,8 @@ export const api = {
       method: 'POST',
       body: { username, password },
     }),
+  /** 游客：一键创建一次性账号并登录 */
+  guest: () => request<{ user: User }>('/auth/guest', { method: 'POST' }),
   logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
   me: () => request<{ user: User | null }>('/auth/me'),
   rename: (username: string) =>

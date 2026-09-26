@@ -344,6 +344,26 @@ export default function Login() {
     }
   }
 
+  // 游客：一键创建临时账号直接进入（点「进入」后出现在「确认」按钮下方）
+  const enterGuest = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const { user } = await api.guest()
+      try {
+        await pullBooks()
+      } catch {
+        /* 拉词书失败不阻塞进入 */
+      }
+      setUser(user)
+      navigate('/', { replace: true })
+    } catch (e) {
+      showPasswordNote(errText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className={`panel login-panel${stage >= 2 ? ' stage-2' : ''}`}>
@@ -464,6 +484,18 @@ export default function Login() {
                 : t('login.enter')}
           </button>
         </div>
+
+        {/* 游客入口：点「进入」后（按钮为「确认」时）出现在下方 */}
+        <button
+          type="button"
+          className={`login-guest${stage === 1 ? ' show' : ''}`}
+          aria-hidden={stage !== 1}
+          tabIndex={stage === 1 ? 0 : -1}
+          disabled={busy}
+          onClick={enterGuest}
+        >
+          {t('login.guest')}
+        </button>
       </div>
     </div>
   )

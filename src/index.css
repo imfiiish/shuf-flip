@@ -962,6 +962,46 @@ kbd {
   box-shadow: 0 8px 20px -12px var(--accent-ring);
 }
 
+/* 游客入口：点「进入」（按钮为「确认」）后，从按钮下方撑开；进密码阶段收起 */
+.login-guest {
+  margin: 0;
+  max-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: max-height 240ms ease, margin 240ms ease, opacity 200ms ease,
+    transform 240ms ease, color 160ms ease;
+}
+
+.login-guest.show {
+  max-height: 40px;
+  margin-top: 14px;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.login-guest.show:hover,
+.login-guest.show:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-guest:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .password-dots {
   display: flex;
   align-items: center;
