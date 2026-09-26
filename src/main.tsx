@@ -5,6 +5,15 @@ import './index.css'
 import { hydrate } from './lib/persist'
 import { contentLangOf, detectLang, translate } from './lib/i18n'
 import { loadIndex } from './data/words'
+import { primeAudio } from './lib/audio'
+
+// 首次用户手势就预热音频输出（早于学习页首次出声），避免第一声被吃掉开头
+const onFirstGesture = () => primeAudio()
+window.addEventListener('pointerdown', onFirstGesture, {
+  capture: true,
+  once: true,
+})
+window.addEventListener('keydown', onFirstGesture, { capture: true, once: true })
 
 const root = createRoot(document.getElementById('root')!)
 const lang = detectLang()
